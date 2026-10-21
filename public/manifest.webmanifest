@@ -1,0 +1,10 @@
+{
+  "name": "Snackchat",
+  "short_name": "Snackchat",
+  "description": "Log, rate and rank your snacks with friends.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFF4E0",
+  "theme_color": "#F28C28",
+  "icons": [{ "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
