@@ -4,6 +4,7 @@ import type { AppContext, Env } from "../env";
 import { hashPassword, newId, randomToken, sha256, verifyPassword } from "../lib/crypto";
 import { sendEmail } from "../lib/email";
 import { createSession, destroySession } from "../lib/session";
+import { placeholderEmail, quickSignInOn, validateQuickSignIn } from "../lib/quickSignIn";
 import { verifyTurnstile } from "../lib/turnstile";
 import { validateSignUp } from "../lib/validation";
 
@@ -23,6 +24,7 @@ const limitByIp = createMiddleware<AppContext>(async (c, next) => {
 auth.use("/signup", limitByIp);
 auth.use("/login", limitByIp);
 auth.use("/resend-verification", limitByIp);
+auth.use("/quick", limitByIp);
 
 auth.post("/signup", async (c) => {
   const parsed = validateSignUp(await c.req.json().catch(() => null));
@@ -70,6 +72,78 @@ auth.post("/signup", async (c) => {
   await sendVerificationEmail(c.env, new URL(c.req.url).origin, userId, input.email);
   await createSession(c, userId);
   return c.json({ ok: true }, 201);
+});
+
+// Quick sign-in for testing with friends: a name and a PIN.
+// - A new name makes an account, using up one invite code.
+// - An existing name signs in with its PIN.
+// - An existing account with no password or PIN yet (the old dev-login
+//   account) is claimed by the first person to set a PIN for it, which also
+//   needs a valid invite code.
+auth.post("/quick", async (c) => {
+  if (!quickSignInOn(c.env)) return c.json({ error: "Not found" }, 404);
+  const parsed = validateQuickSignIn(await c.req.json().catch(() => null));
+  if (!parsed.ok) return c.json({ error: parsed.error }, 400);
+  const { username, pin, inviteCode } = parsed.value;
+  const db = c.env.DB;
+
+  const user = await db
+    .prepare("SELECT id, password_hash FROM users WHERE username = ?")
+    .bind(username)
+    .first<{ id: string; password_hash: string | null }>();
+
+  if (user?.password_hash) {
+    if (!(await verifyPassword(pin, user.password_hash))) return c.json({ error: "Wrong name or PIN." }, 401);
+    await createSession(c, user.id);
+    return c.json({ ok: true, created: false });
+  }
+
+  if (!inviteCode) {
+    return c.json({ error: user ? "Enter the invite code to set your PIN." : "New here? Enter your invite code." }, 400);
+  }
+
+  if (user) {
+    const valid = await db
+      .prepare("SELECT 1 FROM invite_codes WHERE code = ? AND (expires_at IS NULL OR expires_at > ?)")
+      .bind(inviteCode, now())
+      .first();
+    if (!valid) return c.json({ error: "That invite code isn't valid." }, 400);
+    // "password_hash IS NULL" stops two people claiming the same account at once.
+    const claimed = await db
+      .prepare("UPDATE users SET password_hash = ? WHERE id = ? AND password_hash IS NULL")
+      .bind(await hashPassword(pin), user.id)
+      .run();
+    if (claimed.meta.changes !== 1) return c.json({ error: "Wrong name or PIN." }, 401);
+    await createSession(c, user.id);
+    return c.json({ ok: true, created: false });
+  }
+
+  // A new account: use up one invite, the same way as the full sign-up.
+  const used = await db
+    .prepare(
+      `UPDATE invite_codes SET uses = uses + 1
+        WHERE code = ? AND uses < max_uses AND (expires_at IS NULL OR expires_at > ?)`,
+    )
+    .bind(inviteCode, now())
+    .run();
+  if (used.meta.changes !== 1) return c.json({ error: "That invite code isn't valid or has been used up." }, 400);
+
+  const userId = newId();
+  try {
+    await db
+      .prepare(
+        `INSERT INTO users (id, username, email, password_hash, email_verified, created_at)
+         VALUES (?, ?, ?, ?, 1, ?)`,
+      )
+      .bind(userId, username, placeholderEmail(username), await hashPassword(pin), now())
+      .run();
+  } catch (err) {
+    await db.prepare("UPDATE invite_codes SET uses = uses - 1 WHERE code = ?").bind(inviteCode).run();
+    console.error("quick sign-in insert failed", err);
+    return c.json({ error: "That name was just taken. Try another." }, 409);
+  }
+  await createSession(c, userId);
+  return c.json({ ok: true, created: true }, 201);
 });
 
 auth.post("/login", async (c) => {
