@@ -84,3 +84,22 @@ export interface GroupPreview {
   isMember: boolean;
   full: boolean;
 }
+
+export type BoardPeriod = "week" | "month" | "all";
+export type PeopleMetric = "points" | "checkins" | "snacks";
+
+export interface PeopleRow {
+  username: string;
+  points: number;
+  checkins: number;
+  snacks: number;
+  value: number; // the chosen metric
+  rank: number;
+}
+
+export interface SnackRow {
+  snack: SnackSummary;
+  avg: number;
+  count: number;
+  rank: number;
+}

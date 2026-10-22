@@ -3,6 +3,7 @@ import { api, type Me } from "./api";
 import { Link } from "./components/Link";
 import { TabBar } from "./components/TabBar";
 import { matchPath, navigate, usePath } from "./router";
+import { Boards } from "./pages/Boards";
 import { CheckIn } from "./pages/CheckIn";
 import { ComingSoon } from "./pages/ComingSoon";
 import { Feed } from "./pages/Feed";
@@ -117,7 +118,7 @@ export function App() {
   } else if (path === "/boards") {
     tab = "/boards";
     title = "Boards";
-    page = <ComingSoon title="Leaderboards are next">Global, snack-type and group leaderboards arrive after groups.</ComingSoon>;
+    page = <Boards me={me} />;
   } else if (path === "/groups") {
     tab = "/groups";
     title = "Groups";

@@ -214,3 +214,20 @@ fieldset legend { padding: 0; margin-bottom: 6px; }
 .board li.me { background: var(--cream-deep); }
 .board-rank { width: 22px; text-align: center; font-weight: 900; }
 .board-note { margin: 0; padding: 10px 14px 14px; }
+
+/* Boards */
+.segmented { display: flex; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 3px; }
+.segmented button { flex: 1; min-height: 40px; border: 0; border-radius: 9px; background: none; font-weight: 800; color: var(--muted); cursor: pointer; }
+.segmented button.on { background: var(--ink); color: var(--cream); }
+.segmented.dark { background: var(--ink); border-color: var(--ink); border-radius: 14px; padding: 4px; }
+.segmented.dark button { color: #e8d7bf; min-height: 44px; font-size: 1rem; }
+.segmented.dark button.on { background: var(--orange); color: var(--ink); }
+.chip-scroll { display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px; padding: 0 16px 2px; scrollbar-width: none; }
+.chip-scroll .pill { flex-shrink: 0; }
+.podium { display: flex; align-items: flex-end; justify-content: center; gap: 10px; padding-top: 6px; }
+.podium-spot { width: 104px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.podium-spot .avatar { border: 3px solid var(--card); box-shadow: 0 0 0 2px var(--line); }
+.podium-name { font-size: 0.8rem; font-weight: 800; max-width: 104px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.podium-block { width: 100%; border-radius: 12px 12px 4px 4px; display: flex; flex-direction: column; align-items: center; padding-top: 10px; }
+.podium-rank { font-size: 1.6rem; font-weight: 900; }
+.medal-ring { border: 3px solid transparent; border-radius: 14px; display: inline-flex; flex-shrink: 0; }
