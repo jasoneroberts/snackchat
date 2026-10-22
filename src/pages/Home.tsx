@@ -3,7 +3,7 @@ import { api, type Me } from "../api";
 import { Link } from "../components/Link";
 
 /** The welcome page for people who aren't signed in. */
-export function Home() {
+export function Home({ quick = false }: { quick?: boolean }) {
   return (
     <section className="hero">
       <h1>Rate every snack. Beat your mates.</h1>
@@ -11,12 +11,14 @@ export function Home() {
         Log crisps, pub snacks, sweets and everything in between. Rate the crunch, the spice and the flavour, and climb
         your group's leaderboard.
       </p>
-      <div className="actions">
-        <Link href="/signup" className="button">
-          Join with an invite code
-        </Link>
-        <Link href="/login">I already have an account</Link>
-      </div>
+      {!quick && (
+        <div className="actions">
+          <Link href="/signup" className="button">
+            Join with an invite code
+          </Link>
+          <Link href="/login">I already have an account</Link>
+        </div>
+      )}
     </section>
   );
 }

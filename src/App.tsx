@@ -15,6 +15,7 @@ import { Join } from "./pages/Join";
 import { LogIn } from "./pages/LogIn";
 import { NewGroup } from "./pages/NewGroup";
 import { Profile } from "./pages/Profile";
+import { QuickSignIn } from "./pages/QuickSignIn";
 import { Settings } from "./pages/Settings";
 import { Review } from "./pages/Review";
 import { SignUp } from "./pages/SignUp";
@@ -32,12 +33,16 @@ export function App() {
   const path = usePath();
   const [me, setMe] = useState<Me | null | undefined>(undefined); // undefined = still loading
   const [devLogin, setDevLogin] = useState(false);
+  const [quickSignIn, setQuickSignIn] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
 
   const refreshMe = useCallback(async () => {
-    const { user, devLogin } = await api<{ user: Me | null; devLogin?: boolean }>("/me");
+    const { user, devLogin, quickSignIn } = await api<{ user: Me | null; devLogin?: boolean; quickSignIn?: boolean }>(
+      "/me",
+    );
     setMe(user);
     setDevLogin(devLogin === true);
+    setQuickSignIn(quickSignIn === true);
   }, []);
 
   useEffect(() => {
@@ -75,7 +80,16 @@ export function App() {
   // Signed out: the welcome page, sign-up and log-in, without the tab bar.
   if (!me) {
     let page;
-    if (path === "/signup") page = <SignUp onSignedIn={onSignedIn} />;
+    if (quickSignIn) {
+      // Testing mode: one name-and-PIN form instead of sign-up and log-in.
+      if (path.startsWith("/join/")) savePendingJoin(path);
+      page = (
+        <>
+          <Home quick />
+          <QuickSignIn onSignedIn={onSignedIn} />
+        </>
+      );
+    } else if (path === "/signup") page = <SignUp onSignedIn={onSignedIn} />;
     else if (path === "/login") page = <LogIn onSignedIn={onSignedIn} />;
     else {
       if (path.startsWith("/join/")) savePendingJoin(path);
@@ -88,7 +102,7 @@ export function App() {
             <img src="/logo.svg" alt="" width={32} height={32} />
             <span>snackchat</span>
           </Link>
-          <nav className="row">
+          <nav className={quickSignIn ? "hidden" : "row"}>
             <Link href="/login">Log in</Link>
             <Link href="/signup" className="button small">
               Join

@@ -11,6 +11,7 @@ export interface Env {
   EMAIL_FROM: string;
   // Internal development only: open the app as this user with no log-in.
   DEV_LOGIN_AS?: string;
+  QUICK_SIGNIN?: string;
   TURNSTILE_SECRET_KEY?: string;
   RESEND_API_KEY?: string;
 }

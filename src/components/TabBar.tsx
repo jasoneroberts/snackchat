@@ -29,7 +29,7 @@ export function TabBar({ active }: { active: string }) {
     <nav className="tabbar" aria-label="Main">
       {TABS.map((tab) => (
         <Link key={tab.href} href={tab.href} className={tab.href === active ? "tab active" : "tab"} aria-current={tab.href === active ? "page" : undefined}>
-          {tab.icon ?? (
+          {tab.icon ? <span className="tab-icon">{tab.icon}</span> : (
             <span className="tab-plus">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" aria-hidden="true">
                 <path d="M12 5v14M5 12h14" />

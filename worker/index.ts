@@ -5,6 +5,7 @@ import { isVoice } from "../shared/voice";
 import type { AppContext } from "./env";
 import { currentUser } from "./lib/currentUser";
 import { devLoginUsername, getDevUser } from "./lib/devLogin";
+import { quickSignInOn } from "./lib/quickSignIn";
 import { getSessionUser } from "./lib/session";
 import { turnstileInTestMode } from "./lib/turnstile";
 import { admin, reviewCount } from "./routes/admin";
@@ -44,7 +45,7 @@ app.route("/boards", boards);
 
 app.get("/me", async (c) => {
   const user = c.get("user");
-  if (!user) return c.json({ user: null });
+  if (!user) return c.json({ user: null, quickSignIn: quickSignInOn(c.env) });
   const points = await c.env.DB.prepare("SELECT COALESCE(SUM(points), 0) AS total FROM points_ledger WHERE user_id = ?")
     .bind(user.id)
     .first<{ total: number }>();
@@ -63,6 +64,7 @@ app.get("/me", async (c) => {
       reviewCount: user.is_admin === 1 ? await reviewCount(c.env.DB) : 0,
     },
     devLogin: devLoginUsername(c.env) !== null,
+    quickSignIn: quickSignInOn(c.env),
   });
 });
 
@@ -82,6 +84,7 @@ app.get("/health", (c) =>
     ok: true,
     turnstile: turnstileInTestMode(c.env.TURNSTILE_SECRET_KEY) ? "test" : "live",
     devLogin: devLoginUsername(c.env) !== null,
+    quickSignIn: quickSignInOn(c.env),
   }),
 );
 
