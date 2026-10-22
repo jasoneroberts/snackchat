@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Snackchat">
+  <rect width="96" height="96" rx="22" fill="#FFF4E0"/>
+  <path d="M26 20H66A10 10 0 0 0 76 29A10 10 0 0 0 82 40A10 10 0 0 0 86 50V62Q86 72 76 72H42L24 86L28 72H22Q12 72 12 62V30Q12 20 22 20Z" fill="#F28C28"/>
+  <circle cx="32" cy="46" r="5" fill="#FFF4E0"/>
+  <circle cx="48" cy="46" r="5" fill="#FFF4E0"/>
+  <circle cx="64" cy="46" r="5" fill="#FFF4E0"/>
+  <circle cx="84" cy="22" r="3" fill="#F28C28"/>
+  <circle cx="90" cy="32" r="2" fill="#F28C28"/>
+</svg>

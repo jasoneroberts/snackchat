@@ -1,0 +1,48 @@
+// Cloudflare configuration for the Snackchat Worker.
+// Docs: https://developers.cloudflare.com/workers/wrangler/configuration/
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "snackchat",
+  "main": "./worker/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // The React app is built into static files. Requests under /api go to the
+  // Worker first; everything else is served from the build, falling back to
+  // index.html so the app's own routes (/login, /signup) work on refresh.
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "snackchat-db",
+      "database_id": "7bc8b9b1-77af-43c5-98fa-f538f54293c6",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  "kv_namespaces": [
+    { "binding": "CACHE", "id": "d99b2213559f4f9988d41fef70b59de1" }
+  ],
+
+  // Check-in photos. The Worker reads and writes them through env.PHOTOS.
+  "r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "snackchat-photos" }],
+
+  // Simple per-key rate limits, counted per Cloudflare location.
+  "ratelimits": [
+    { "name": "AUTH_LIMITER", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } }
+  ],
+
+  "vars": {
+    "APP_NAME": "Snackchat",
+    // "log" prints verification links to the Worker logs (wrangler tail);
+    // "resend" sends real email and needs RESEND_API_KEY and EMAIL_FROM.
+    "EMAIL_MODE": "log",
+    "EMAIL_FROM": "Snackchat <hello@example.com>"
+  },
+
+  "observability": { "enabled": true }
+}
