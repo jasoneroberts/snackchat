@@ -28,9 +28,8 @@
     { "binding": "CACHE", "id": "d99b2213559f4f9988d41fef70b59de1" }
   ],
 
-  // R2 must be switched on in the Cloudflare dashboard before this bucket can
-  // be created. Uncomment once "snackchat-photos" exists.
-  // "r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "snackchat-photos" }],
+  // Check-in photos. The Worker reads and writes them through env.PHOTOS.
+  "r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "snackchat-photos" }],
 
   // Simple per-key rate limits, counted per Cloudflare location.
   "ratelimits": [

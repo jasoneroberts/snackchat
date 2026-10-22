@@ -4,6 +4,7 @@ export interface Env {
   ASSETS: Fetcher;
   DB: D1Database;
   CACHE: KVNamespace;
+  PHOTOS: R2Bucket;
   AUTH_LIMITER: RateLimit;
   APP_NAME: string;
   EMAIL_MODE: "log" | "resend";

@@ -11,7 +11,7 @@ on a phone's home screen) that runs entirely on Cloudflare.
 | API | `worker/` (Hono on Cloudflare Workers) | Everything under `/api`: sign-up, log-in, and soon check-ins and leaderboards. |
 | Database | D1 `snackchat-db`, schema in `migrations/` | Users, sessions, snacks, check-ins, groups, points. |
 | Cache | KV `snackchat-cache` | Will hold cached leaderboards. |
-| Photos | R2 `snackchat-photos` | Not created yet: R2 has to be switched on in the Cloudflare dashboard first. |
+| Photos | R2 `snackchat-photos` | Check-in photos (upload comes with the check-in PR). |
 | Bot check | Turnstile | Checked on sign-up and log-in. |
 
 One Worker serves both: requests to `/api/*` run the Hono app in
