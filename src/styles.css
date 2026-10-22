@@ -1,4 +1,6 @@
-:root {
+/* Colours. Grown-up mode is the default; lad mode swaps them further down.
+   The [data-voice] selectors also let a preview card show the other look. */
+:root, [data-voice="grownup"] {
   --orange: #f28c28;
   --orange-dark: #9a4a06;
   --cream: #fff4e0;
@@ -250,3 +252,49 @@ fieldset legend { padding: 0; margin-bottom: 6px; }
 .review-photo { width: 100%; max-height: 60vh; object-fit: contain; border-radius: 12px; background: var(--line-soft); }
 .review-avatar { width: 88px; height: 88px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
 .review-text { margin: 6px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Picking lad mode or grown-up mode: each option is a preview of its own look */
+.voice-option {
+  display: grid; gap: 4px; width: 100%; text-align: left; padding: 16px; cursor: pointer;
+  background: var(--card); color: var(--ink); border: 2px solid var(--line); border-radius: 16px;
+}
+.voice-option.on { border-color: var(--orange); box-shadow: 0 0 0 2px var(--orange); }
+.voice-option:disabled { cursor: wait; }
+.voice-name { font-size: 1.15rem; font-weight: 900; }
+.voice-sample { font-weight: 800; }
+.voice-blurb { color: var(--muted); }
+
+/* Lad mode: a dark pub-table look. Same layout, different paint. */
+[data-voice="lad"] {
+  --orange: #f28c28;
+  --orange-dark: #ffb366;
+  --cream: #121813;
+  --cream-deep: #1a221c;
+  --ink: #f3eadb;
+  --muted: #b5aa95;
+  --card: #1e2821;
+  --line: #34443a;
+  --line-soft: #2a372f;
+  --good: #8ad9a2;
+  --good-bg: #1c3a27;
+  --bad: #ff8f80;
+  --mat-red: #c8102e;
+  --on-orange: #2b1d0e;
+  color: var(--ink);
+  background: var(--cream);
+  color-scheme: dark;
+}
+/* Dark text stays dark where it sits on orange or the pale podium colours. */
+[data-voice="lad"] .button:not(.secondary):not(.dark),
+[data-voice="lad"] .tab-plus,
+[data-voice="lad"] .segmented.dark button.on,
+[data-voice="lad"] .podium-block { color: var(--on-orange); }
+[data-voice="lad"] .segmented.dark { background: #0a0e0b; border-color: var(--line); }
+[data-voice="lad"] .title,
+[data-voice="lad"] .section-title,
+.voice-option[data-voice="lad"] .voice-name { text-transform: uppercase; letter-spacing: 0.02em; }
+/* Beer-mat badges: square-ish and red rather than round and green. */
+[data-voice="lad"] .points-badge,
+[data-voice="lad"] .count-badge { background: var(--mat-red); color: #fff; border-radius: 4px; }
+[data-voice="lad"] .photo-drop { border-color: var(--line); }
+[data-voice="lad"] .link-box { border-color: var(--line); }

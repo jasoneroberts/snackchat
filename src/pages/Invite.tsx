@@ -4,8 +4,10 @@ import { api, errorText } from "../api";
 import { GroupBadge } from "../components/GroupBadge";
 import { Link } from "../components/Link";
 import { inviteLink, modeOf } from "../lib/groups";
+import { useVoice } from "../lib/voice";
 
 export function Invite({ id }: { id: string }) {
+  const { t } = useVoice();
   const [data, setData] = useState<GroupPage | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -49,7 +51,7 @@ export function Invite({ id }: { id: string }) {
         <GroupBadge name={group.name} size={64} />
         <h1 className="title">{group.name}</h1>
         <p className="muted no-margin">
-          {isNew ? "Your group is ready. Now get people in." : `Ranked by ${modeOf(group.scoringMode).label.toLowerCase()}.`}
+          {isNew ? t("groups.ready") : `Ranked by ${modeOf(group.scoringMode).label.toLowerCase()}.`}
         </p>
       </div>
 

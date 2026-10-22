@@ -3,12 +3,14 @@ import type { FeedItem } from "../../shared/types";
 import { api, errorText, type Me } from "../api";
 import { CheckinCard } from "../components/CheckinCard";
 import { Link } from "../components/Link";
+import { useVoice } from "../lib/voice";
 
 export function Feed({ me, onChanged }: { me: Me; onChanged: () => void }) {
   const [items, setItems] = useState<FeedItem[] | null>(null);
   const [next, setNext] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  const { t } = useVoice();
 
   const load = async (before?: string) => {
     const page = await api<{ items: FeedItem[]; next: string | null }>(
@@ -39,10 +41,10 @@ export function Feed({ me, onChanged }: { me: Me; onChanged: () => void }) {
     <div className="page stack">
       {items.length === 0 && (
         <div className="empty">
-          <h2>Nothing here yet</h2>
-          <p className="muted">Be the first to check in a snack.</p>
+          <h2>{t("feed.emptyTitle")}</h2>
+          <p className="muted">{t("feed.emptyBody")}</p>
           <Link href="/checkin" className="button">
-            Check in a snack
+            {t("feed.emptyButton")}
           </Link>
         </div>
       )}
@@ -60,7 +62,7 @@ export function Feed({ me, onChanged }: { me: Me; onChanged: () => void }) {
             setLoadingMore(false);
           }}
         >
-          {loadingMore ? "Loading…" : "Show older check-ins"}
+          {loadingMore ? "Loading…" : t("feed.older")}
         </button>
       )}
     </div>

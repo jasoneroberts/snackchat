@@ -9,8 +9,10 @@ import { SnackTile } from "../components/SnackTile";
 import { rating } from "../lib/format";
 import { modeOf, resetOf, resetsIn } from "../lib/groups";
 import { navigate } from "../router";
+import { useVoice } from "../lib/voice";
 
 export function Group({ id, me }: { id: string; me: Me }) {
+  const { t } = useVoice();
   const [data, setData] = useState<GroupPage | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -102,7 +104,7 @@ export function Group({ id, me }: { id: string; me: Me }) {
         <Link href={`/snack/${favourite.id}`} className="list-card">
           <SnackTile snack={favourite} size={48} />
           <span className="grow">
-            <span className="small accent block">Group's favourite snack</span>
+            <span className="small accent block">{t("groups.favourite", { category: favourite.category })}</span>
             <b>{favourite.name}</b>
             <span className="small muted block">
               {favourite.brand} · {favourite.checkins} check-in{favourite.checkins === 1 ? "" : "s"}

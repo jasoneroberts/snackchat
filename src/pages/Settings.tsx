@@ -2,6 +2,7 @@ import { useState } from "react";
 import { api, errorText, type Me } from "../api";
 import { Avatar } from "../components/Avatar";
 import { Link } from "../components/Link";
+import { VoiceChoice } from "../components/VoiceChoice";
 import { squareAvatar } from "../lib/image";
 
 export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<void> }) {
@@ -82,6 +83,14 @@ export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<v
         )}
         {busy && <p className="small muted">Saving…</p>}
         {error && <p className="error">{error}</p>}
+      </section>
+
+      <section className="card-plain stack-sm">
+        <div>
+          <h2 className="section-title">Lad mode or grown-up mode</h2>
+          <p className="small muted no-margin">Changes the words and colours only. Your snacks, points and boards stay the same.</p>
+        </div>
+        <VoiceChoice current={me.voice} onSaved={onChanged} />
       </section>
 
       {me.isAdmin && (

@@ -7,6 +7,7 @@ import { Bars } from "../components/Bars";
 import { CheckinCard } from "../components/CheckinCard";
 import { Link } from "../components/Link";
 import { rating } from "../lib/format";
+import { useVoice } from "../lib/voice";
 
 export function Profile({
   username,
@@ -21,6 +22,7 @@ export function Profile({
   onLogOut: () => void;
   onChanged: () => void;
 }) {
+  const { t } = useVoice();
   const [data, setData] = useState<ProfilePage | null>(null);
   const [error, setError] = useState<string | null>(null);
   const isMe = username.toLowerCase() === me.username.toLowerCase();
@@ -91,8 +93,8 @@ export function Profile({
 
       {data.checkins && (
         <>
-          <h2 className="section-title">Recent check-ins</h2>
-          {data.checkins.length === 0 && <p className="muted">No check-ins yet.</p>}
+          <h2 className="section-title">{t("profile.recent")}</h2>
+          {data.checkins.length === 0 && <p className="muted">{t("profile.none")}</p>}
           {data.checkins.map((item) => (
             <CheckinCard
               key={item.id}

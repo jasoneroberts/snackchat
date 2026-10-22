@@ -33,7 +33,7 @@ export async function getSessionUser(c: Context<AppContext>): Promise<User | nul
   const token = getCookie(c, SESSION_COOKIE);
   if (!token) return null;
   return c.env.DB.prepare(
-    `SELECT u.id, u.username, u.email, u.email_verified, u.country, u.is_admin, u.avatar_id, u.avatar_pending_id
+    `SELECT u.id, u.username, u.email, u.email_verified, u.country, u.is_admin, u.avatar_id, u.avatar_pending_id, u.voice
        FROM sessions s JOIN users u ON u.id = s.user_id
       WHERE s.id = ? AND s.expires_at > ?`,
   )

@@ -1,5 +1,7 @@
 // Small wrapper around fetch for the Snackchat API.
 
+import type { Voice } from "../shared/voice";
+
 export interface Me {
   id: string;
   username: string;
@@ -10,6 +12,8 @@ export interface Me {
   avatarPendingId: string | null;
   isAdmin: boolean;
   reviewCount: number;
+  /** null until they've picked lad mode or grown-up mode. */
+  voice: Voice | null;
 }
 
 export class ApiError extends Error {
