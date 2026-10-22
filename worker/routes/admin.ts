@@ -1,8 +1,11 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import type { ReviewQueue } from "../../shared/types";
+import type { DemoStatus, ReviewQueue } from "../../shared/types";
 import type { AppContext } from "../env";
+import { POINTS } from "../../shared/catalogue";
 import { currentUser } from "../lib/currentUser";
+import { buildDemoData, DEMO_GROUPS, DEMO_PHOTO_PREFIX, DEMO_PREFIX, demoUserId, offSearchUrl, wantsPhoto } from "../lib/demo";
+import { newInviteCode } from "../lib/groups";
 import { avatarKey } from "./avatars";
 
 // Photo approval. Every new check-in photo and profile picture waits here
@@ -105,5 +108,183 @@ admin.post("/avatars/:userId", async (c) => {
     await db.prepare("UPDATE users SET avatar_pending_id = NULL WHERE id = ?").bind(userId).run();
     await c.env.PHOTOS.delete(avatarKey(userId, user.avatar_pending_id));
   }
+  return c.json({ ok: true });
+});
+
+// Demo data ---------------------------------------------------------------
+
+/** Whether demo data is loaded, and which demo snacks still have no photo. */
+admin.get("/demo", async (c) => {
+  const db = c.env.DB;
+  const [counts, missing] = await Promise.all([
+    db
+      .prepare(
+        `SELECT (SELECT COUNT(*) FROM users WHERE id LIKE 'demo-%') AS users,
+                (SELECT COUNT(*) FROM checkins WHERE id LIKE 'demo-%') AS checkins,
+                (SELECT COUNT(*) FROM photos WHERE id LIKE 'demo-%') AS photos`,
+      )
+      .first<{ users: number; checkins: number; photos: number }>(),
+    db
+      .prepare(
+        `SELECT DISTINCT c.snack_id AS id FROM checkins c
+          WHERE c.id LIKE 'demo-%'
+            AND NOT EXISTS (SELECT 1 FROM photos p JOIN checkins pc ON pc.id = p.checkin_id
+                             WHERE pc.snack_id = c.snack_id AND p.id LIKE 'demo-%')
+          ORDER BY c.snack_id`,
+      )
+      .all<{ id: string }>(),
+  ]);
+  return c.json({
+    users: counts?.users ?? 0,
+    checkins: counts?.checkins ?? 0,
+    photos: counts?.photos ?? 0,
+    missingPhotos: missing.results.map((r) => r.id),
+  } satisfies DemoStatus);
+});
+
+// Add the demo people, their check-ins and two groups (with you in both).
+// Photos come afterwards, one snack per call (see below).
+admin.post("/demo", async (c) => {
+  const me = currentUser(c);
+  const db = c.env.DB;
+  const loaded = await db.prepare("SELECT 1 FROM users WHERE id LIKE 'demo-%' LIMIT 1").first();
+  if (loaded) return c.json({ error: "Demo data is already loaded. Remove it first." }, 409);
+
+  const time = Math.floor(Date.now() / 1000);
+  const data = buildDemoData(time);
+  const { results: taken } = await db
+    .prepare(`SELECT username FROM users WHERE username IN (${data.users.map(() => "?").join(", ")})`)
+    .bind(...data.users.map((u) => u.username))
+    .all<{ username: string }>();
+  if (taken.length) {
+    return c.json({ error: `Someone already uses ${taken.map((t) => "@" + t.username).join(", ")}.` }, 409);
+  }
+  const statements: D1PreparedStatement[] = [];
+  for (const u of data.users) {
+    // "!" is not a valid password hash, so nobody can sign in as a demo person
+    // (and quick sign-in can't claim them, because it only claims NULL).
+    statements.push(
+      db
+        .prepare(
+          `INSERT INTO users (id, username, email, password_hash, email_verified, created_at)
+           VALUES (?, ?, ?, '!', 1, ?)`,
+        )
+        .bind(u.id, u.username, `${u.username}@demo.snackchat.invalid`, time - 30 * 24 * 3600),
+    );
+  }
+  for (const ch of data.checkins) {
+    statements.push(
+      db
+        .prepare("INSERT INTO checkins (id, user_id, snack_id, overall, review, venue_text, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
+        .bind(ch.id, ch.userId, ch.snackId, ch.overall, ch.review, ch.venue, ch.createdAt),
+    );
+    for (const [attribute, value] of Object.entries(ch.attributes)) {
+      statements.push(
+        db.prepare("INSERT INTO checkin_attributes (checkin_id, attribute, value) VALUES (?, ?, ?)").bind(ch.id, attribute, value),
+      );
+    }
+    for (const line of ch.points) {
+      statements.push(
+        db
+          .prepare("INSERT INTO points_ledger (user_id, checkin_id, reason, points, created_at) VALUES (?, ?, ?, ?, ?)")
+          .bind(ch.userId, ch.id, line.reason, line.points, ch.createdAt),
+      );
+    }
+  }
+  for (const g of DEMO_GROUPS) {
+    statements.push(
+      db
+        .prepare(
+          `INSERT INTO groups (id, name, invite_code, scoring_mode, reset_period, created_by, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .bind(g.id, g.name, newInviteCode(), g.scoring, g.reset, demoUserId(g.owner), time - 20 * 24 * 3600),
+    );
+    const members: [string, string][] = [
+      [demoUserId(g.owner), "owner"],
+      ...g.members.map((m): [string, string] => [demoUserId(m), "member"]),
+      [me.id, "member"],
+    ];
+    for (const [userId, role] of members) {
+      statements.push(
+        db
+          .prepare("INSERT INTO group_members (group_id, user_id, role, joined_at) VALUES (?, ?, ?, ?)")
+          .bind(g.id, userId, role, time - 20 * 24 * 3600),
+      );
+    }
+  }
+  await db.batch(statements);
+  return c.json({ users: data.users.length, checkins: data.checkins.length }, 201);
+});
+
+// Find one snack's pack photo on Open Food Facts and add it to some of that
+// snack's demo check-ins. The page calls this once per snack, a few seconds
+// apart, because Open Food Facts allows about 10 searches a minute.
+admin.post("/demo/photos/:snackId", async (c) => {
+  const db = c.env.DB;
+  const snackId = c.req.param("snackId");
+  const snack = await db
+    .prepare("SELECT name, brand FROM snacks WHERE id = ?")
+    .bind(snackId)
+    .first<{ name: string; brand: string | null }>();
+  if (!snack) return c.json({ error: "Snack not found." }, 404);
+
+  const headers = { "User-Agent": "Snackchat/0.1 (demo data; github.com/jasoneroberts)" };
+  // A snack with no photo is fine, so any failure here just reports "not found".
+  let picture: { body: ArrayBuffer; type: string };
+  try {
+    const search = await fetch(offSearchUrl(snack.name, snack.brand), { headers });
+    if (!search.ok) return c.json({ found: false, reason: `search ${search.status}` });
+    const { products } = (await search.json()) as { products?: { image_front_url?: string }[] };
+    const imageUrl = products?.find((p) => p.image_front_url)?.image_front_url;
+    if (!imageUrl) return c.json({ found: false, reason: "no photo" });
+    const image = await fetch(imageUrl, { headers });
+    const type = image.headers.get("content-type") ?? "";
+    if (!image.ok || !type.startsWith("image/")) return c.json({ found: false, reason: `image ${image.status}` });
+    picture = { body: await image.arrayBuffer(), type };
+  } catch (err) {
+    console.error("demo photo fetch failed", err);
+    return c.json({ found: false, reason: "fetch failed" });
+  }
+  const key = `${DEMO_PHOTO_PREFIX}${snackId}`;
+  await c.env.PHOTOS.put(key, picture.body, { httpMetadata: { contentType: picture.type } });
+
+  const { results } = await db
+    .prepare(
+      `SELECT c.id, c.user_id, c.created_at FROM checkins c
+        WHERE c.snack_id = ? AND c.id LIKE 'demo-%'
+          AND NOT EXISTS (SELECT 1 FROM photos p WHERE p.checkin_id = c.id)`,
+    )
+    .bind(snackId)
+    .all<{ id: string; user_id: string; created_at: number }>();
+  const chosen = results.filter((r) => wantsPhoto(r.id));
+  // Always give at least one check-in the photo, so every snack gets a picture.
+  if (chosen.length === 0 && results.length > 0) chosen.push(results[0]);
+  const statements = chosen.flatMap((r) => [
+    db
+      .prepare("INSERT INTO photos (id, checkin_id, r2_key, status, created_at) VALUES (?, ?, ?, 'visible', ?)")
+      .bind(`${DEMO_PREFIX}p-${r.id}`, r.id, key, r.created_at),
+    db
+      .prepare("INSERT INTO points_ledger (user_id, checkin_id, reason, points, created_at) VALUES (?, ?, 'photo', ?, ?)")
+      .bind(r.user_id, r.id, POINTS.photo, r.created_at),
+  ]);
+  if (statements.length) await db.batch(statements);
+  return c.json({ found: true, added: chosen.length });
+});
+
+// Remove everything the demo added: photos in R2, groups, then the people
+// (their check-ins, points and memberships go with them).
+admin.delete("/demo", async (c) => {
+  const db = c.env.DB;
+  let cursor: string | undefined;
+  do {
+    const list = await c.env.PHOTOS.list({ prefix: DEMO_PHOTO_PREFIX, cursor });
+    if (list.objects.length) await c.env.PHOTOS.delete(list.objects.map((o) => o.key));
+    cursor = list.truncated ? list.cursor : undefined;
+  } while (cursor);
+  await db.batch([
+    db.prepare("DELETE FROM groups WHERE id LIKE 'demo-%'"),
+    db.prepare("DELETE FROM users WHERE id LIKE 'demo-%'"),
+  ]);
   return c.json({ ok: true });
 });
