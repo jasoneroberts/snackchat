@@ -9,6 +9,8 @@ export interface Env {
   APP_NAME: string;
   EMAIL_MODE: "log" | "resend";
   EMAIL_FROM: string;
+  // Internal development only: open the app as this user with no log-in.
+  DEV_LOGIN_AS?: string;
   TURNSTILE_SECRET_KEY?: string;
   RESEND_API_KEY?: string;
 }

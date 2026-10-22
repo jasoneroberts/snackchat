@@ -41,7 +41,10 @@
     // "log" prints verification links to the Worker logs (wrangler tail);
     // "resend" sends real email and needs RESEND_API_KEY and EMAIL_FROM.
     "EMAIL_MODE": "log",
-    "EMAIL_FROM": "Snackchat <hello@example.com>"
+    "EMAIL_FROM": "Snackchat <hello@example.com>",
+    // Internal development: everyone who opens the app is signed in as this
+    // user, with no log-in screen. Delete this line before sharing the app.
+    "DEV_LOGIN_AS": "jase"
   },
 
   "observability": { "enabled": true }
