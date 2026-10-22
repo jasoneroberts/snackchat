@@ -243,3 +243,10 @@ fieldset legend { padding: 0; margin-bottom: 6px; }
 .podium-block { width: 100%; border-radius: 12px 12px 4px 4px; display: flex; flex-direction: column; align-items: center; padding-top: 10px; }
 .podium-rank { font-size: 1.6rem; font-weight: 900; }
 .medal-ring { border: 3px solid transparent; border-radius: 14px; display: inline-flex; flex-shrink: 0; }
+
+/* Photo approvals */
+.count-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; margin-left: 6px; border-radius: 999px; background: var(--orange); color: #fff; font-size: 0.75rem; font-weight: 900; }
+.settings-link { color: var(--ink); text-decoration: none; }
+.review-photo { width: 100%; max-height: 60vh; object-fit: contain; border-radius: 12px; background: var(--line-soft); }
+.review-avatar { width: 88px; height: 88px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.review-text { margin: 6px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }

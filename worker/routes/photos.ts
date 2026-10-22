@@ -6,16 +6,18 @@ export const photos = new Hono<AppContext>();
 
 // Serve a check-in photo from R2. Photos never change once uploaded, so the
 // browser may keep them for a year. A private person's photos are only served
-// to them.
+// to them, and a photo waiting for approval only to them and to admins.
 photos.get("/:id", async (c) => {
   const viewer = currentUser(c);
   const row = await c.env.DB.prepare(
     `SELECT p.r2_key FROM photos p
        JOIN checkins ch ON ch.id = p.checkin_id
        JOIN users u ON u.id = ch.user_id
-      WHERE p.id = ? AND p.status = 'visible' AND (u.is_private = 0 OR u.id = ?)`,
+      WHERE p.id = ?1
+        AND ((p.status = 'visible' AND (u.is_private = 0 OR u.id = ?2))
+          OR (p.status = 'pending' AND (u.id = ?2 OR ?3 = 1)))`,
   )
-    .bind(c.req.param("id"), viewer.id)
+    .bind(c.req.param("id"), viewer.id, viewer.is_admin)
     .first<{ r2_key: string }>();
   if (!row) return c.json({ error: "Photo not found." }, 404);
 

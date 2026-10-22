@@ -20,6 +20,7 @@ interface Row {
   paired_with: string | null;
   attrs: string;
   photo_id: string | null;
+  photo_pending: number;
   points: number;
   created_at: number;
 }
@@ -40,11 +41,14 @@ export async function listCheckins(db: D1Database, f: FeedFilter): Promise<FeedI
               s.category_id, s.status AS snack_status, c.overall, c.review, c.venue_text, c.paired_with,
               c.created_at,
               (SELECT json_group_object(attribute, value) FROM checkin_attributes WHERE checkin_id = c.id) AS attrs,
-              (SELECT id FROM photos WHERE checkin_id = c.id AND status = 'visible' LIMIT 1) AS photo_id,
+              p.id AS photo_id, p.status = 'pending' AS photo_pending,
               (SELECT COALESCE(SUM(points), 0) FROM points_ledger WHERE checkin_id = c.id) AS points
          FROM checkins c
          JOIN users u ON u.id = c.user_id
          JOIN snacks s ON s.id = c.snack_id
+         -- A photo shows once approved; the person who posted it sees it while it waits.
+         LEFT JOIN photos p ON p.checkin_id = c.id
+               AND (p.status = 'visible' OR (p.status = 'pending' AND c.user_id = ?1))
         WHERE (u.is_private = 0 OR u.id = ?1)
           AND (?2 IS NULL OR c.snack_id = ?2)
           AND (?3 IS NULL OR c.user_id = ?3)
@@ -73,6 +77,7 @@ export async function listCheckins(db: D1Database, f: FeedFilter): Promise<FeedI
     pairedWith: r.paired_with,
     attributes: JSON.parse(r.attrs || "{}") as Record<string, number>,
     photoId: r.photo_id,
+    photoPending: r.photo_pending === 1,
     points: r.points,
     createdAt: r.created_at,
   }));

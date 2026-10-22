@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api, errorText, type Me } from "../api";
 import { Avatar } from "../components/Avatar";
+import { Link } from "../components/Link";
 import { squareAvatar } from "../lib/image";
 
 export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<void> }) {
@@ -34,7 +35,7 @@ export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<v
       <section className="card-plain stack">
         <h2 className="section-title">Profile picture</h2>
         <div className="avatar-edit">
-          <Avatar username={me.username} avatarId={me.avatarId} size={96} />
+          <Avatar username={me.username} avatarId={me.avatarPendingId ?? me.avatarId} size={96} />
           <div className="stack-sm">
             <div className="photo-buttons">
               {/* capture="user" opens the front camera on phones, for a selfie. */}
@@ -60,7 +61,7 @@ export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<v
                 Choose photo
               </label>
             </div>
-            {me.avatarId && (
+            {(me.avatarId || me.avatarPendingId) && (
               <button
                 type="button"
                 className="link-button small delete"
@@ -72,10 +73,23 @@ export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<v
             )}
           </div>
         </div>
-        <p className="small muted">We crop it to a square from the middle of the photo.</p>
+        {me.avatarPendingId ? (
+          <p className="small notice">
+            Waiting for approval. {me.avatarId ? "Everyone else sees your old picture" : "Everyone else sees your initials"} until then.
+          </p>
+        ) : (
+          <p className="small muted">We crop it to a square from the middle of the photo. New pictures are checked before others see them.</p>
+        )}
         {busy && <p className="small muted">Saving…</p>}
         {error && <p className="error">{error}</p>}
       </section>
+
+      {me.isAdmin && (
+        <Link href="/review" className="card-plain row settings-link">
+          <b className="grow">Photo approvals</b>
+          {me.reviewCount > 0 ? <span className="count-badge">{me.reviewCount}</span> : <span className="muted small">All clear</span>}
+        </Link>
+      )}
     </div>
   );
 }

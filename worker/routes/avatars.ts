@@ -10,15 +10,18 @@ export const avatars = new Hono<AppContext>();
 const MAX_AVATAR_BYTES = 1024 * 1024;
 const AVATAR_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
-const avatarKey = (userId: string, avatarId: string) => `avatars/${userId}/${avatarId}`;
+export const avatarKey = (userId: string, avatarId: string) => `avatars/${userId}/${avatarId}`;
 
 // Serve a profile picture to anyone signed in. Unlike check-in photos these
 // show for private people too, because they still appear on group boards.
+// One waiting for approval is only served to its owner and to admins.
 // Each upload gets a new id, so the browser can cache one for a year.
 avatars.get("/:id", async (c) => {
-  currentUser(c);
-  const row = await c.env.DB.prepare("SELECT id FROM users WHERE avatar_id = ?")
-    .bind(c.req.param("id"))
+  const viewer = currentUser(c);
+  const row = await c.env.DB.prepare(
+    "SELECT id FROM users WHERE avatar_id = ?1 OR (avatar_pending_id = ?1 AND (id = ?2 OR ?3 = 1))",
+  )
+    .bind(c.req.param("id"), viewer.id, viewer.is_admin)
     .first<{ id: string }>();
   if (!row) return c.json({ error: "Picture not found." }, 404);
 
@@ -34,7 +37,8 @@ avatars.get("/:id", async (c) => {
   });
 });
 
-// Set or replace your picture. It arrives as a form with one "photo" file.
+// Upload a new picture. It arrives as a form with one "photo" file and waits
+// for an admin (routes/admin.ts); everyone else keeps seeing the old one.
 avatars.post("/", async (c) => {
   const user = currentUser(c);
   const form = await c.req.parseBody().catch(() => null);
@@ -47,16 +51,18 @@ avatars.post("/", async (c) => {
   await c.env.PHOTOS.put(avatarKey(user.id, avatarId), photo.stream(), {
     httpMetadata: { contentType: photo.type },
   });
-  await c.env.DB.prepare("UPDATE users SET avatar_id = ? WHERE id = ?").bind(avatarId, user.id).run();
-  if (user.avatar_id) await c.env.PHOTOS.delete(avatarKey(user.id, user.avatar_id));
-  return c.json({ avatarId }, 201);
+  await c.env.DB.prepare("UPDATE users SET avatar_pending_id = ? WHERE id = ?").bind(avatarId, user.id).run();
+  // Replacing a picture that was still waiting? Its file isn't needed any more.
+  if (user.avatar_pending_id) await c.env.PHOTOS.delete(avatarKey(user.id, user.avatar_pending_id));
+  return c.json({ avatarPendingId: avatarId }, 201);
 });
 
-// Remove your picture and go back to initials.
+// Remove your picture (and any waiting one) and go back to initials.
 avatars.delete("/", async (c) => {
   const user = currentUser(c);
-  if (!user.avatar_id) return c.json({ ok: true });
-  await c.env.DB.prepare("UPDATE users SET avatar_id = NULL WHERE id = ?").bind(user.id).run();
-  await c.env.PHOTOS.delete(avatarKey(user.id, user.avatar_id));
+  const ids = [user.avatar_id, user.avatar_pending_id].filter((id): id is string => id !== null);
+  if (!ids.length) return c.json({ ok: true });
+  await c.env.DB.prepare("UPDATE users SET avatar_id = NULL, avatar_pending_id = NULL WHERE id = ?").bind(user.id).run();
+  await c.env.PHOTOS.delete(ids.map((id) => avatarKey(user.id, id)));
   return c.json({ ok: true });
 });

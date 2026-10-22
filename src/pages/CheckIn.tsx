@@ -6,7 +6,11 @@ import { SnackTile } from "../components/SnackTile";
 import { StarPicker } from "../components/Stars";
 import { shrinkPhoto } from "../lib/image";
 
-export function CheckIn({ onDone }: { onDone: (snackName: string, points: number) => void }) {
+export function CheckIn({
+  onDone,
+}: {
+  onDone: (snackName: string, points: number, withPhoto: boolean) => void;
+}) {
   const [snack, setSnack] = useState<SnackSummary | null>(null);
   const [overall, setOverall] = useState<number | null>(null);
   const [attrs, setAttrs] = useState<Record<string, number>>({});
@@ -55,7 +59,7 @@ export function CheckIn({ onDone }: { onDone: (snackName: string, points: number
     if (photo) form.set("photo", photo.blob, "photo.jpg");
     try {
       const res = await api<{ points: number }>("/checkins", { body: form });
-      onDone(snack.name, res.points);
+      onDone(snack.name, res.points, photo !== null);
     } catch (err) {
       setError(errorText(err));
       setBusy(false);
@@ -97,6 +101,7 @@ export function CheckIn({ onDone }: { onDone: (snackName: string, points: number
           ) : (
             <div className="photo-drop">
               <span>Add a photo (+{POINTS.photo} pts)</span>
+              <span className="small muted">Photos show to everyone once they're approved.</span>
               <div className="photo-buttons">
                 {/* capture="environment" opens the back camera straight away on phones. */}
                 <label className="button">
