@@ -3,6 +3,7 @@ import { HTTPException } from "hono/http-exception";
 import { csrf } from "hono/csrf";
 import type { AppContext } from "./env";
 import { getSessionUser } from "./lib/session";
+import { turnstileInTestMode } from "./lib/turnstile";
 import { auth } from "./routes/auth";
 
 const app = new Hono<AppContext>().basePath("/api");
@@ -26,7 +27,10 @@ app.get("/me", (c) => {
   });
 });
 
-app.get("/health", (c) => c.json({ ok: true }));
+// "turnstile": "test" means the bot check is not protecting anything yet.
+app.get("/health", (c) =>
+  c.json({ ok: true, turnstile: turnstileInTestMode(c.env.TURNSTILE_SECRET_KEY) ? "test" : "live" }),
+);
 
 app.notFound((c) => c.json({ error: "Not found" }, 404));
 app.onError((err, c) => {

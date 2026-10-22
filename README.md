@@ -52,6 +52,12 @@ Verification links appear in the terminal running `npm run dev`.
 
 ## Deploy
 
+Until step 1 is done the app runs in **Turnstile test mode**: the front end
+uses Cloudflare's always-pass test site key and the Worker falls back to the
+matching test secret, so sign-up works but the bot check blocks nothing.
+`/api/health` reports `"turnstile": "test"` while this is the case. Invite codes
+still gate sign-up. Do step 1 before inviting people beyond a few testers.
+
 1. Create a Turnstile widget in the Cloudflare dashboard (Turnstile, Add widget,
    hostname `snackchat.<your-subdomain>.workers.dev`). Put its **site key** in
    `.env` as `VITE_TURNSTILE_SITE_KEY`, and set the **secret key** on the Worker:

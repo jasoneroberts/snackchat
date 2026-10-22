@@ -9,7 +9,7 @@ export interface Env {
   APP_NAME: string;
   EMAIL_MODE: "log" | "resend";
   EMAIL_FROM: string;
-  TURNSTILE_SECRET_KEY: string;
+  TURNSTILE_SECRET_KEY?: string;
   RESEND_API_KEY?: string;
 }
 
