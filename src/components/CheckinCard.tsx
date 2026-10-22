@@ -1,9 +1,14 @@
+import { useCallback, useState } from "react";
 import { attributeLabel, attributesFor, getCategory } from "../../shared/catalogue";
 import type { FeedItem } from "../../shared/types";
 import { rating, timeAgo } from "../lib/format";
 import { Avatar } from "./Avatar";
 import { Link } from "./Link";
+import { PhotoViewer } from "./PhotoViewer";
+import { SnackTile } from "./SnackTile";
 import { Stars } from "./Stars";
+
+const THUMB = 64; // px
 
 export function CheckinCard({
   item,
@@ -16,13 +21,16 @@ export function CheckinCard({
 }) {
   const category = getCategory(item.snack.category);
   // Show sliders in their usual order rather than the order they were saved.
+  const [viewing, setViewing] = useState(false);
+  const close = useCallback(() => setViewing(false), []);
+  const photoUrl = `/api/photos/${item.photoId}`;
   const chips = attributesFor(item.snack.category).filter((a) => item.attributes[a.key] !== undefined);
 
   return (
     <article className="checkin">
       <header className="checkin-head">
         <Link href={`/u/${item.username}`} className="plain">
-          <Avatar username={item.username} />
+          <Avatar username={item.username} avatarId={item.avatarId} />
         </Link>
         <div className="grow">
           <div>
@@ -40,18 +48,25 @@ export function CheckinCard({
       </header>
 
       <div className="checkin-snack">
-        <Link href={`/snack/${item.snack.id}`} className="snack-link">
-          {item.snack.name}
-        </Link>
-        <div className="small muted">
-          {[item.snack.brand, category?.name].filter(Boolean).join(" · ")}
-          {item.snack.status === "pending" && <span className="tag">new, pending</span>}
+        {/* Their photo as a thumbnail that opens full screen, or the snack's brand tile. */}
+        {item.photoId ? (
+          <button type="button" className="checkin-thumb" aria-label={`Show photo of ${item.snack.name}`} onClick={() => setViewing(true)}>
+            <img src={photoUrl} alt="" loading="lazy" />
+          </button>
+        ) : (
+          <SnackTile snack={item.snack} size={THUMB} className="checkin-thumb" />
+        )}
+        <div className="grow">
+          <Link href={`/snack/${item.snack.id}`} className="snack-link">
+            {item.snack.name}
+          </Link>
+          <div className="small muted">
+            {[item.snack.brand, category?.name].filter(Boolean).join(" · ")}
+            {item.snack.status === "pending" && <span className="tag">new, pending</span>}
+          </div>
         </div>
       </div>
-
-      {item.photoId && (
-        <img className="checkin-photo" src={`/api/photos/${item.photoId}`} alt={`Photo of ${item.snack.name}`} loading="lazy" />
-      )}
+      {viewing && <PhotoViewer src={photoUrl} alt={`Photo of ${item.snack.name}`} onClose={close} />}
 
       <div className="checkin-rating">
         <Stars value={item.overall} />

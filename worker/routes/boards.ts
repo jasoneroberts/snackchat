@@ -49,7 +49,7 @@ boards.get("/people", async (c) => {
     : "points";
 
   const { results } = await c.env.DB.prepare(
-    `SELECT u.username,
+    `SELECT u.username, u.avatar_id AS avatarId,
             (SELECT COALESCE(SUM(pl.points), 0) FROM points_ledger pl
                JOIN checkins c ON c.id = pl.checkin_id JOIN snacks s ON s.id = c.snack_id
               WHERE pl.user_id = u.id AND pl.created_at >= ?2 AND ${TYPES}) AS points,

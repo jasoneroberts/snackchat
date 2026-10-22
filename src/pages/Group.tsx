@@ -79,7 +79,7 @@ export function Group({ id, me }: { id: string; me: Me }) {
               <li key={r.username} className={isMe ? "me" : undefined}>
                 <span className="board-rank">{r.rank}</span>
                 <Link href={`/u/${r.username}`} className="plain row grow">
-                  <Avatar username={r.username} size={34} />
+                  <Avatar username={r.username} avatarId={r.avatarId} size={34} />
                   <span className="grow">
                     <b>@{r.username}</b>
                     {isMe && <span className="muted"> (you)</span>}

@@ -1,6 +1,27 @@
 import { avatarColour, initials } from "../lib/format";
 
-export function Avatar({ username, size = 38 }: { username: string; size?: number }) {
+/** A person's profile picture, or their initials on a colour when they haven't set one. */
+export function Avatar({
+  username,
+  avatarId,
+  size = 38,
+}: {
+  username: string;
+  avatarId?: string | null;
+  size?: number;
+}) {
+  if (avatarId) {
+    return (
+      <img
+        className="avatar"
+        src={`/api/avatars/${avatarId}`}
+        alt=""
+        width={size}
+        height={size}
+        style={{ width: size, height: size }}
+      />
+    );
+  }
   return (
     <span
       className="avatar"

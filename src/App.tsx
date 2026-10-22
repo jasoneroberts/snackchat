@@ -15,6 +15,7 @@ import { Join } from "./pages/Join";
 import { LogIn } from "./pages/LogIn";
 import { NewGroup } from "./pages/NewGroup";
 import { Profile } from "./pages/Profile";
+import { Settings } from "./pages/Settings";
 import { SignUp } from "./pages/SignUp";
 import { Snack } from "./pages/Snack";
 
@@ -135,6 +136,9 @@ export function App() {
   } else if (joinCode) {
     title = "Join a group";
     page = <Join code={joinCode} />;
+  } else if (path === "/settings") {
+    title = "Settings";
+    page = <Settings me={me} onChanged={refreshMe} />;
   } else if (snackId) {
     page = <Snack id={snackId} me={me} />;
   } else if (profileName) {

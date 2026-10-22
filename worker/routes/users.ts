@@ -12,12 +12,12 @@ users.get("/:username", async (c) => {
   const db = c.env.DB;
 
   const user = await db
-    .prepare("SELECT id, username, country, is_private, created_at FROM users WHERE username = ?")
+    .prepare("SELECT id, username, avatar_id, country, is_private, created_at FROM users WHERE username = ?")
     .bind(c.req.param("username"))
-    .first<{ id: string; username: string; country: string; is_private: number; created_at: number }>();
+    .first<{ id: string; username: string; avatar_id: string | null; country: string; is_private: number; created_at: number }>();
   if (!user) return c.json({ error: "No one by that name." }, 404);
 
-  const profile = { username: user.username, country: user.country, joinedAt: user.created_at };
+  const profile = { username: user.username, avatarId: user.avatar_id, country: user.country, joinedAt: user.created_at };
   if (user.is_private && user.id !== viewer.id) return c.json({ profile, private: true });
 
   const [stats, points, taste, checkins] = await Promise.all([

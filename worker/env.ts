@@ -22,6 +22,7 @@ export interface User {
   email_verified: number;
   country: string;
   is_admin: number;
+  avatar_id: string | null;
 }
 
 export type AppContext = {

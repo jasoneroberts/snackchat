@@ -6,6 +6,7 @@ export interface Me {
   emailVerified: boolean;
   country: string;
   points: number;
+  avatarId: string | null;
 }
 
 export class ApiError extends Error {

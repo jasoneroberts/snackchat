@@ -5,6 +5,7 @@ import { api, errorText, type Me } from "../api";
 import { Avatar } from "../components/Avatar";
 import { Bars } from "../components/Bars";
 import { CheckinCard } from "../components/CheckinCard";
+import { Link } from "../components/Link";
 import { rating } from "../lib/format";
 
 export function Profile({
@@ -42,13 +43,18 @@ export function Profile({
   return (
     <div className="page stack">
       <div className="profile-head">
-        <Avatar username={data.profile.username} size={72} />
+        <Avatar username={data.profile.username} avatarId={data.profile.avatarId} size={72} />
         <div>
           <h1 className="title">@{data.profile.username}</h1>
           <div className="muted">
             {data.profile.country === "GB" ? "UK" : data.profile.country} · Snacking since {joined}
           </div>
         </div>
+        {isMe && (
+          <Link href="/settings" className="button secondary small profile-settings">
+            Settings
+          </Link>
+        )}
       </div>
 
       {data.private && <p className="muted">This profile is private.</p>}
