@@ -42,9 +42,11 @@
     // "resend" sends real email and needs RESEND_API_KEY and EMAIL_FROM.
     "EMAIL_MODE": "log",
     "EMAIL_FROM": "Snackchat <hello@example.com>",
-    // Internal development: everyone who opens the app is signed in as this
-    // user, with no log-in screen. Delete this line before sharing the app.
-    "DEV_LOGIN_AS": "jase"
+    // Testing with friends: sign in with a name and a PIN (plus the invite
+    // code the first time) instead of email and password. Set to "off" and
+    // add real Turnstile keys before a wider launch.
+    // (DEV_LOGIN_AS="<name>" signs everyone in as that user, for local work only.)
+    "QUICK_SIGNIN": "on"
   },
 
   "observability": { "enabled": true }
