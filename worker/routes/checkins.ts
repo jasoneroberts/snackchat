@@ -98,10 +98,12 @@ checkins.post("/", async (c) => {
         .bind(user.id, checkinId, line.reason, line.points, time),
     ),
   ];
+  // Photos wait for an admin to approve them (routes/admin.ts); the check-in
+  // and its points go live straight away.
   if (photoId && photoKey) {
     statements.push(
       db
-        .prepare("INSERT INTO photos (id, checkin_id, r2_key, created_at) VALUES (?, ?, ?, ?)")
+        .prepare("INSERT INTO photos (id, checkin_id, r2_key, status, created_at) VALUES (?, ?, ?, 'pending', ?)")
         .bind(photoId, checkinId, photoKey, time),
     );
   }

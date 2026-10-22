@@ -53,6 +53,7 @@ export function Profile({
         {isMe && (
           <Link href="/settings" className="button secondary small profile-settings">
             Settings
+            {me.reviewCount > 0 && <span className="count-badge">{me.reviewCount}</span>}
           </Link>
         )}
       </div>

@@ -5,6 +5,7 @@ import type { AppContext } from "./env";
 import { devLoginUsername, getDevUser } from "./lib/devLogin";
 import { getSessionUser } from "./lib/session";
 import { turnstileInTestMode } from "./lib/turnstile";
+import { admin, reviewCount } from "./routes/admin";
 import { auth } from "./routes/auth";
 import { avatars } from "./routes/avatars";
 import { boards } from "./routes/boards";
@@ -34,6 +35,7 @@ app.route("/snacks", snacks);
 app.route("/checkins", checkins);
 app.route("/photos", photos);
 app.route("/avatars", avatars);
+app.route("/admin", admin);
 app.route("/users", users);
 app.route("/groups", groups);
 app.route("/boards", boards);
@@ -52,6 +54,10 @@ app.get("/me", async (c) => {
       country: user.country,
       points: points?.total ?? 0,
       avatarId: user.avatar_id,
+      avatarPendingId: user.avatar_pending_id,
+      isAdmin: user.is_admin === 1,
+      // Admins see how many photos are waiting for them.
+      reviewCount: user.is_admin === 1 ? await reviewCount(c.env.DB) : 0,
     },
     devLogin: devLoginUsername(c.env) !== null,
   });

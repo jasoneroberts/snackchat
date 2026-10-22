@@ -23,6 +23,7 @@ export interface User {
   country: string;
   is_admin: number;
   avatar_id: string | null;
+  avatar_pending_id: string | null;
 }
 
 export type AppContext = {

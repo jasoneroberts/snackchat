@@ -11,6 +11,7 @@ export interface FeedItem {
   pairedWith: string | null;
   attributes: Record<string, number>;
   photoId: string | null;
+  photoPending: boolean; // only ever true on your own check-ins
   points: number;
   createdAt: number; // Unix seconds
 }
@@ -105,4 +106,9 @@ export interface SnackRow {
   avg: number;
   count: number;
   rank: number;
+}
+
+export interface ReviewQueue {
+  photos: { id: string; username: string; snackName: string; review: string | null; createdAt: number }[];
+  avatars: { userId: string; username: string; avatarId: string; currentId: string | null }[];
 }

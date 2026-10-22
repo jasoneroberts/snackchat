@@ -16,6 +16,7 @@ import { LogIn } from "./pages/LogIn";
 import { NewGroup } from "./pages/NewGroup";
 import { Profile } from "./pages/Profile";
 import { Settings } from "./pages/Settings";
+import { Review } from "./pages/Review";
 import { SignUp } from "./pages/SignUp";
 import { Snack } from "./pages/Snack";
 
@@ -109,8 +110,9 @@ export function App() {
     page = (
       <CheckIn
         key={window.location.search}
-        onDone={(name, points) => {
-          setToast({ title: points > 0 ? `+${points} pts` : "Checked in", body: `${name} is on the board.` });
+        onDone={(name, points, withPhoto) => {
+          const photoNote = withPhoto ? " Your photo shows once it's approved." : "";
+          setToast({ title: points > 0 ? `+${points} pts` : "Checked in", body: `${name} is on the board.${photoNote}` });
           refresh();
           navigate("/");
         }}
@@ -139,6 +141,9 @@ export function App() {
   } else if (path === "/settings") {
     title = "Settings";
     page = <Settings me={me} onChanged={refreshMe} />;
+  } else if (path === "/review" && me.isAdmin) {
+    title = "Approvals";
+    page = <Review onChanged={refresh} />;
   } else if (snackId) {
     page = <Snack id={snackId} me={me} />;
   } else if (profileName) {

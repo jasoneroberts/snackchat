@@ -63,6 +63,7 @@ export function CheckinCard({
           <div className="small muted">
             {[item.snack.brand, category?.name].filter(Boolean).join(" · ")}
             {item.snack.status === "pending" && <span className="tag">new, pending</span>}
+            {item.photoPending && <span className="tag">photo awaiting approval</span>}
           </div>
         </div>
       </div>

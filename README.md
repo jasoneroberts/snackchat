@@ -56,6 +56,8 @@ One Worker serves both: requests to `/api/*` run the Hono app in
 | `POST /api/groups/:id/leave` / `DELETE /api/groups/:id` | Leave, or delete if you're the owner. |
 | `GET /api/avatars/:id` | A profile picture (signed-in users). |
 | `POST /api/avatars` / `DELETE /api/avatars` | Set your profile picture (form field `photo`), or remove it. |
+| `GET /api/admin/queue` | Admins: check-in photos and profile pictures waiting for approval. |
+| `POST /api/admin/photos/:id` / `POST /api/admin/avatars/:userId` | Admins: `{ "action": "approve" }` or `"reject"`. Rejecting a check-in photo deletes it and takes back its photo points. |
 | `GET /api/boards/people` | Leaderboard of people. `scope` (global or a group id), `period` (week, month, all), `metric` (points, checkins, snacks). Top 50 plus you. |
 | `GET /api/boards/snacks` | Top rated snacks by weighted rating. `scope`, `period`, optional `category`. |
 

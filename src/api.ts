@@ -7,6 +7,9 @@ export interface Me {
   country: string;
   points: number;
   avatarId: string | null;
+  avatarPendingId: string | null;
+  isAdmin: boolean;
+  reviewCount: number;
 }
 
 export class ApiError extends Error {
