@@ -1,7 +1,9 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { csrf } from "hono/csrf";
+import { isVoice } from "../shared/voice";
 import type { AppContext } from "./env";
+import { currentUser } from "./lib/currentUser";
 import { devLoginUsername, getDevUser } from "./lib/devLogin";
 import { quickSignInOn } from "./lib/quickSignIn";
 import { getSessionUser } from "./lib/session";
@@ -56,6 +58,7 @@ app.get("/me", async (c) => {
       points: points?.total ?? 0,
       avatarId: user.avatar_id,
       avatarPendingId: user.avatar_pending_id,
+      voice: isVoice(user.voice) ? user.voice : null,
       isAdmin: user.is_admin === 1,
       // Admins see how many photos are waiting for them.
       reviewCount: user.is_admin === 1 ? await reviewCount(c.env.DB) : 0,
@@ -63,6 +66,15 @@ app.get("/me", async (c) => {
     devLogin: devLoginUsername(c.env) !== null,
     quickSignIn: quickSignInOn(c.env),
   });
+});
+
+// Pick lad mode or grown-up mode. Only words and colours change.
+app.put("/me/voice", async (c) => {
+  const user = currentUser(c);
+  const { voice } = await c.req.json<{ voice?: unknown }>().catch(() => ({ voice: undefined }));
+  if (!isVoice(voice)) return c.json({ error: "Pick grown-up or lad mode." }, 400);
+  await c.env.DB.prepare("UPDATE users SET voice = ? WHERE id = ?").bind(voice, user.id).run();
+  return c.json({ voice });
 });
 
 // "turnstile": "test" means the bot check is not protecting anything yet.

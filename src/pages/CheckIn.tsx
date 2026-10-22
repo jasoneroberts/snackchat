@@ -5,6 +5,7 @@ import { api, errorText } from "../api";
 import { SnackTile } from "../components/SnackTile";
 import { StarPicker } from "../components/Stars";
 import { shrinkPhoto } from "../lib/image";
+import { useVoice } from "../lib/voice";
 
 export function CheckIn({
   onDone,
@@ -20,6 +21,7 @@ export function CheckIn({
   const [photo, setPhoto] = useState<{ blob: Blob; url: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const { t } = useVoice();
 
   // Arriving from a snack page ("Check in this snack") picks that snack.
   useEffect(() => {
@@ -68,6 +70,8 @@ export function CheckIn({
 
   const category = snack ? getCategory(snack.category) : undefined;
   const reviewBonus = review.trim().length >= REVIEW_BONUS_CHARS;
+  // Kids snacks keep grown-up words, and crisps are "crunch" while chocolate is "munch".
+  const about = { category: snack?.category };
 
   return (
     <form className="page stack" onSubmit={submit}>
@@ -100,7 +104,7 @@ export function CheckIn({
             </div>
           ) : (
             <div className="photo-drop">
-              <span>Add a photo (+{POINTS.photo} pts)</span>
+              <span>{t("checkin.photo", { ...about, vars: { pts: POINTS.photo } })}</span>
               <span className="small muted">Photos show to everyone once they're approved.</span>
               <div className="photo-buttons">
                 {/* capture="environment" opens the back camera straight away on phones. */}
@@ -134,13 +138,13 @@ export function CheckIn({
           )}
 
           <div className="field">
-            <span className="field-label">Overall rating</span>
+            <span className="field-label">{t("checkin.rating", about)}</span>
             <StarPicker value={overall} onChange={setOverall} />
           </div>
 
           <div className="card-plain stack-sm">
             <div>
-              <div className="field-label">Describe it</div>
+              <div className="field-label">{t("checkin.describe", about)}</div>
               <div className="small muted">Optional. Spice 1 means mild, not bad.</div>
             </div>
             {attributesFor(snack.category).map((a) => {
@@ -170,13 +174,13 @@ export function CheckIn({
           </div>
 
           <label className="field">
-            <span className="field-label">Review</span>
+            <span className="field-label">{t("checkin.review", about)}</span>
             <textarea
               rows={3}
               maxLength={1000}
               value={review}
               onChange={(e) => setReview(e.target.value)}
-              placeholder={`How was it? (${REVIEW_BONUS_CHARS}+ characters earns +${POINTS.review} pts)`}
+              placeholder={t("checkin.reviewPlaceholder", { ...about, vars: { chars: REVIEW_BONUS_CHARS, pts: POINTS.review } })}
             />
             {review && !reviewBonus && (
               <span className="small muted">{REVIEW_BONUS_CHARS - review.trim().length} more characters for the bonus</span>
@@ -185,11 +189,11 @@ export function CheckIn({
 
           <div className="two-up">
             <label className="field">
-              <span className="field-label">Where?</span>
+              <span className="field-label">{t("checkin.where", about)}</span>
               <input value={venue} maxLength={80} onChange={(e) => setVenue(e.target.value)} placeholder="The Red Lion" />
             </label>
             <label className="field">
-              <span className="field-label">With?</span>
+              <span className="field-label">{t("checkin.with", about)}</span>
               <input
                 value={pairedWith}
                 maxLength={80}
@@ -205,7 +209,7 @@ export function CheckIn({
 
       {snack && (
         <button type="submit" className="button big" disabled={overall === null || busy}>
-          {busy ? "Checking in…" : overall === null ? "Give it a star rating" : "Check in"}
+          {busy ? t("checkin.busy", about) : overall === null ? t("checkin.needRating", about) : t("checkin.submit", about)}
         </button>
       )}
     </form>
@@ -218,6 +222,7 @@ function SnackSearch({ onPick }: { onPick: (s: SnackSummary) => void }) {
   const [results, setResults] = useState<SnackSummary[] | null>(null);
   const [adding, setAdding] = useState(false);
   const latest = useRef(0);
+  const { t } = useVoice();
 
   useEffect(() => {
     // Wait for a pause in typing, and ignore replies to older searches.
@@ -238,17 +243,17 @@ function SnackSearch({ onPick }: { onPick: (s: SnackSummary) => void }) {
   return (
     <div className="field">
       <label htmlFor="snack-search" className="field-label">
-        What are you snacking on?
+        {t("checkin.search")}
       </label>
       <input
         id="snack-search"
         type="search"
         autoComplete="off"
-        placeholder="Search snacks or brands"
+        placeholder={t("checkin.searchPlaceholder")}
         value={q}
         onChange={(e) => setQ(e.target.value)}
       />
-      {!q && results && results.length > 0 && <span className="small muted">Popular right now</span>}
+      {!q && results && results.length > 0 && <span className="small muted">{t("checkin.popular")}</span>}
       <div className="results">
         {results?.map((s) => (
           <button key={s.id} type="button" className="result" onClick={() => onPick(s)}>
@@ -264,7 +269,7 @@ function SnackSearch({ onPick }: { onPick: (s: SnackSummary) => void }) {
       </div>
       {q.trim().length >= 2 && (
         <button type="button" className="button secondary" onClick={() => setAdding(true)}>
-          Can't find it? Add “{q.trim()}”
+          {t("checkin.addMissing", { vars: { q: q.trim() } })}
         </button>
       )}
     </div>
@@ -285,6 +290,7 @@ function AddSnack({
   const [category, setCategory] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const { t } = useVoice();
 
   const add = async () => {
     setBusy(true);
@@ -301,7 +307,7 @@ function AddSnack({
   return (
     <div className="card-plain stack-sm">
       <div>
-        <div className="field-label">Add a new snack</div>
+        <div className="field-label">{t("checkin.addTitle")}</div>
         <div className="small muted">New snacks show as pending until they're confirmed, but you can check in straight away.</div>
       </div>
       <label className="field">

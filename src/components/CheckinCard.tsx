@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { attributeLabel, attributesFor, getCategory } from "../../shared/catalogue";
 import type { FeedItem } from "../../shared/types";
 import { rating, timeAgo } from "../lib/format";
+import { useVoice } from "../lib/voice";
 import { Avatar } from "./Avatar";
 import { Link } from "./Link";
 import { PhotoViewer } from "./PhotoViewer";
@@ -20,6 +21,8 @@ export function CheckinCard({
   onDelete?: (id: string) => void;
 }) {
   const category = getCategory(item.snack.category);
+  const { t } = useVoice();
+  const about = { category: item.snack.category };
   // Show sliders in their usual order rather than the order they were saved.
   const [viewing, setViewing] = useState(false);
   const close = useCallback(() => setViewing(false), []);
@@ -37,11 +40,11 @@ export function CheckinCard({
             <Link href={`/u/${item.username}`} className="plain">
               <b>@{item.username}</b>
             </Link>{" "}
-            <span className="muted">checked in</span>
+            <span className="muted">{t("card.checkedIn", about)}</span>
           </div>
           <div className="small muted">
             {timeAgo(item.createdAt)}
-            {item.venue && ` · at ${item.venue}`}
+            {item.venue && ` · ${t("card.at", { ...about, vars: { venue: item.venue } })}`}
           </div>
         </div>
         {item.points > 0 && <span className="points-badge">+{item.points} pts</span>}
@@ -75,7 +78,7 @@ export function CheckinCard({
       </div>
 
       {item.review && <p className="checkin-review">{item.review}</p>}
-      {item.pairedWith && <p className="small muted checkin-with">Paired with: {item.pairedWith}</p>}
+      {item.pairedWith && <p className="small muted checkin-with">{t("card.pairedWith", { ...about, vars: { with: item.pairedWith } })}</p>}
 
       {(chips.length > 0 || mine) && (
         <div className="chips">

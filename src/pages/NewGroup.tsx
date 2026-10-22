@@ -4,8 +4,10 @@ import type { ResetPeriod, ScoringMode } from "../../shared/types";
 import { api, errorText } from "../api";
 import { MODE_CHOICES, RESET_CHOICES } from "../lib/groups";
 import { navigate } from "../router";
+import { useVoice } from "../lib/voice";
 
 export function NewGroup() {
+  const { t } = useVoice();
   const [name, setName] = useState("");
   const [scoringMode, setScoringMode] = useState<ScoringMode>("points");
   const [resetPeriod, setResetPeriod] = useState<ResetPeriod>("weekly");
@@ -100,7 +102,7 @@ export function NewGroup() {
 
       {error && <p className="error">{error}</p>}
       <button type="submit" className="button big" disabled={busy || name.trim().length < 2}>
-        {busy ? "Creating…" : "Create group"}
+        {busy ? "Creating…" : t("groups.create")}
       </button>
     </form>
   );

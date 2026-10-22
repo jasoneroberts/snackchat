@@ -6,6 +6,7 @@ import { Avatar } from "../components/Avatar";
 import { Link } from "../components/Link";
 import { SnackTile } from "../components/SnackTile";
 import { rating } from "../lib/format";
+import { useVoice } from "../lib/voice";
 
 type Kind = "people" | "snacks";
 
@@ -46,6 +47,7 @@ export function Boards({ me }: { me: Me }) {
   const [people, setPeople] = useState<PeopleRow[] | null>(null);
   const [snacks, setSnacks] = useState<SnackRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useVoice();
 
   const update = (change: Partial<View>) => {
     const next = { ...view, ...change };
@@ -92,7 +94,7 @@ export function Boards({ me }: { me: Me }) {
       <div className="segmented dark">
         {(["people", "snacks"] as Kind[]).map((k) => (
           <button key={k} type="button" className={view.kind === k ? "on" : ""} aria-pressed={view.kind === k} onClick={() => update({ kind: k })}>
-            {k === "people" ? "People" : "Snacks"}
+            {k === "people" ? t("boards.people") : t("boards.snacks")}
           </button>
         ))}
       </div>
@@ -120,7 +122,7 @@ export function Boards({ me }: { me: Me }) {
         <div className="row wrap">
           {METRICS.map((m) => (
             <button key={m.id} type="button" className={view.metric === m.id ? "pill on" : "pill"} onClick={() => update({ metric: m.id })}>
-              {m.label}
+              {m.id === "points" ? t("boards.points") : m.label}
             </button>
           ))}
         </div>
@@ -154,13 +156,14 @@ const PODIUM_COLOURS = ["#F7C68E", "#E6E1D8", "#E9C2A0"]; // gold, silver, bronz
 const PODIUM_HEIGHTS = [120, 92, 72];
 
 function PeopleBoard({ rows, me, unit }: { rows: PeopleRow[] | null; me: Me; unit: string }) {
+  const { t } = useVoice();
   if (!rows) return <p className="muted">Loading…</p>;
   if (rows.every((r) => r.checkins === 0)) {
     return (
       <div className="empty">
-        <p className="muted">No check-ins yet for this board.</p>
+        <p className="muted">{t("boards.empty")}</p>
         <Link href="/checkin" className="button">
-          Check in a snack
+          {t("boards.emptyButton")}
         </Link>
       </div>
     );
@@ -199,7 +202,7 @@ function PeopleBoard({ rows, me, unit }: { rows: PeopleRow[] | null; me: Me; uni
                 <Avatar username={r.username} avatarId={r.avatarId} size={34} />
                 <span className="grow">
                   <b>@{r.username}</b>
-                  {r.username === me.username && <span className="muted"> (you)</span>}
+                  {r.username === me.username && <span className="muted"> {t("boards.you")}</span>}
                   <span className="small muted block">
                     {r.checkins} check-in{r.checkins === 1 ? "" : "s"} · {r.snacks} snack{r.snacks === 1 ? "" : "s"}
                   </span>
@@ -219,13 +222,14 @@ function PeopleBoard({ rows, me, unit }: { rows: PeopleRow[] | null; me: Me; uni
 const MEDALS = ["#E0A526", "#A8A29A", "#B87333"];
 
 function SnackBoard({ rows }: { rows: SnackRow[] | null }) {
+  const { t } = useVoice();
   if (!rows) return <p className="muted">Loading…</p>;
   if (rows.length === 0) {
     return (
       <div className="empty">
-        <p className="muted">No rated snacks here yet.</p>
+        <p className="muted">{t("boards.noSnacks")}</p>
         <Link href="/checkin" className="button">
-          Rate one now
+          {t("boards.rateOne")}
         </Link>
       </div>
     );

@@ -5,8 +5,10 @@ import { GroupBadge } from "../components/GroupBadge";
 import { Link } from "../components/Link";
 import { modeOf, ordinal, resetOf } from "../lib/groups";
 import { navigate } from "../router";
+import { useVoice } from "../lib/voice";
 
 export function Groups() {
+  const { t } = useVoice();
   const [groups, setGroups] = useState<GroupCard[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [code, setCode] = useState("");
@@ -32,17 +34,17 @@ export function Groups() {
   return (
     <div className="page stack">
       <div>
-        <h1 className="title">Your groups</h1>
+        <h1 className="title">{t("groups.title")}</h1>
         <p className="muted no-margin">Private leagues for your mates, family or office. Anyone can start one and invite people.</p>
       </div>
 
       <Link href="/groups/new" className="button big">
-        + Start a group
+        {t("groups.start")}
       </Link>
 
       {error && <p className="error">{error}</p>}
       {groups === null && !error && <p className="muted">Loading…</p>}
-      {groups?.length === 0 && <p className="muted">You're not in any groups yet.</p>}
+      {groups?.length === 0 && <p className="muted">{t("groups.none")}</p>}
       {groups?.map((g) => (
         <Link key={g.id} href={`/groups/${g.id}`} className="list-card">
           <GroupBadge name={g.name} />

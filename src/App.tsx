@@ -20,6 +20,9 @@ import { Settings } from "./pages/Settings";
 import { Review } from "./pages/Review";
 import { SignUp } from "./pages/SignUp";
 import { Snack } from "./pages/Snack";
+import { PickVoice } from "./pages/PickVoice";
+import { VoiceProvider } from "./lib/voice";
+import { line } from "../shared/voice";
 
 interface Toast {
   title: string;
@@ -45,6 +48,12 @@ export function App() {
   useEffect(() => {
     refreshMe().catch(() => setMe(null));
   }, [refreshMe]);
+
+  // Lad mode's colours come from CSS keyed on <html data-voice="lad">.
+  const voice = me?.voice ?? "grownup";
+  useEffect(() => {
+    document.documentElement.dataset.voice = voice;
+  }, [voice]);
 
   useEffect(() => {
     if (!toast) return;
@@ -105,6 +114,23 @@ export function App() {
     );
   }
 
+  // Signed in but not picked lad or grown-up mode yet: ask before anything else.
+  if (me.voice === null) {
+    return (
+      <div className="app">
+        <header className="topbar">
+          <span className="brand">
+            <img src="/logo.svg" alt="" width={32} height={32} />
+            <span>snackchat</span>
+          </span>
+        </header>
+        <main>
+          <PickVoice me={me} onChanged={refreshMe} />
+        </main>
+      </div>
+    );
+  }
+
   // Signed in: the app shell with the bottom tab bar.
   const snackId = matchPath("/snack/", path);
   const groupId = path === "/groups/new" ? null : matchPath("/groups/", path);
@@ -120,13 +146,14 @@ export function App() {
     page = <Feed me={me} onChanged={refresh} />;
   } else if (path === "/checkin") {
     tab = "/checkin";
-    title = "Check in";
+    title = line(voice, "title.checkin");
     page = (
       <CheckIn
         key={window.location.search}
         onDone={(name, points, withPhoto) => {
           const photoNote = withPhoto ? " Your photo shows once it's approved." : "";
-          setToast({ title: points > 0 ? `+${points} pts` : "Checked in", body: `${name} is on the board.${photoNote}` });
+          const checkedIn = line(voice, "toast.checkedIn");
+          setToast({ title: points > 0 ? `+${points} pts` : checkedIn, body: `${line(voice, "toast.onBoard", { vars: { name } })}${photoNote}` });
           refresh();
           navigate("/");
         }}
@@ -134,20 +161,20 @@ export function App() {
     );
   } else if (path === "/boards") {
     tab = "/boards";
-    title = "Boards";
+    title = line(voice, "title.boards");
     page = <Boards me={me} />;
   } else if (path === "/groups") {
     tab = "/groups";
-    title = "Groups";
+    title = line(voice, "title.groups");
     page = <Groups />;
   } else if (path === "/groups/new") {
-    title = "New group";
+    title = line(voice, "title.newGroup");
     page = <NewGroup />;
   } else if (inviteGroupId) {
     title = "Invite";
     page = <Invite id={inviteGroupId} />;
   } else if (groupId) {
-    title = "Group";
+    title = line(voice, "title.group");
     page = <Group id={groupId} me={me} />;
   } else if (joinCode) {
     title = "Join a group";
@@ -169,56 +196,58 @@ export function App() {
   const showBack = !tab;
 
   return (
-    <div className="shell">
-      <header className="appbar">
-        <div className="row">
-          {showBack && (
-            <button type="button" className="icon-button" aria-label="Back" onClick={() => history.back()}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"
+    <VoiceProvider voice={voice}>
+      <div className="shell">
+        <header className="appbar">
+          <div className="row">
+            {showBack && (
+              <button type="button" className="icon-button" aria-label="Back" onClick={() => history.back()}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"
+                  strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M15 18l-6-6 6-6" />
+                </svg>
+              </button>
+            )}
+            <Link href="/" className="brand">
+              <img src="/logo.svg" alt="" width={32} height={32} />
+              <span>{title}</span>
+            </Link>
+          </div>
+          <div className="row">
+            {devLogin && (
+              <span className="dev-badge" title="Dev login is on: everyone with the link is signed in as this user">
+                dev
+              </span>
+            )}
+            <Link href="/me" className="points-pill">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--orange-dark)" strokeWidth="2.4"
                 strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M15 18l-6-6 6-6" />
+                <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" />
+                <path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3" />
               </svg>
-            </button>
-          )}
-          <Link href="/" className="brand">
-            <img src="/logo.svg" alt="" width={32} height={32} />
-            <span>{title}</span>
-          </Link>
-        </div>
-        <div className="row">
-          {devLogin && (
-            <span className="dev-badge" title="Dev login is on: everyone with the link is signed in as this user">
-              dev
+              {me.points} pts
+            </Link>
+          </div>
+        </header>
+        <main className="shell-main">
+          <VerifyNotice me={me} />
+          {page}
+        </main>
+        {toast && (
+          <div className="toast" role="status">
+            <span className="grow">
+              <b>{toast.title}</b>
+              <br />
+              {toast.body}
             </span>
-          )}
-          <Link href="/me" className="points-pill">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--orange-dark)" strokeWidth="2.4"
-              strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" />
-              <path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3" />
-            </svg>
-            {me.points} pts
-          </Link>
-        </div>
-      </header>
-      <main className="shell-main">
-        <VerifyNotice me={me} />
-        {page}
-      </main>
-      {toast && (
-        <div className="toast" role="status">
-          <span className="grow">
-            <b>{toast.title}</b>
-            <br />
-            {toast.body}
-          </span>
-          <button type="button" className="icon-button" aria-label="Dismiss" onClick={() => setToast(null)}>
-            ×
-          </button>
-        </div>
-      )}
-      <TabBar active={tab} />
-    </div>
+            <button type="button" className="icon-button" aria-label="Dismiss" onClick={() => setToast(null)}>
+              ×
+            </button>
+          </div>
+        )}
+        <TabBar active={tab} />
+      </div>
+    </VoiceProvider>
   );
 }
 
