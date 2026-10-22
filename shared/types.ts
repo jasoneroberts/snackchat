@@ -41,3 +41,46 @@ export interface ProfilePage {
   taste?: Record<string, number>;
   checkins?: FeedItem[];
 }
+
+export type ScoringMode = "points" | "unique" | "checkins";
+export type ResetPeriod = "weekly" | "monthly" | "never";
+
+export interface GroupCard {
+  id: string;
+  name: string;
+  members: number;
+  scoringMode: ScoringMode;
+  resetPeriod: ResetPeriod;
+  myRank: number | null;
+}
+
+export interface BoardRow {
+  username: string;
+  value: number;
+  rank: number;
+  role: "owner" | "admin" | "member";
+}
+
+export interface GroupPage {
+  group: {
+    id: string;
+    name: string;
+    inviteCode: string;
+    scoringMode: ScoringMode;
+    resetPeriod: ResetPeriod;
+    categories: string[] | null;
+    createdAt: number;
+  };
+  myRole: "owner" | "admin" | "member";
+  periodEnd: number | null; // Unix seconds, null when the board never resets
+  board: BoardRow[];
+  favourite: (SnackSummary & { avg: number; checkins: number }) | null;
+}
+
+export interface GroupPreview {
+  id: string;
+  name: string;
+  members: number;
+  isMember: boolean;
+  full: boolean;
+}

@@ -48,6 +48,17 @@ One Worker serves both: requests to `/api/*` run the Hono app in
 | `GET /api/photos/:id` | A check-in photo from R2. |
 | `GET /api/users/:username` | Profile: stats, taste profile, recent check-ins. |
 
+| `GET /api/groups` | Your groups with your rank in each. |
+| `POST /api/groups` | Start a group (name, scoring mode, reset period, snack types). |
+| `GET /api/groups/join/:code` | Preview the group an invite code belongs to. |
+| `POST /api/groups/join` | Join with a code (rate limited). |
+| `GET /api/groups/:id` | Members only: settings, invite code, this period's board, favourite snack. |
+| `POST /api/groups/:id/leave` / `DELETE /api/groups/:id` | Leave, or delete if you're the owner. |
+
+Group boards are worked out on request from check-ins and the points ledger,
+so changing a group's settings never loses history. Weekly boards run from
+Monday 00:00 UTC, monthly ones from the 1st.
+
 Points: 10 for a snack you haven't checked in before, 2 for a repeat, +3 for a
 photo, +2 for a review of 50+ characters, at most 100 a day (UTC). The rules are
 in `shared/catalogue.ts` and `worker/lib/checkin.ts`.

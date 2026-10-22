@@ -7,6 +7,7 @@ import { getSessionUser } from "./lib/session";
 import { turnstileInTestMode } from "./lib/turnstile";
 import { auth } from "./routes/auth";
 import { checkins } from "./routes/checkins";
+import { groups } from "./routes/groups";
 import { photos } from "./routes/photos";
 import { snacks } from "./routes/snacks";
 import { users } from "./routes/users";
@@ -31,6 +32,7 @@ app.route("/snacks", snacks);
 app.route("/checkins", checkins);
 app.route("/photos", photos);
 app.route("/users", users);
+app.route("/groups", groups);
 
 app.get("/me", async (c) => {
   const user = c.get("user");
