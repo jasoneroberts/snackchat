@@ -1,0 +1,163 @@
+// Demo data so the live app has something to look at before friends join.
+// Every row it makes has an id starting "demo-", and every photo lives in R2
+// under "demo/", so it can all be removed again in one go (routes/admin.ts).
+
+import { POINTS, REVIEW_BONUS_CHARS } from "../../shared/catalogue";
+
+export const DEMO_PREFIX = "demo-";
+export const DEMO_PHOTO_PREFIX = "demo/";
+
+interface DemoPerson {
+  username: string;
+  favourites: string[]; // snack ids (seed-*) they check in most
+  generous: number; // added to every rating they give, -0.5 to +0.5
+}
+
+const PEOPLE: DemoPerson[] = [
+  { username: "crisp_queen", generous: 0.25, favourites: ["seed-walkers-cheese-onion", "seed-mccoys-flame-grilled-steak", "seed-kettle-sea-salt-balsamic", "seed-tyrrells-sea-salted", "seed-pipers-anglesey-sea-salt", "seed-seabrook-original"] },
+  { username: "pub_grub_pete", generous: 0, favourites: ["seed-scampi-fries", "seed-bacon-fries", "seed-pork-scratchings", "seed-dry-roasted-peanuts", "seed-mccoys-salt-malt-vinegar"] },
+  { username: "choc_o_clock", generous: 0.5, favourites: ["seed-dairy-milk", "seed-maltesers", "seed-twix", "seed-chocolate-hobnobs", "seed-jaffa-cakes"] },
+  { username: "chilli_charlie", generous: -0.25, favourites: ["seed-takis-fuego", "seed-doritos-chilli-heatwave", "seed-monster-munch-flamin-hot", "seed-nik-naks-nice-spicy", "seed-wasabi-peas"] },
+  { username: "nana_biscuit", generous: 0.25, favourites: ["seed-jaffa-cakes", "seed-chocolate-hobnobs", "seed-dairy-milk", "seed-walkers-ready-salted"] },
+  { username: "vinegar_vic", generous: -0.5, favourites: ["seed-walkers-salt-vinegar", "seed-mccoys-salt-malt-vinegar", "seed-chipsticks-salt-vinegar", "seed-discos-salt-vinegar", "seed-pringles-salt-vinegar"] },
+  { username: "sweet_tooth_sal", generous: 0.25, favourites: ["seed-starmix", "seed-tangfastics", "seed-fruit-pastilles", "seed-maltesers"] },
+  { username: "gym_snacker", generous: -0.25, favourites: ["seed-nakd-cocoa-orange", "seed-graze-protein-oat-bites", "seed-salted-pistachios", "seed-popchips-sea-salt"] },
+];
+
+// How good each snack "really" is, before each person's own taste.
+const QUALITY: Record<string, number> = {
+  "seed-walkers-cheese-onion": 4, "seed-mccoys-flame-grilled-steak": 4.25, "seed-kettle-sea-salt-balsamic": 4,
+  "seed-tyrrells-sea-salted": 3.75, "seed-pipers-anglesey-sea-salt": 4.25, "seed-seabrook-original": 3.5,
+  "seed-scampi-fries": 4, "seed-bacon-fries": 3.75, "seed-pork-scratchings": 3.5, "seed-dry-roasted-peanuts": 3.75,
+  "seed-mccoys-salt-malt-vinegar": 4.25, "seed-dairy-milk": 4, "seed-maltesers": 4.25, "seed-twix": 3.75,
+  "seed-chocolate-hobnobs": 4.5, "seed-jaffa-cakes": 4.25, "seed-takis-fuego": 3.75, "seed-doritos-chilli-heatwave": 3.5,
+  "seed-monster-munch-flamin-hot": 3.75, "seed-nik-naks-nice-spicy": 4, "seed-wasabi-peas": 3.25,
+  "seed-walkers-ready-salted": 3.5, "seed-walkers-salt-vinegar": 3.75, "seed-chipsticks-salt-vinegar": 3.5,
+  "seed-discos-salt-vinegar": 3.75, "seed-pringles-salt-vinegar": 3.25, "seed-starmix": 3.75, "seed-tangfastics": 4,
+  "seed-fruit-pastilles": 3.75, "seed-nakd-cocoa-orange": 3.25, "seed-graze-protein-oat-bites": 3,
+  "seed-salted-pistachios": 4, "seed-popchips-sea-salt": 3.25,
+};
+
+const REVIEWS = [
+  "Proper crunch, would buy again.",
+  "Bit too salty for me but I still finished the bag.",
+  "Absolute classic. Can't go wrong with these.",
+  "Shared these at the pub and they were gone in about four minutes.",
+  "Flavour hits hard then fades. Decent value for the price.",
+  "Not my favourite, a bit bland compared to the others.",
+  "Perfect with a cold drink on a Friday.",
+  "Too moreish. Dangerous to have in the house.",
+  "Kids loved them, I thought they were alright.",
+  "Better than I remembered from school.",
+  null,
+  null,
+  null,
+];
+
+const VENUES = ["The Red Lion", "Desk", "Train home", "Sofa", "Five-a-side", "Mum's", null, null, null];
+
+/** A small seeded random number generator, so the demo data is the same every time. */
+function rng(seed: number) {
+  let s = seed >>> 0;
+  return () => {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    return s / 2 ** 32;
+  };
+}
+
+const quarter = (n: number) => Math.min(5, Math.max(0.25, Math.round(n * 4) / 4));
+
+export interface DemoCheckin {
+  id: string;
+  userId: string;
+  snackId: string;
+  overall: number;
+  review: string | null;
+  venue: string | null;
+  attributes: Record<string, number>;
+  createdAt: number;
+  points: { reason: string; points: number }[];
+}
+
+export interface DemoData {
+  users: { id: string; username: string }[];
+  checkins: DemoCheckin[];
+}
+
+export const demoUserId = (username: string) => `${DEMO_PREFIX}${username}`;
+
+/** Build the demo people and three weeks of their check-ins, ending at `now`. */
+export function buildDemoData(now: number, seed = 7): DemoData {
+  const random = rng(seed);
+  const pick = <T>(list: T[]) => list[Math.floor(random() * list.length)];
+  const allSnacks = Object.keys(QUALITY);
+  const checkins: DemoCheckin[] = [];
+
+  PEOPLE.forEach((person, p) => {
+    const seen = new Set<string>();
+    const count = 5 + Math.floor(random() * 6); // 5 to 10 check-ins each
+    for (let i = 0; i < count; i++) {
+      // Mostly their favourites, sometimes something else.
+      const snackId = random() < 0.75 ? pick(person.favourites) : pick(allSnacks);
+      const overall = quarter(QUALITY[snackId] + person.generous + (random() - 0.5));
+      const review = pick(REVIEWS);
+      // Squaring bunches check-ins towards the last few days, so the feed looks lively.
+      const createdAt = now - Math.floor(random() ** 2 * 21 * 24 * 3600) - 600;
+      const points = [
+        seen.has(snackId) ? { reason: "repeat", points: POINTS.repeat } : { reason: "new_snack", points: POINTS.newSnack },
+      ];
+      if (review && review.length >= REVIEW_BONUS_CHARS) points.push({ reason: "review", points: POINTS.review });
+      seen.add(snackId);
+      checkins.push({
+        id: `${DEMO_PREFIX}c${p}-${i}`,
+        userId: demoUserId(person.username),
+        snackId,
+        overall,
+        review,
+        venue: pick(VENUES),
+        attributes: {
+          flavour: 2 + Math.floor(random() * 4),
+          value: 1 + Math.floor(random() * 5),
+          more: 2 + Math.floor(random() * 4),
+        },
+        createdAt,
+        points,
+      });
+    }
+  });
+
+  return {
+    users: PEOPLE.map((p) => ({ id: demoUserId(p.username), username: p.username })),
+    checkins,
+  };
+}
+
+export const DEMO_GROUPS = [
+  { id: `${DEMO_PREFIX}g-crisp-club`, name: "Office Crisp Club", scoring: "points", reset: "weekly", owner: "crisp_queen",
+    members: ["pub_grub_pete", "vinegar_vic", "chilli_charlie", "gym_snacker"] },
+  { id: `${DEMO_PREFIX}g-pub-quiz`, name: "Pub Quiz Lot", scoring: "unique", reset: "monthly", owner: "pub_grub_pete",
+    members: ["choc_o_clock", "nana_biscuit", "sweet_tooth_sal", "crisp_queen"] },
+] as const;
+
+/** Every other check-in of a snack gets the photo, so not every card looks the same. */
+export const wantsPhoto = (checkinId: string) => checkinId.charCodeAt(checkinId.length - 1) % 2 === 0;
+
+/**
+ * The Open Food Facts search for a snack's pack photo. Their pictures are
+ * shared under CC BY-SA, which is fine for demo data we delete later.
+ */
+export function offSearchUrl(name: string, brand: string | null): string {
+  const terms = `${brand ?? ""} ${name}`.trim();
+  const params = new URLSearchParams({
+    search_terms: terms,
+    search_simple: "1",
+    action: "process",
+    json: "1",
+    page_size: "5",
+    fields: "product_name,brands,image_front_url",
+    tagtype_0: "countries",
+    tag_contains_0: "contains",
+    tag_0: "united-kingdom",
+  });
+  return `https://world.openfoodfacts.org/cgi/search.pl?${params}`;
+}

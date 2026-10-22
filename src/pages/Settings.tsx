@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api, errorText, type Me } from "../api";
 import { Avatar } from "../components/Avatar";
+import { DemoData } from "../components/DemoData";
 import { Link } from "../components/Link";
 import { VoiceChoice } from "../components/VoiceChoice";
 import { squareAvatar } from "../lib/image";
@@ -92,6 +93,8 @@ export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<v
         </div>
         <VoiceChoice current={me.voice} onSaved={onChanged} />
       </section>
+
+      {me.isAdmin && <DemoData onChanged={() => void onChanged()} />}
 
       {me.isAdmin && (
         <Link href="/review" className="card-plain row settings-link">

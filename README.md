@@ -59,6 +59,8 @@ One Worker serves both: requests to `/api/*` run the Hono app in
 | `POST /api/auth/quick` | Quick sign-in when `QUICK_SIGNIN` is "on": `{ username, pin, inviteCode }`. A new name needs the invite code; after that, name and PIN. |
 | `GET /api/admin/queue` | Admins: check-in photos and profile pictures waiting for approval. |
 | `POST /api/admin/photos/:id` / `POST /api/admin/avatars/:userId` | Admins: `{ "action": "approve" }` or `"reject"`. Rejecting a check-in photo deletes it and takes back its photo points. |
+| `GET` / `POST` / `DELETE /api/admin/demo` | Admins: demo data status, load it (8 people, check-ins, 2 groups), or remove it all. Everything demo has an id starting `demo-`. |
+| `POST /api/admin/demo/photos/:snackId` | Admins: fetch one snack's pack photo from Open Food Facts for the demo check-ins. |
 | `GET /api/boards/people` | Leaderboard of people. `scope` (global or a group id), `period` (week, month, all), `metric` (points, checkins, snacks). Top 50 plus you. |
 | `GET /api/boards/snacks` | Top rated snacks by weighted rating. `scope`, `period`, optional `category`. |
 

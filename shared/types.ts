@@ -112,3 +112,10 @@ export interface ReviewQueue {
   photos: { id: string; username: string; snackName: string; review: string | null; createdAt: number }[];
   avatars: { userId: string; username: string; avatarId: string; currentId: string | null }[];
 }
+
+export interface DemoStatus {
+  users: number;
+  checkins: number;
+  photos: number;
+  missingPhotos: string[]; // demo snacks with no photo yet
+}
