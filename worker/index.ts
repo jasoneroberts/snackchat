@@ -6,6 +6,10 @@ import { devLoginUsername, getDevUser } from "./lib/devLogin";
 import { getSessionUser } from "./lib/session";
 import { turnstileInTestMode } from "./lib/turnstile";
 import { auth } from "./routes/auth";
+import { checkins } from "./routes/checkins";
+import { photos } from "./routes/photos";
+import { snacks } from "./routes/snacks";
+import { users } from "./routes/users";
 
 const app = new Hono<AppContext>().basePath("/api");
 
@@ -23,12 +27,25 @@ app.use("*", async (c, next) => {
 });
 
 app.route("/auth", auth);
+app.route("/snacks", snacks);
+app.route("/checkins", checkins);
+app.route("/photos", photos);
+app.route("/users", users);
 
-app.get("/me", (c) => {
+app.get("/me", async (c) => {
   const user = c.get("user");
   if (!user) return c.json({ user: null });
+  const points = await c.env.DB.prepare("SELECT COALESCE(SUM(points), 0) AS total FROM points_ledger WHERE user_id = ?")
+    .bind(user.id)
+    .first<{ total: number }>();
   return c.json({
-    user: { id: user.id, username: user.username, emailVerified: user.email_verified === 1, country: user.country },
+    user: {
+      id: user.id,
+      username: user.username,
+      emailVerified: user.email_verified === 1,
+      country: user.country,
+      points: points?.total ?? 0,
+    },
     devLogin: devLoginUsername(c.env) !== null,
   });
 });

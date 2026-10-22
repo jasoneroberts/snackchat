@@ -8,10 +8,11 @@ on a phone's home screen) that runs entirely on Cloudflare.
 | Piece | Where | What it does |
 | --- | --- | --- |
 | Front end | `src/` (React + Vite) | The pages people see. Built into static files. |
-| API | `worker/` (Hono on Cloudflare Workers) | Everything under `/api`: sign-up, log-in, and soon check-ins and leaderboards. |
+| API | `worker/` (Hono on Cloudflare Workers) | Everything under `/api`: sign-up, log-in, snacks, check-ins, photos, profiles. |
+| Shared | `shared/` | Snack types, sliders, points rules and API types used by both sides. |
 | Database | D1 `snackchat-db`, schema in `migrations/` | Users, sessions, snacks, check-ins, groups, points. |
 | Cache | KV `snackchat-cache` | Will hold cached leaderboards. |
-| Photos | R2 `snackchat-photos` | Check-in photos (upload comes with the check-in PR). |
+| Photos | R2 `snackchat-photos` | Check-in photos, shrunk in the browser to 1600px JPEG before upload. |
 | Bot check | Turnstile | Checked on sign-up and log-in. |
 
 One Worker serves both: requests to `/api/*` run the Hono app in
@@ -33,6 +34,26 @@ One Worker serves both: requests to `/api/*` run the Hono app in
 - **Email verification.** A one-time link (valid 24 hours) is emailed on
   sign-up. Until Snackchat has its own domain, `EMAIL_MODE` is `log`: the link
   is written to the Worker logs instead of being emailed.
+
+## Check-ins
+
+| Route | What it does |
+| --- | --- |
+| `GET /api/snacks?q=` | Search snacks (popular ones when `q` is empty). |
+| `POST /api/snacks` | Add a snack; it stays `pending` until approved. |
+| `GET /api/snacks/:id` | Snack page: averages, slider averages, rank in its type, recent check-ins. |
+| `GET /api/checkins` | The feed, 20 at a time (`?before=` for older). |
+| `POST /api/checkins` | Form with `data` (JSON) and an optional `photo`. Awards points. |
+| `DELETE /api/checkins/:id` | Delete your own check-in, its photo and its points. |
+| `GET /api/photos/:id` | A check-in photo from R2. |
+| `GET /api/users/:username` | Profile: stats, taste profile, recent check-ins. |
+
+Points: 10 for a snack you haven't checked in before, 2 for a repeat, +3 for a
+photo, +2 for a review of 50+ characters, at most 100 a day (UTC). The rules are
+in `shared/catalogue.ts` and `worker/lib/checkin.ts`.
+
+Schema changes go in a new file in `migrations/`. Workers Builds does not apply
+them, so run `npm run db:migrate:remote` before (or right after) merging.
 
 ## Run it locally
 

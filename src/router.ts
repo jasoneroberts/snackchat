@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 export function navigate(to: string) {
   window.history.pushState(null, "", to);
   window.dispatchEvent(new PopStateEvent("popstate"));
+  window.scrollTo(0, 0);
 }
 
 export function usePath(): string {
@@ -16,4 +17,11 @@ export function usePath(): string {
     return () => window.removeEventListener("popstate", onChange);
   }, []);
   return path;
+}
+
+/** Match "/snack/:id" style paths: matchPath("/snack/", path) → "abc" or null. */
+export function matchPath(prefix: string, path: string): string | null {
+  if (!path.startsWith(prefix)) return null;
+  const rest = decodeURIComponent(path.slice(prefix.length));
+  return rest && !rest.includes("/") ? rest : null;
 }
