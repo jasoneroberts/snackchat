@@ -22,6 +22,7 @@ export interface SnackSummary {
   status: string; // "approved" or "pending"
   checkins?: number;
   avg?: number | null;
+  photoId?: string | null; // newest community photo, used as the thumbnail
 }
 
 export interface SnackPage {

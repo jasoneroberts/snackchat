@@ -4,6 +4,7 @@ import type { AppContext } from "../env";
 import { newId } from "../lib/crypto";
 import { currentUser } from "../lib/currentUser";
 import { listCheckins } from "../lib/feed";
+import { searchPatterns } from "../lib/search";
 
 export const snacks = new Hono<AppContext>();
 
@@ -17,29 +18,38 @@ interface SnackRow {
   status: string;
   checkins: number;
   avg: number | null;
+  photoId: string | null;
 }
 
-// Search, or the most checked-in snacks when there's no search text.
-// Pending snacks only show up for the person who added them.
+// The newest visible photo of snack `s` from someone with a public profile.
+const LATEST_PHOTO = `SELECT p.id FROM photos p
+    JOIN checkins pc ON pc.id = p.checkin_id
+    JOIN users pu ON pu.id = pc.user_id
+   WHERE pc.snack_id = s.id AND p.status = 'visible' AND pu.is_private = 0
+   ORDER BY p.created_at DESC LIMIT 1`;
+
+// Search, or the most checked-in snacks when there's no search text. Every
+// word must appear in the name or brand. Pending snacks only show up for the
+// person who added them. photoId is the newest public photo, for thumbnails.
 snacks.get("/", async (c) => {
   const user = currentUser(c);
-  const q = c.req.query("q")?.trim().slice(0, 60) || null;
+  const patterns = searchPatterns(c.req.query("q"));
   const category = c.req.query("category") || null;
-  // Escape LIKE's wildcards so "100%" searches for a literal percent sign.
-  const pattern = q ? `%${q.replace(/[\\%_]/g, (ch) => `\\${ch}`)}%` : null;
+  const wordFilters = patterns.map(() => "AND REPLACE(s.name || ' ' || IFNULL(s.brand, ''), '''', '') LIKE ? ESCAPE '\\'").join("\n        ");
 
   const { results } = await c.env.DB.prepare(
     `SELECT s.id, s.name, s.brand, s.category_id AS category, s.status,
             (SELECT COUNT(*) FROM checkins WHERE snack_id = s.id) AS checkins,
-            (SELECT AVG(overall) FROM checkins WHERE snack_id = s.id) AS avg
+            (SELECT AVG(overall) FROM checkins WHERE snack_id = s.id) AS avg,
+            (${LATEST_PHOTO}) AS photoId
        FROM snacks s
-      WHERE (s.status = 'approved' OR (s.status = 'pending' AND s.created_by = ?1))
-        AND (?2 IS NULL OR s.name LIKE ?2 ESCAPE '\\' OR s.brand LIKE ?2 ESCAPE '\\')
-        AND (?3 IS NULL OR s.category_id = ?3)
+      WHERE (s.status = 'approved' OR (s.status = 'pending' AND s.created_by = ?))
+        AND (? IS NULL OR s.category_id = ?)
+        ${wordFilters}
       ORDER BY checkins DESC, s.name
       LIMIT 20`,
   )
-    .bind(user.id, pattern, category)
+    .bind(user.id, category, category, ...patterns)
     .all<SnackRow>();
 
   return c.json({ snacks: results });
@@ -85,9 +95,20 @@ snacks.get("/:id", async (c) => {
   const db = c.env.DB;
 
   const snack = await db
-    .prepare("SELECT id, name, brand, category_id AS category, status, country FROM snacks WHERE id = ?")
+    .prepare(
+      `SELECT s.id, s.name, s.brand, s.category_id AS category, s.status, s.country, (${LATEST_PHOTO}) AS photoId
+         FROM snacks s WHERE s.id = ?`,
+    )
     .bind(id)
-    .first<{ id: string; name: string; brand: string | null; category: string; status: string; country: string }>();
+    .first<{
+      id: string;
+      name: string;
+      brand: string | null;
+      category: string;
+      status: string;
+      country: string;
+      photoId: string | null;
+    }>();
   if (!snack || snack.status === "rejected") return c.json({ error: "Snack not found." }, 404);
 
   const [stats, attrs, rank, checkins] = await Promise.all([
