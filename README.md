@@ -54,6 +54,8 @@ One Worker serves both: requests to `/api/*` run the Hono app in
 | `POST /api/groups/join` | Join with a code (rate limited). |
 | `GET /api/groups/:id` | Members only: settings, invite code, this period's board, favourite snack. |
 | `POST /api/groups/:id/leave` / `DELETE /api/groups/:id` | Leave, or delete if you're the owner. |
+| `GET /api/boards/people` | Leaderboard of people. `scope` (global or a group id), `period` (week, month, all), `metric` (points, checkins, snacks). Top 50 plus you. |
+| `GET /api/boards/snacks` | Top rated snacks by weighted rating. `scope`, `period`, optional `category`. |
 
 Group boards are worked out on request from check-ins and the points ledger,
 so changing a group's settings never loses history. Weekly boards run from

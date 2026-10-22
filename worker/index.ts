@@ -6,6 +6,7 @@ import { devLoginUsername, getDevUser } from "./lib/devLogin";
 import { getSessionUser } from "./lib/session";
 import { turnstileInTestMode } from "./lib/turnstile";
 import { auth } from "./routes/auth";
+import { boards } from "./routes/boards";
 import { checkins } from "./routes/checkins";
 import { groups } from "./routes/groups";
 import { photos } from "./routes/photos";
@@ -33,6 +34,7 @@ app.route("/checkins", checkins);
 app.route("/photos", photos);
 app.route("/users", users);
 app.route("/groups", groups);
+app.route("/boards", boards);
 
 app.get("/me", async (c) => {
   const user = c.get("user");
