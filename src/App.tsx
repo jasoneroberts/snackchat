@@ -9,10 +9,12 @@ import { SignUp } from "./pages/SignUp";
 export function App() {
   const path = usePath();
   const [me, setMe] = useState<Me | null | undefined>(undefined); // undefined = still loading
+  const [devLogin, setDevLogin] = useState(false);
 
   const refreshMe = useCallback(async () => {
-    const { user } = await api<{ user: Me | null }>("/me");
+    const { user, devLogin } = await api<{ user: Me | null; devLogin?: boolean }>("/me");
     setMe(user);
+    setDevLogin(devLogin === true);
   }, []);
 
   useEffect(() => {
@@ -46,9 +48,15 @@ export function App() {
           {me ? (
             <>
               <span className="who">@{me.username}</span>
-              <button className="link-button" onClick={logOut}>
-                Log out
-              </button>
+              {devLogin ? (
+                <span className="dev-badge" title="Dev login is on: everyone with the link is signed in as this user">
+                  dev
+                </span>
+              ) : (
+                <button className="link-button" onClick={logOut}>
+                  Log out
+                </button>
+              )}
             </>
           ) : me === null ? (
             <>
