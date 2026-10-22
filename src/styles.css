@@ -180,3 +180,37 @@ input:focus, textarea:focus { outline: 2px solid var(--orange); border-color: tr
 .bar-fill.dark { background: var(--ink); }
 .bar-value { width: 28px; text-align: right; font-weight: 900; }
 .profile-head { display: flex; align-items: center; gap: 14px; }
+
+/* Groups */
+.no-margin { margin: 0; }
+.stack-lg { display: flex; flex-direction: column; gap: 20px; }
+.gap-lg { gap: 12px; }
+.centre { text-align: center; align-items: center; }
+.centre-self { align-self: center; }
+.accent { color: var(--orange-dark); font-weight: 800; }
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+fieldset legend { padding: 0; margin-bottom: 6px; }
+.button.dark { background: var(--ink); color: var(--cream); }
+.list-card {
+  display: flex; align-items: center; gap: 12px; width: 100%; background: var(--card); border: 1px solid var(--line);
+  border-radius: 16px; padding: 12px; color: var(--ink); text-decoration: none;
+}
+.group-badge { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: 28%; font-weight: 900; color: var(--ink); }
+.rank-box { display: flex; flex-direction: column; align-items: flex-end; }
+.rank-box b { font-size: 1.15rem; color: var(--orange-dark); }
+.code-input { text-transform: uppercase; letter-spacing: 2px; font-weight: 800; }
+.choice {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; text-align: left; cursor: pointer;
+  background: var(--card); border: 2px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-top: 8px;
+}
+.choice.on { border-color: var(--ink); background: var(--cream-deep); }
+.link-box { display: flex; align-items: center; gap: 8px; background: var(--card); border: 1px dashed #d9b98c; border-radius: 12px; padding: 8px 8px 8px 12px; }
+.link-text { flex: 1; min-width: 0; font-family: ui-monospace, Menlo, monospace; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.code { color: var(--ink); letter-spacing: 1px; }
+.card-plain.flush { padding: 0; overflow: hidden; }
+.board-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 12px 14px 8px; }
+.board { list-style: none; margin: 0; padding: 0; }
+.board li { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-top: 1px solid var(--line-soft); }
+.board li.me { background: var(--cream-deep); }
+.board-rank { width: 22px; text-align: center; font-weight: 900; }
+.board-note { margin: 0; padding: 10px 14px 14px; }

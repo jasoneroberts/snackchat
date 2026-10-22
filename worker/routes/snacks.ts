@@ -4,6 +4,7 @@ import type { AppContext } from "../env";
 import { newId } from "../lib/crypto";
 import { currentUser } from "../lib/currentUser";
 import { listCheckins } from "../lib/feed";
+import { LATEST_PHOTO } from "../lib/photoSql";
 import { searchPatterns } from "../lib/search";
 
 export const snacks = new Hono<AppContext>();
@@ -21,12 +22,6 @@ interface SnackRow {
   photoId: string | null;
 }
 
-// The newest visible photo of snack `s` from someone with a public profile.
-const LATEST_PHOTO = `SELECT p.id FROM photos p
-    JOIN checkins pc ON pc.id = p.checkin_id
-    JOIN users pu ON pu.id = pc.user_id
-   WHERE pc.snack_id = s.id AND p.status = 'visible' AND pu.is_private = 0
-   ORDER BY p.created_at DESC LIMIT 1`;
 
 // Search, or the most checked-in snacks when there's no search text. Every
 // word must appear in the name or brand. Pending snacks only show up for the

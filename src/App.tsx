@@ -6,8 +6,13 @@ import { matchPath, navigate, usePath } from "./router";
 import { CheckIn } from "./pages/CheckIn";
 import { ComingSoon } from "./pages/ComingSoon";
 import { Feed } from "./pages/Feed";
+import { Group } from "./pages/Group";
+import { Groups } from "./pages/Groups";
 import { Home, VerifyNotice } from "./pages/Home";
+import { Invite } from "./pages/Invite";
+import { Join } from "./pages/Join";
 import { LogIn } from "./pages/LogIn";
+import { NewGroup } from "./pages/NewGroup";
 import { Profile } from "./pages/Profile";
 import { SignUp } from "./pages/SignUp";
 import { Snack } from "./pages/Snack";
@@ -47,7 +52,8 @@ export function App() {
 
   const onSignedIn = async () => {
     await refreshMe();
-    navigate("/");
+    // Came from a group invite link before signing in? Carry on to it.
+    navigate(readPendingJoin() ?? "/");
   };
 
   const refresh = () => void refreshMe().catch(() => {});
@@ -59,7 +65,10 @@ export function App() {
     let page;
     if (path === "/signup") page = <SignUp onSignedIn={onSignedIn} />;
     else if (path === "/login") page = <LogIn onSignedIn={onSignedIn} />;
-    else page = <Home />;
+    else {
+      if (path.startsWith("/join/")) savePendingJoin(path);
+      page = <Home />;
+    }
     return (
       <div className="app">
         <header className="topbar">
@@ -81,6 +90,9 @@ export function App() {
 
   // Signed in: the app shell with the bottom tab bar.
   const snackId = matchPath("/snack/", path);
+  const groupId = path === "/groups/new" ? null : matchPath("/groups/", path);
+  const inviteGroupId = path.match(/^\/groups\/([^/]+)\/invite$/)?.[1] ?? null;
+  const joinCode = matchPath("/join/", path);
   const profileName = path === "/me" ? me.username : matchPath("/u/", path);
 
   let page;
@@ -109,7 +121,19 @@ export function App() {
   } else if (path === "/groups") {
     tab = "/groups";
     title = "Groups";
-    page = <ComingSoon title="Groups are coming">Start a group, invite your mates with a link or code, and compete on its own board.</ComingSoon>;
+    page = <Groups />;
+  } else if (path === "/groups/new") {
+    title = "New group";
+    page = <NewGroup />;
+  } else if (inviteGroupId) {
+    title = "Invite";
+    page = <Invite id={inviteGroupId} />;
+  } else if (groupId) {
+    title = "Group";
+    page = <Group id={groupId} me={me} />;
+  } else if (joinCode) {
+    title = "Join a group";
+    page = <Join code={joinCode} />;
   } else if (snackId) {
     page = <Snack id={snackId} me={me} />;
   } else if (profileName) {
@@ -172,4 +196,24 @@ export function App() {
       <TabBar active={tab} />
     </div>
   );
+}
+
+const PENDING_JOIN = "snackchat.pendingJoin";
+
+function savePendingJoin(path: string) {
+  try {
+    sessionStorage.setItem(PENDING_JOIN, path);
+  } catch {
+    // Private browsing can block storage; they'll just land on the feed.
+  }
+}
+
+function readPendingJoin(): string | null {
+  try {
+    const path = sessionStorage.getItem(PENDING_JOIN);
+    sessionStorage.removeItem(PENDING_JOIN);
+    return path;
+  } catch {
+    return null;
+  }
 }
