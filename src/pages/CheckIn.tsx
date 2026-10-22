@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { CATEGORIES, POINTS, REVIEW_BONUS_CHARS, attributesFor, getCategory } from "../../shared/catalogue";
 import type { SnackPage, SnackSummary } from "../../shared/types";
 import { api, errorText } from "../api";
+import { SnackTile } from "../components/SnackTile";
 import { StarPicker } from "../components/Stars";
 import { shrinkPhoto } from "../lib/image";
 
@@ -68,7 +69,7 @@ export function CheckIn({ onDone }: { onDone: (snackName: string, points: number
     <form className="page stack" onSubmit={submit}>
       {snack ? (
         <div className="snack-chosen">
-          <span className="snack-thumb" style={{ background: category?.tint }} />
+          <SnackTile snack={snack} size={56} />
           <div className="grow">
             <b className="big-text">{snack.name}</b>
             <div className="small muted">
@@ -86,26 +87,45 @@ export function CheckIn({ onDone }: { onDone: (snackName: string, points: number
 
       {snack && (
         <>
-          <label className="photo-drop">
-            <input type="file" accept="image/*" className="visually-hidden" onChange={(e) => onPhoto(e.target.files?.[0])} />
-            {photo ? (
+          {photo ? (
+            <div className="photo-preview">
               <img src={photo.url} alt="Your photo" />
-            ) : (
-              <>
-                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-                  strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <rect x="3" y="5" width="18" height="15" rx="3" />
-                  <circle cx="12" cy="12.5" r="3.5" />
-                  <path d="M8 5l1.5-2h5L16 5" />
-                </svg>
-                <span>Add a photo (+{POINTS.photo} pts)</span>
-              </>
-            )}
-          </label>
-          {photo && (
-            <button type="button" className="link-button small" onClick={() => setPhoto(null)}>
-              Remove photo
-            </button>
+              <button type="button" className="link-button small" onClick={() => setPhoto(null)}>
+                Remove photo
+              </button>
+            </div>
+          ) : (
+            <div className="photo-drop">
+              <span>Add a photo (+{POINTS.photo} pts)</span>
+              <div className="photo-buttons">
+                {/* capture="environment" opens the back camera straight away on phones. */}
+                <label className="button">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="visually-hidden"
+                    onChange={(e) => onPhoto(e.target.files?.[0])}
+                  />
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
+                    strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <rect x="3" y="5" width="18" height="15" rx="3" />
+                    <circle cx="12" cy="12.5" r="3.5" />
+                    <path d="M8 5l1.5-2h5L16 5" />
+                  </svg>
+                  Take photo
+                </label>
+                <label className="button secondary">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="visually-hidden"
+                    onChange={(e) => onPhoto(e.target.files?.[0])}
+                  />
+                  Choose photo
+                </label>
+              </div>
+            </div>
           )}
 
           <div className="field">
@@ -227,7 +247,7 @@ function SnackSearch({ onPick }: { onPick: (s: SnackSummary) => void }) {
       <div className="results">
         {results?.map((s) => (
           <button key={s.id} type="button" className="result" onClick={() => onPick(s)}>
-            <span className="snack-thumb small" style={{ background: getCategory(s.category)?.tint }} />
+            <SnackTile snack={s} size={44} />
             <span className="grow">
               <b>{s.name}</b>
               <span className="small muted block">

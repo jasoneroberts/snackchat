@@ -5,6 +5,7 @@ import { api, errorText, type Me } from "../api";
 import { Bars } from "../components/Bars";
 import { CheckinCard } from "../components/CheckinCard";
 import { Link } from "../components/Link";
+import { SnackTile } from "../components/SnackTile";
 import { rating } from "../lib/format";
 
 export function Snack({ id, me }: { id: string; me: Me }) {
@@ -27,11 +28,7 @@ export function Snack({ id, me }: { id: string; me: Me }) {
 
   return (
     <div className="page stack">
-      {photo ? (
-        <img className="hero-photo" src={`/api/photos/${photo}`} alt={`Photo of ${snack.name}`} />
-      ) : (
-        <div className="hero-photo placeholder" style={{ background: category?.tint }} />
-      )}
+      <SnackTile snack={{ ...snack, photoId: snack.photoId ?? photo }} />
       <div>
         <h1 className="title">{snack.name}</h1>
         <div className="muted">
