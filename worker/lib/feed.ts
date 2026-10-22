@@ -8,6 +8,7 @@ export type { FeedItem };
 interface Row {
   id: string;
   username: string;
+  avatar_id: string | null;
   snack_id: string;
   snack_name: string;
   snack_brand: string | null;
@@ -35,7 +36,7 @@ export interface FeedFilter {
 export async function listCheckins(db: D1Database, f: FeedFilter): Promise<FeedItem[]> {
   const { results } = await db
     .prepare(
-      `SELECT c.id, u.username, s.id AS snack_id, s.name AS snack_name, s.brand AS snack_brand,
+      `SELECT c.id, u.username, u.avatar_id, s.id AS snack_id, s.name AS snack_name, s.brand AS snack_brand,
               s.category_id, s.status AS snack_status, c.overall, c.review, c.venue_text, c.paired_with,
               c.created_at,
               (SELECT json_group_object(attribute, value) FROM checkin_attributes WHERE checkin_id = c.id) AS attrs,
@@ -64,6 +65,7 @@ export async function listCheckins(db: D1Database, f: FeedFilter): Promise<FeedI
   return results.map((r) => ({
     id: r.id,
     username: r.username,
+    avatarId: r.avatar_id,
     snack: { id: r.snack_id, name: r.snack_name, brand: r.snack_brand, category: r.category_id, status: r.snack_status },
     overall: r.overall,
     review: r.review,

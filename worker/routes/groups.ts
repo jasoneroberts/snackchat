@@ -49,12 +49,12 @@ const SCORE_SQL: Record<ScoringMode, string> = {
 async function leaderboard(db: D1Database, g: GroupRow): Promise<BoardRow[]> {
   const { results } = await db
     .prepare(
-      `SELECT u.username, m.role, (${SCORE_SQL[g.scoring_mode]}) AS value
+      `SELECT u.username, u.avatar_id AS avatarId, m.role, (${SCORE_SQL[g.scoring_mode]}) AS value
          FROM group_members m JOIN users u ON u.id = m.user_id
         WHERE m.group_id = ?1`,
     )
     .bind(g.id, periodStart(g.reset_period, now()), g.categories)
-    .all<{ username: string; role: BoardRow["role"]; value: number }>();
+    .all<{ username: string; avatarId: string | null; role: BoardRow["role"]; value: number }>();
   return rank(results);
 }
 

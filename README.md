@@ -54,6 +54,8 @@ One Worker serves both: requests to `/api/*` run the Hono app in
 | `POST /api/groups/join` | Join with a code (rate limited). |
 | `GET /api/groups/:id` | Members only: settings, invite code, this period's board, favourite snack. |
 | `POST /api/groups/:id/leave` / `DELETE /api/groups/:id` | Leave, or delete if you're the owner. |
+| `GET /api/avatars/:id` | A profile picture (signed-in users). |
+| `POST /api/avatars` / `DELETE /api/avatars` | Set your profile picture (form field `photo`), or remove it. |
 | `GET /api/boards/people` | Leaderboard of people. `scope` (global or a group id), `period` (week, month, all), `metric` (points, checkins, snacks). Top 50 plus you. |
 | `GET /api/boards/snacks` | Top rated snacks by weighted rating. `scope`, `period`, optional `category`. |
 

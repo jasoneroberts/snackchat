@@ -178,7 +178,7 @@ function PeopleBoard({ rows, me, unit }: { rows: PeopleRow[] | null; me: Me; uni
           const place = podium.indexOf(p);
           return (
             <Link key={p.username} href={`/u/${p.username}`} className="podium-spot plain">
-              <Avatar username={p.username} size={52} />
+              <Avatar username={p.username} avatarId={p.avatarId} size={52} />
               <span className="podium-name">@{p.username}</span>
               <span className="podium-block" style={{ height: PODIUM_HEIGHTS[place], background: PODIUM_COLOURS[place] }}>
                 <b className="podium-rank">{p.rank}</b>
@@ -196,7 +196,7 @@ function PeopleBoard({ rows, me, unit }: { rows: PeopleRow[] | null; me: Me; uni
             <li key={r.username} className={r.username === me.username ? "me" : undefined}>
               <span className="board-rank">{r.rank}</span>
               <Link href={`/u/${r.username}`} className="plain row grow">
-                <Avatar username={r.username} size={34} />
+                <Avatar username={r.username} avatarId={r.avatarId} size={34} />
                 <span className="grow">
                   <b>@{r.username}</b>
                   {r.username === me.username && <span className="muted"> (you)</span>}

@@ -6,6 +6,7 @@ import { devLoginUsername, getDevUser } from "./lib/devLogin";
 import { getSessionUser } from "./lib/session";
 import { turnstileInTestMode } from "./lib/turnstile";
 import { auth } from "./routes/auth";
+import { avatars } from "./routes/avatars";
 import { boards } from "./routes/boards";
 import { checkins } from "./routes/checkins";
 import { groups } from "./routes/groups";
@@ -32,6 +33,7 @@ app.route("/auth", auth);
 app.route("/snacks", snacks);
 app.route("/checkins", checkins);
 app.route("/photos", photos);
+app.route("/avatars", avatars);
 app.route("/users", users);
 app.route("/groups", groups);
 app.route("/boards", boards);
@@ -49,6 +51,7 @@ app.get("/me", async (c) => {
       emailVerified: user.email_verified === 1,
       country: user.country,
       points: points?.total ?? 0,
+      avatarId: user.avatar_id,
     },
     devLogin: devLoginUsername(c.env) !== null,
   });

@@ -3,6 +3,7 @@
 export interface FeedItem {
   id: string;
   username: string;
+  avatarId: string | null;
   snack: { id: string; name: string; brand: string | null; category: string; status: string };
   overall: number;
   review: string | null;
@@ -35,7 +36,7 @@ export interface SnackPage {
 }
 
 export interface ProfilePage {
-  profile: { username: string; country: string; joinedAt: number };
+  profile: { username: string; avatarId: string | null; country: string; joinedAt: number };
   private: boolean;
   stats?: { checkins: number; snacks: number; avg: number | null; points: number };
   taste?: Record<string, number>;
@@ -56,6 +57,7 @@ export interface GroupCard {
 
 export interface BoardRow {
   username: string;
+  avatarId: string | null;
   value: number;
   rank: number;
   role: "owner" | "admin" | "member";
@@ -90,6 +92,7 @@ export type PeopleMetric = "points" | "checkins" | "snacks";
 
 export interface PeopleRow {
   username: string;
+  avatarId: string | null;
   points: number;
   checkins: number;
   snacks: number;

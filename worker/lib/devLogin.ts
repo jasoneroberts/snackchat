@@ -17,7 +17,7 @@ export function devLoginUsername(env: AppContext["Bindings"]): string | null {
 
 export async function getDevUser(c: Context<AppContext>, username: string): Promise<User> {
   const select = c.env.DB.prepare(
-    "SELECT id, username, email, email_verified, country, is_admin FROM users WHERE username = ?",
+    "SELECT id, username, email, email_verified, country, is_admin, avatar_id FROM users WHERE username = ?",
   ).bind(username);
 
   const existing = await select.first<User>();
