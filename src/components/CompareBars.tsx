@@ -3,7 +3,8 @@ import type { Attribute } from "../../shared/catalogue";
 /**
  * Your preference and a snack's average side by side, one pair of bars per
  * slider: yours in orange on top, everyone's average for the snack in dark
- * underneath. Sliders missing from either side are left out.
+ * underneath. Sliders you haven't set are left out; one the snack hasn't been
+ * rated on yet shows an empty bar and a dash, so you can see it's missing.
  */
 export function CompareBars({
   attributes,
@@ -14,7 +15,7 @@ export function CompareBars({
   mine: Record<string, number | undefined>;
   theirs: Record<string, number>;
 }) {
-  const rows = attributes.filter((a) => mine[a.key] != null && theirs[a.key] != null);
+  const rows = attributes.filter((a) => mine[a.key] != null);
   if (!rows.length) return null;
   return (
     <div className="bars compare">
@@ -25,13 +26,13 @@ export function CompareBars({
             <span className="bar-track" title={`You: ${mine[a.key]}`}>
               <span className="bar-fill" style={{ width: `${(mine[a.key]! / 5) * 100}%` }} />
             </span>
-            <span className="bar-track" title={`Snack average: ${theirs[a.key].toFixed(1)}`}>
-              <span className="bar-fill dark" style={{ width: `${(theirs[a.key] / 5) * 100}%` }} />
+            <span className="bar-track" title={theirs[a.key] != null ? `Snack average: ${theirs[a.key].toFixed(1)}` : "Not rated yet"}>
+              {theirs[a.key] != null && <span className="bar-fill dark" style={{ width: `${(theirs[a.key] / 5) * 100}%` }} />}
             </span>
           </span>
           <span className="compare-values">
             <span>{mine[a.key]}</span>
-            <span>{theirs[a.key].toFixed(1)}</span>
+            <span>{theirs[a.key] != null ? theirs[a.key].toFixed(1) : "–"}</span>
           </span>
         </div>
       ))}

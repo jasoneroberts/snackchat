@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getCategory, TASTE } from "../../shared/catalogue";
+import { CATEGORIES, getCategory, TASTE } from "../../shared/catalogue";
 import type { ExplorePage, Preferences, SnackSummary, Suggestion } from "../../shared/types";
 import { api, errorText } from "../api";
 import { CompareBars, CompareKey } from "../components/CompareBars";
@@ -7,6 +7,16 @@ import { Link } from "../components/Link";
 import { SnackTile } from "../components/SnackTile";
 import { rating } from "../lib/format";
 import { useVoice } from "../lib/voice";
+
+// Remember the snack-type filter on this device, like Boards does.
+const SAVED_FILTER = "snackchat.explore.category";
+function loadFilter(): string {
+  try {
+    return localStorage.getItem(SAVED_FILTER) ?? "";
+  } catch {
+    return "";
+  }
+}
 
 /**
  * Explore: set what you like, then get the snacks whose community averages
@@ -17,9 +27,10 @@ export function Explore() {
   const [data, setData] = useState<ExplorePage | null>(null);
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [category, setCategory] = useState(loadFilter);
 
-  const load = () =>
-    api<ExplorePage>("/explore")
+  const load = (type = category) =>
+    api<ExplorePage>(`/explore?category=${encodeURIComponent(type)}`)
       .then((page) => {
         setData(page);
         if (!page.preferences) setEditing(true);
@@ -29,6 +40,16 @@ export function Explore() {
   useEffect(() => {
     load();
   }, []);
+
+  const filter = (type: string) => {
+    setCategory(type);
+    try {
+      localStorage.setItem(SAVED_FILTER, type);
+    } catch {
+      // Storage blocked: the filter still works, it just won't be remembered.
+    }
+    load(type);
+  };
 
   // Save or discard: take the card away straight away, then tell the server.
   const choose = async (s: Suggestion, choice: "saved" | "discarded") => {
@@ -120,8 +141,20 @@ export function Explore() {
             <h2 className="section-title">{t("explore.suggestions")}</h2>
             <p className="small muted">Closest to your taste, from everyone's ratings. Snacks you've had are left out.</p>
           </div>
+          <div className="chip-scroll">
+            <button type="button" className={category === "" ? "pill on" : "pill"} onClick={() => filter("")}>
+              All snacks
+            </button>
+            {CATEGORIES.map((c) => (
+              <button key={c.id} type="button" className={category === c.id ? "pill on" : "pill"} onClick={() => filter(c.id)}>
+                {c.name}
+              </button>
+            ))}
+          </div>
           {data.suggestions.length === 0 ? (
-            <p className="muted">{t("explore.none")}</p>
+            <p className="muted">
+              {category ? `No ${getCategory(category)?.short ?? "snacks"} to suggest right now. Try another type.` : t("explore.none")}
+            </p>
           ) : (
             <>
               <CompareKey />
