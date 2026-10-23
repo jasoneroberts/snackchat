@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { UNIVERSAL } from "../../shared/catalogue";
+import { TASTE } from "../../shared/catalogue";
 import type { ProfilePage } from "../../shared/types";
 import { api, errorText, type Me } from "../api";
 import { Avatar } from "../components/Avatar";
@@ -95,7 +95,7 @@ export function Profile({
           </div>
           <p className="small muted">{isMe ? "What you like. Explore uses it to suggest snacks." : "What they like."}</p>
           <Bars
-            attributes={UNIVERSAL.filter((a) => data.preferences![a.key] != null)}
+            attributes={TASTE.filter((a) => data.preferences![a.key] != null)}
             values={data.preferences as Record<string, number>}
             dark
           />

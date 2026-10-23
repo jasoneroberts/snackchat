@@ -39,7 +39,14 @@ describe("buildDemoData", () => {
   });
 
   it("rates flavour, saltiness and sweetness so Explore can match", () => {
-    for (const c of data.checkins) expect(Object.keys(c.attributes).sort()).toEqual(["flavour", "more", "salt", "sweet", "value"]);
+    for (const c of data.checkins) expect(Object.keys(c.attributes)).toEqual(expect.arrayContaining(["flavour", "salt", "sweet", "value", "more"]));
+  });
+
+  it("rates spice only on snack types that have a Spice slider", () => {
+    const hot = data.checkins.filter((c) => c.attributes.spice !== undefined).map((c) => c.snackId);
+    expect(hot.length).toBeGreaterThan(0);
+    const notHot = ["seed-dairy-milk", "seed-maltesers", "seed-twix", "seed-starmix", "seed-tangfastics", "seed-jaffa-cakes"];
+    expect(hot.filter((id) => notHot.includes(id))).toEqual([]);
   });
 
   it("only uses group members who exist", () => {

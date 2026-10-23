@@ -21,7 +21,7 @@ export interface Category {
 }
 
 const crunch: Attribute = { key: "crunch", label: "Crunch", low: "Soft", high: "Shatters" };
-const spice: Attribute = { key: "spice", label: "Spice", low: "Mild", high: "Blazing" };
+export const spice: Attribute = { key: "spice", label: "Spice", low: "Mild", high: "Blazing" };
 
 // Every snack gets these.
 export const UNIVERSAL: Attribute[] = [
@@ -31,6 +31,10 @@ export const UNIVERSAL: Attribute[] = [
   { key: "value", label: "Value for money", low: "Poor", high: "Great" },
   { key: "more", label: "Moreishness", low: "One is plenty", high: "Gone in seconds" },
 ];
+
+// The sliders you can set a taste preference for on Explore: the universal
+// ones plus spice. Snacks whose type has no Spice slider count as mild.
+export const TASTE: Attribute[] = [...UNIVERSAL, { ...spice, label: "Spiciness" }];
 
 export const CATEGORIES: Category[] = [
   {
