@@ -142,3 +142,8 @@ export interface BrandRow {
   snacks: number;
   logoId: string | null;
 }
+
+export interface LogoSuggestion {
+  suggestion: { url: string; source: "wikidata" | "website"; label: string } | null;
+  more: number; // how many other suggestions are left after this one
+}
