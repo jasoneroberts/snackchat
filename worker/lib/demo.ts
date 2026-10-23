@@ -38,6 +38,22 @@ const QUALITY: Record<string, number> = {
   "seed-salted-pistachios": 4, "seed-popchips-sea-salt": 3.25,
 };
 
+// Each snack's character as [flavour, saltiness, sweetness], 1-5. Demo
+// check-ins land within a point of these, so Explore has sensible averages.
+const TASTE: Record<string, [number, number, number]> = {
+  "seed-walkers-cheese-onion": [4, 4, 1], "seed-mccoys-flame-grilled-steak": [5, 4, 1], "seed-kettle-sea-salt-balsamic": [4, 4, 2],
+  "seed-tyrrells-sea-salted": [2, 4, 1], "seed-pipers-anglesey-sea-salt": [2, 4, 1], "seed-seabrook-original": [2, 3, 1],
+  "seed-scampi-fries": [5, 5, 1], "seed-bacon-fries": [4, 4, 2], "seed-pork-scratchings": [4, 5, 1], "seed-dry-roasted-peanuts": [3, 4, 1],
+  "seed-mccoys-salt-malt-vinegar": [5, 5, 1], "seed-dairy-milk": [3, 1, 5], "seed-maltesers": [3, 1, 4], "seed-twix": [3, 2, 5],
+  "seed-chocolate-hobnobs": [4, 2, 4], "seed-jaffa-cakes": [3, 1, 4], "seed-takis-fuego": [5, 4, 1], "seed-doritos-chilli-heatwave": [4, 3, 2],
+  "seed-monster-munch-flamin-hot": [5, 3, 1], "seed-nik-naks-nice-spicy": [5, 3, 2], "seed-wasabi-peas": [4, 3, 1],
+  "seed-walkers-ready-salted": [2, 3, 1], "seed-walkers-salt-vinegar": [4, 4, 1], "seed-chipsticks-salt-vinegar": [4, 4, 1],
+  "seed-discos-salt-vinegar": [4, 4, 1], "seed-pringles-salt-vinegar": [3, 4, 1], "seed-starmix": [3, 1, 5], "seed-tangfastics": [5, 1, 4],
+  "seed-fruit-pastilles": [3, 1, 4], "seed-nakd-cocoa-orange": [3, 1, 3], "seed-graze-protein-oat-bites": [2, 2, 3],
+  "seed-salted-pistachios": [3, 4, 1], "seed-popchips-sea-salt": [2, 3, 1],
+};
+
+
 const REVIEWS = [
   "Proper crunch, would buy again.",
   "Bit too salty for me but I still finished the bag.",
@@ -90,6 +106,8 @@ export const demoUserId = (username: string) => `${DEMO_PREFIX}${username}`;
 export function buildDemoData(now: number, seed = 7): DemoData {
   const random = rng(seed);
   const pick = <T>(list: T[]) => list[Math.floor(random() * list.length)];
+  // A slider score: the snack's real value give or take one, kept on the 1-5 scale.
+  const nudge = (n: number) => Math.min(5, Math.max(1, n + Math.floor(random() * 3) - 1));
   const allSnacks = Object.keys(QUALITY);
   const checkins: DemoCheckin[] = [];
 
@@ -116,7 +134,9 @@ export function buildDemoData(now: number, seed = 7): DemoData {
         review,
         venue: pick(VENUES),
         attributes: {
-          flavour: 2 + Math.floor(random() * 4),
+          flavour: nudge(TASTE[snackId][0]),
+          salt: nudge(TASTE[snackId][1]),
+          sweet: nudge(TASTE[snackId][2]),
           value: 1 + Math.floor(random() * 5),
           more: 2 + Math.floor(random() * 4),
         },

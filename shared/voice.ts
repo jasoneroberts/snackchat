@@ -25,12 +25,14 @@ export const LINES = {
   "tab.feed": { grownup: "Feed", lad: "Feed" },
   "tab.boards": { grownup: "Boards", lad: "The Table" },
   "tab.checkin": { grownup: "Check in", lad: "Log it" },
+  "tab.explore": { grownup: "Explore", lad: "Hunt" },
   "tab.groups": { grownup: "Groups", lad: "Squads" },
   "tab.profile": { grownup: "Profile", lad: "Me" },
 
   // Page titles in the top bar
   "title.checkin": { grownup: "Check in", lad: "Log the {snack}" },
   "title.boards": { grownup: "Boards", lad: "The Table" },
+  "title.explore": { grownup: "Explore", lad: "The Hunt" },
   "title.groups": { grownup: "Groups", lad: "Squads" },
   "title.newGroup": { grownup: "New group", lad: "New squad" },
   "title.group": { grownup: "Group", lad: "Squad" },
@@ -67,6 +69,20 @@ export const LINES = {
   "checkin.photo": { grownup: "Add a photo (+{pts} pts)", lad: "Snap it (+{pts} pts)" },
   "toast.checkedIn": { grownup: "Checked in", lad: "Logged" },
   "toast.onBoard": { grownup: "{name} is on the board.", lad: "{name} is on the Table." },
+
+  // Explore
+  "explore.setTaste": { grownup: "What do you like?", lad: "What's your poison?" },
+  "explore.yourTaste": { grownup: "Your taste", lad: "Your poison" },
+  "explore.findSnacks": { grownup: "Find my snacks", lad: "Find me some {snack}" },
+  "explore.suggestions": { grownup: "Try these next", lad: "Get these down you" },
+  "explore.none": {
+    grownup: "No more suggestions right now. Check back once more snacks have been rated.",
+    lad: "You've cleared the lot. Check back when there's more {snack} about.",
+  },
+  "explore.save": { grownup: "Save to try", lad: "Bag it" },
+  "explore.discard": { grownup: "Not for me", lad: "Bin it" },
+  "explore.saved": { grownup: "Saved to try", lad: "Bagged for later" },
+  "explore.tried": { grownup: "Check in", lad: "Log it" },
 
   // Boards
   "boards.people": { grownup: "People", lad: "Lads" },

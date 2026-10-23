@@ -38,6 +38,10 @@ describe("buildDemoData", () => {
     }
   });
 
+  it("rates flavour, saltiness and sweetness so Explore can match", () => {
+    for (const c of data.checkins) expect(Object.keys(c.attributes).sort()).toEqual(["flavour", "more", "salt", "sweet", "value"]);
+  });
+
   it("only uses group members who exist", () => {
     const names = new Set(data.users.map((u) => u.username));
     for (const g of DEMO_GROUPS) for (const m of [g.owner, ...g.members]) expect(names.has(m)).toBe(true);

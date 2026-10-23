@@ -72,14 +72,14 @@ label { display: grid; gap: 6px; font-weight: 700; }
 
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; max-width: 560px; margin: 0 auto;
-  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center;
+  display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); align-items: center;
   background: var(--card); border-top: 1px solid var(--line);
   padding: 6px 0 calc(6px + env(safe-area-inset-bottom));
 }
 .tab { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 56px; justify-content: center; font-size: 0.72rem; font-weight: 700; color: var(--muted); text-decoration: none; }
 .tab.active { color: var(--ink); font-weight: 900; }
 /* The selected tab gets a soft orange pill behind its icon. */
-.tab-icon { width: 52px; height: 30px; border-radius: 999px; display: flex; align-items: center; justify-content: center; transition: background-color 0.15s; }
+.tab-icon { width: 48px; height: 30px; border-radius: 999px; display: flex; align-items: center; justify-content: center; transition: background-color 0.15s; }
 .tab.active .tab-icon { background: color-mix(in srgb, var(--orange) 38%, transparent); color: var(--ink); }
 .tab.active .tab-plus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--orange) 35%, transparent); }
 .tab-plus { width: 46px; height: 32px; border-radius: 999px; background: var(--orange); display: flex; align-items: center; justify-content: center; color: var(--ink); }
@@ -192,6 +192,15 @@ button.checkin-thumb img { width: 100%; height: 100%; object-fit: cover; display
 .bar-fill { display: block; height: 100%; border-radius: 999px; background: var(--orange); }
 .bar-fill.dark { background: var(--ink); }
 .bar-value { width: 28px; text-align: right; font-weight: 900; }
+/* Explore: your bar and the snack's average bar, stacked per slider. */
+.compare .bar-row { align-items: center; }
+.compare-pair { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.compare-pair .bar-track { flex: none; height: 8px; }
+.compare-values { width: 28px; display: flex; flex-direction: column; align-items: flex-end; font-size: 0.72rem; font-weight: 900; line-height: 11px; }
+.compare-key { display: flex; gap: 14px; }
+.compare-key span { display: inline-flex; align-items: center; gap: 5px; }
+.swatch { display: inline-block; width: 14px; height: 8px; border-radius: 999px; background: var(--orange); }
+.swatch.dark { background: var(--ink); }
 .profile-head { display: flex; align-items: center; gap: 14px; }
 .profile-settings { margin-left: auto; align-self: flex-start; }
 .avatar-edit { display: flex; align-items: center; gap: 16px; }
@@ -303,3 +312,16 @@ fieldset legend { padding: 0; margin-bottom: 6px; }
 [data-voice="lad"] .count-badge { background: var(--mat-red); color: #fff; border-radius: 4px; }
 [data-voice="lad"] .photo-drop { border-color: var(--line); }
 [data-voice="lad"] .link-box { border-color: var(--line); }
+
+/* Explore */
+.row-between { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.pref-summary { display: flex; flex-wrap: wrap; gap: 6px; }
+.suggestion { display: flex; flex-direction: column; gap: 12px; }
+.suggestion-head { display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; }
+.suggestion-head .grow { display: flex; flex-direction: column; gap: 2px; }
+.match-badge { font-weight: 900; font-size: 0.95rem; background: color-mix(in srgb, var(--orange) 30%, transparent); border-radius: 999px; padding: 4px 10px; }
+.suggestion-buttons { display: flex; gap: 8px; }
+.suggestion-buttons .button { flex: 1; }
+.saved-row { display: flex; align-items: center; gap: 8px; }
+.saved-link { color: inherit; text-decoration: none; gap: 10px; }
+.saved-row .icon-button { margin: 0; }

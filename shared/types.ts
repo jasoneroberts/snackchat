@@ -40,7 +40,7 @@ export interface ProfilePage {
   profile: { username: string; avatarId: string | null; country: string; joinedAt: number };
   private: boolean;
   stats?: { checkins: number; snacks: number; avg: number | null; points: number };
-  taste?: Record<string, number>;
+  preferences?: Preferences | null; // their taste profile, as set on Explore
   checkins?: FeedItem[];
 }
 
@@ -118,4 +118,21 @@ export interface DemoStatus {
   checkins: number;
   photos: number;
   missingPhotos: string[]; // demo snacks with no photo yet
+}
+
+// Taste preferences: 1-5 per universal slider; a missing key means "don't mind".
+export type Preferences = Partial<Record<string, number>>;
+
+export interface Suggestion {
+  snack: SnackSummary;
+  match: number; // 0 to 1
+  avg: number; // overall rating
+  count: number; // check-ins
+  averages: Record<string, number>; // everyone's average for each slider
+}
+
+export interface ExplorePage {
+  preferences: Preferences | null;
+  suggestions: Suggestion[];
+  saved: SnackSummary[];
 }
