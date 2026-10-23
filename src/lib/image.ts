@@ -3,6 +3,7 @@
 
 const MAX_SIDE = 1600;
 const AVATAR_SIDE = 400;
+const LOGO_SIDE = 256;
 const QUALITY = 0.85;
 const SERVER_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const SERVER_MAX_BYTES = 5 * 1024 * 1024;
@@ -35,6 +36,22 @@ export async function squareAvatar(file: File): Promise<Blob> {
     .drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, out, out);
   bitmap.close();
   return toJpeg(canvas);
+}
+
+/** A PNG logo no bigger than 256px on its longest side; PNG keeps a transparent background. */
+export async function shrinkLogo(file: File): Promise<Blob> {
+  const bitmap = await decode(file);
+  if (!bitmap) return file;
+
+  const scale = Math.min(1, LOGO_SIDE / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  return new Promise((resolve, reject) =>
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Couldn't read that image."))), "image/png"),
+  );
 }
 
 /**

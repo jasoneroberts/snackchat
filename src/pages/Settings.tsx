@@ -102,6 +102,13 @@ export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<v
           {me.reviewCount > 0 ? <span className="count-badge">{me.reviewCount}</span> : <span className="muted small">All clear</span>}
         </Link>
       )}
+
+      {me.isAdmin && (
+        <Link href="/brands" className="card-plain row settings-link">
+          <b className="grow">Brand logos</b>
+          <span className="muted small">Shown when a snack has no photo</span>
+        </Link>
+      )}
     </div>
   );
 }

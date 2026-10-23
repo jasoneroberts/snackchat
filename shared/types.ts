@@ -136,3 +136,9 @@ export interface ExplorePage {
   suggestions: Suggestion[];
   saved: SnackSummary[];
 }
+
+export interface BrandRow {
+  brand: string;
+  snacks: number;
+  logoId: string | null;
+}

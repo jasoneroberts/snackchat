@@ -1,12 +1,15 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import type { DemoStatus, ReviewQueue } from "../../shared/types";
+import type { BrandRow, DemoStatus, ReviewQueue } from "../../shared/types";
 import type { AppContext } from "../env";
 import { POINTS } from "../../shared/catalogue";
 import { currentUser } from "../lib/currentUser";
 import { buildDemoData, DEMO_GROUPS, DEMO_PHOTO_PREFIX, DEMO_PREFIX, demoUserId, offSearchUrl, wantsPhoto } from "../lib/demo";
 import { newInviteCode } from "../lib/groups";
+import { brandKey } from "../../shared/brands";
+import { newId } from "../lib/crypto";
 import { avatarKey } from "./avatars";
+import { logoKey } from "./logos";
 
 // Photo approval. Every new check-in photo and profile picture waits here
 // until an admin approves or rejects it. (An AI check could later approve the
@@ -286,5 +289,57 @@ admin.delete("/demo", async (c) => {
     db.prepare("DELETE FROM groups WHERE id LIKE 'demo-%'"),
     db.prepare("DELETE FROM users WHERE id LIKE 'demo-%'"),
   ]);
+  return c.json({ ok: true });
+});
+
+// Maker logos ---------------------------------------------------------------
+
+// The browser shrinks a logo to a small PNG first (src/lib/image.ts).
+const MAX_LOGO_BYTES = 512 * 1024;
+// No SVG: it can carry scripts, and logos are served from the app's own address.
+const LOGO_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+
+// Every brand on a snack, most snacks first, with its logo if it has one.
+admin.get("/brands", async (c) => {
+  const { results } = await c.env.DB.prepare(
+    `SELECT MIN(TRIM(s.brand)) AS brand, COUNT(*) AS snacks, l.logo_id AS logoId
+       FROM snacks s LEFT JOIN brand_logos l ON l.brand_key = LOWER(TRIM(s.brand))
+      WHERE s.brand IS NOT NULL AND TRIM(s.brand) != '' AND s.status != 'rejected'
+      GROUP BY LOWER(TRIM(s.brand))
+      ORDER BY snacks DESC, brand`,
+  ).all<BrandRow>();
+  return c.json({ brands: results });
+});
+
+// Upload or replace a brand's logo: a form with "brand" and a "logo" file.
+admin.post("/brands/logo", async (c) => {
+  const form = await c.req.parseBody().catch(() => null);
+  const brand = typeof form?.brand === "string" ? brandKey(form.brand) : "";
+  const logo = form?.logo instanceof File && form.logo.size > 0 ? form.logo : null;
+  if (!brand) return c.json({ error: "Which brand is this for?" }, 400);
+  if (!logo) return c.json({ error: "Pick a logo image." }, 400);
+  if (!LOGO_TYPES.has(logo.type)) return c.json({ error: "Logos must be PNG, JPEG or WebP." }, 400);
+  if (logo.size > MAX_LOGO_BYTES) return c.json({ error: "That logo is too big (512 KB max)." }, 400);
+
+  const old = await c.env.DB.prepare("SELECT logo_id FROM brand_logos WHERE brand_key = ?").bind(brand).first<{ logo_id: string }>();
+  const logoId = newId();
+  await c.env.PHOTOS.put(logoKey(logoId), logo.stream(), { httpMetadata: { contentType: logo.type } });
+  await c.env.DB.prepare(
+    `INSERT INTO brand_logos (brand_key, logo_id, updated_at) VALUES (?, ?, ?)
+     ON CONFLICT (brand_key) DO UPDATE SET logo_id = excluded.logo_id, updated_at = excluded.updated_at`,
+  )
+    .bind(brand, logoId, Math.floor(Date.now() / 1000))
+    .run();
+  if (old) await c.env.PHOTOS.delete(logoKey(old.logo_id));
+  return c.json({ logoId }, 201);
+});
+
+// Remove a brand's logo; its snacks go back to showing nothing.
+admin.delete("/brands/logo", async (c) => {
+  const brand = brandKey(c.req.query("brand") ?? "");
+  const old = await c.env.DB.prepare("DELETE FROM brand_logos WHERE brand_key = ? RETURNING logo_id")
+    .bind(brand)
+    .first<{ logo_id: string }>();
+  if (old) await c.env.PHOTOS.delete(logoKey(old.logo_id));
   return c.json({ ok: true });
 });
