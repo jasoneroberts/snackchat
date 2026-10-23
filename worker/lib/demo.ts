@@ -53,6 +53,18 @@ const TASTE: Record<string, [number, number, number]> = {
   "seed-salted-pistachios": [3, 4, 1], "seed-popchips-sea-salt": [2, 3, 1],
 };
 
+// How hot the snacks whose type has a Spice slider are (crisps, nuts, pub and
+// world snacks), so Explore can match chilli fans.
+const SPICE: Record<string, number> = {
+  "seed-walkers-cheese-onion": 1, "seed-mccoys-flame-grilled-steak": 2, "seed-kettle-sea-salt-balsamic": 1,
+  "seed-tyrrells-sea-salted": 1, "seed-pipers-anglesey-sea-salt": 1, "seed-seabrook-original": 1,
+  "seed-scampi-fries": 1, "seed-bacon-fries": 1, "seed-pork-scratchings": 1, "seed-dry-roasted-peanuts": 2,
+  "seed-mccoys-salt-malt-vinegar": 1, "seed-takis-fuego": 5, "seed-doritos-chilli-heatwave": 4,
+  "seed-monster-munch-flamin-hot": 4, "seed-nik-naks-nice-spicy": 4, "seed-wasabi-peas": 5,
+  "seed-walkers-ready-salted": 1, "seed-walkers-salt-vinegar": 1, "seed-chipsticks-salt-vinegar": 1,
+  "seed-discos-salt-vinegar": 1, "seed-pringles-salt-vinegar": 1, "seed-salted-pistachios": 1, "seed-popchips-sea-salt": 1,
+};
+
 
 const REVIEWS = [
   "Proper crunch, would buy again.",
@@ -137,6 +149,7 @@ export function buildDemoData(now: number, seed = 7): DemoData {
           flavour: nudge(TASTE[snackId][0]),
           salt: nudge(TASTE[snackId][1]),
           sweet: nudge(TASTE[snackId][2]),
+          ...(SPICE[snackId] ? { spice: nudge(SPICE[snackId]) } : {}),
           value: 1 + Math.floor(random() * 5),
           more: 2 + Math.floor(random() * 4),
         },

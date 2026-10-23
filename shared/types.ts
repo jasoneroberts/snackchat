@@ -120,7 +120,7 @@ export interface DemoStatus {
   missingPhotos: string[]; // demo snacks with no photo yet
 }
 
-// Taste preferences: 1-5 per universal slider; a missing key means "don't mind".
+// Taste preferences: 1-5 per TASTE slider (universal plus spice); a missing key means "don't mind".
 export type Preferences = Partial<Record<string, number>>;
 
 export interface Suggestion {

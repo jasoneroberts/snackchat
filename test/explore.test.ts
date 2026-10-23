@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type Candidate, matchScore, rankMatches, readPreferences } from "../worker/lib/explore";
+import { type Candidate, matchScore, rankMatches, readPreferences, withImpliedSpice } from "../worker/lib/explore";
 
 describe("matchScore", () => {
   it("is 100% when the snack's averages are exactly your taste", () => {
@@ -64,5 +64,29 @@ describe("readPreferences", () => {
     expect(readPreferences({ flavour: 2.5 })).toBeNull();
     expect(readPreferences({ flavour: "4" })).toBeNull();
     expect(readPreferences(null)).toBeNull();
+  });
+});
+
+describe("spice", () => {
+  it("is a preference you can set", () => {
+    expect(readPreferences({ spice: 5, flavour: 4 })).toEqual({ spice: 5, flavour: 4 });
+  });
+
+  it("counts snack types with no Spice slider as mild", () => {
+    expect(withImpliedSpice({ sweet: 5 }, "chocolate")).toEqual({ sweet: 5, spice: 1 });
+  });
+
+  it("leaves spicy snack types to their real ratings", () => {
+    expect(withImpliedSpice({ spice: 4.5 }, "crisps")).toEqual({ spice: 4.5 });
+    expect(withImpliedSpice({ salt: 3 }, "crisps")).toEqual({ salt: 3 });
+  });
+
+  it("so a chilli fan gets hot crisps above chocolate", () => {
+    const prefs = { spice: 5, flavour: 5 };
+    const ranked = rankMatches(prefs, [
+      { id: "dairy-milk", averages: withImpliedSpice({ flavour: 5 }, "chocolate"), rating: 5 },
+      { id: "takis", averages: withImpliedSpice({ flavour: 5, spice: 5 }, "world"), rating: 3 },
+    ]);
+    expect(ranked.map((s) => s.id)).toEqual(["takis", "dairy-milk"]);
   });
 });

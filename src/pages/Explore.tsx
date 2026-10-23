@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getCategory, UNIVERSAL } from "../../shared/catalogue";
+import { getCategory, TASTE } from "../../shared/catalogue";
 import type { ExplorePage, Preferences, SnackSummary, Suggestion } from "../../shared/types";
 import { api, errorText } from "../api";
 import { CompareBars, CompareKey } from "../components/CompareBars";
@@ -80,7 +80,7 @@ export function Explore() {
             </button>
           </div>
           <div className="pref-summary small">
-            {UNIVERSAL.map((a) => (
+            {TASTE.map((a) => (
               <span key={a.key} className="chip">
                 {a.label} {data.preferences![a.key] ?? "any"}
               </span>
@@ -160,7 +160,7 @@ function SuggestionCard({
         </span>
         <span className="match-badge">{Math.round(s.match * 100)}%</span>
       </Link>
-      <CompareBars attributes={UNIVERSAL} mine={prefs} theirs={s.averages} />
+      <CompareBars attributes={TASTE} mine={prefs} theirs={s.averages} />
       <div className="suggestion-buttons">
         <button type="button" className="button secondary small" onClick={() => onChoose("discarded")}>
           {t("explore.discard")}
@@ -185,7 +185,7 @@ function PreferenceEditor({
 }) {
   const { t } = useVoice();
   const [prefs, setPrefs] = useState<Record<string, number>>(() =>
-    Object.fromEntries(UNIVERSAL.map((a) => [a.key, initial ? initial[a.key] ?? 0 : 3])),
+    Object.fromEntries(TASTE.map((a) => [a.key, initial ? initial[a.key] ?? 0 : 3])),
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -195,7 +195,7 @@ function PreferenceEditor({
     setBusy(true);
     setError(null);
     try {
-      const body = Object.fromEntries(UNIVERSAL.map((a) => [a.key, prefs[a.key] || null]));
+      const body = Object.fromEntries(TASTE.map((a) => [a.key, prefs[a.key] || null]));
       await api("/explore/preferences", { method: "PUT", body });
       onSaved();
     } catch (err) {
@@ -213,7 +213,7 @@ function PreferenceEditor({
           your profile too.
         </p>
       </div>
-      {UNIVERSAL.map((a) => {
+      {TASTE.map((a) => {
         const v = prefs[a.key];
         return (
           <div key={a.key} className="slider">

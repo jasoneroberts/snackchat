@@ -3,7 +3,7 @@ import type { ExplorePage, Preferences, SnackSummary, Suggestion } from "../../s
 import type { AppContext } from "../env";
 import { weightedRating } from "../lib/boards";
 import { currentUser } from "../lib/currentUser";
-import { PREFERENCE_KEYS, rankMatches, readPreferences } from "../lib/explore";
+import { PREFERENCE_KEYS, rankMatches, readPreferences, withImpliedSpice } from "../lib/explore";
 import { LATEST_PHOTO } from "../lib/photoSql";
 
 export const explore = new Hono<AppContext>();
@@ -78,7 +78,7 @@ explore.get("/", async (c) => {
     const mean = total ? snacks.results.reduce((sum, s) => sum + s.avg * s.count, 0) / total : 0;
     const ranked = rankMatches(
       preferences,
-      snacks.results.map((s) => ({ ...s, averages: bySnack.get(s.id) ?? {}, rating: weightedRating(s.avg, s.count, mean) })),
+      snacks.results.map((s) => ({ ...s, averages: withImpliedSpice(bySnack.get(s.id) ?? {}, s.category), rating: weightedRating(s.avg, s.count, mean) })),
     );
     suggestions = ranked.slice(0, SUGGESTIONS).map((s) => ({
       snack: { id: s.id, name: s.name, brand: s.brand, category: s.category, status: s.status, photoId: s.photoId },

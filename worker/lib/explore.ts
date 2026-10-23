@@ -1,8 +1,8 @@
-import { UNIVERSAL } from "../../shared/catalogue";
+import { attributesFor, TASTE } from "../../shared/catalogue";
 import type { Preferences } from "../../shared/types";
 
-// The sliders you can set a preference for: the universal ones every snack has.
-export const PREFERENCE_KEYS = UNIVERSAL.map((a) => a.key);
+// The sliders you can set a preference for: the universal ones plus spice.
+export const PREFERENCE_KEYS = TASTE.map((a) => a.key);
 
 // A snack needs at least this many of your set preferences to compare against,
 // otherwise one lucky slider could make it a "100% match".
@@ -38,6 +38,16 @@ export function matchScore(prefs: Preferences, averages: Record<string, number>)
   if (shared.length === 0 || shared.length < Math.min(MIN_OVERLAP, set.length)) return null;
   const gap = shared.reduce((sum, k) => sum + Math.abs(prefs[k]! - averages[k]), 0) / shared.length;
   return 1 - gap / 4;
+}
+
+/**
+ * A snack's averages for matching. Snack types without a Spice slider
+ * (chocolate, sweets, biscuits...) aren't spicy, so they count as spice 1
+ * rather than being let off: a chilli fan shouldn't get Dairy Milk at 100%.
+ */
+export function withImpliedSpice(averages: Record<string, number>, category: string): Record<string, number> {
+  if (averages.spice != null || attributesFor(category).some((a) => a.key === "spice")) return averages;
+  return { ...averages, spice: 1 };
 }
 
 export interface Candidate {
