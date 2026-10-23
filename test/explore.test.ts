@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { type Candidate, matchScore, rankMatches, readPreferences, withImpliedSpice } from "../worker/lib/explore";
+import { tasteFor } from "../shared/catalogue";
+import { type Candidate, matchScore, rankMatches, readPreferences } from "../worker/lib/explore";
 
 describe("matchScore", () => {
   it("is 100% when the snack's averages are exactly your taste", () => {
@@ -56,7 +57,7 @@ describe("rankMatches", () => {
 
 describe("readPreferences", () => {
   it("keeps 1-5 values and drops blanks and unknown keys", () => {
-    expect(readPreferences({ flavour: 4, salt: null, sweet: 1, crunch: 5 })).toEqual({ flavour: 4, sweet: 1 });
+    expect(readPreferences({ flavour: 4, salt: null, sweet: 1, chew: 5 })).toEqual({ flavour: 4, sweet: 1 });
   });
 
   it("rejects anything off the scale", () => {
@@ -67,26 +68,36 @@ describe("readPreferences", () => {
   });
 });
 
-describe("spice", () => {
-  it("is a preference you can set", () => {
-    expect(readPreferences({ spice: 5, flavour: 4 })).toEqual({ spice: 5, flavour: 4 });
+describe("only the sliders a snack type is rated on count", () => {
+  const keys = (category: string) => tasteFor(category).map((a) => a.key);
+
+  it("knows which types have crunch and spice", () => {
+    expect(keys("crisps")).toEqual(["flavour", "salt", "sweet", "value", "more", "crunch", "spice"]);
+    expect(keys("chocolate")).toEqual(["flavour", "salt", "sweet", "value", "more"]);
+    expect(keys("chews")).not.toContain("crunch");
+    expect(keys("world")).toContain("spice");
   });
 
-  it("counts snack types with no Spice slider as mild", () => {
-    expect(withImpliedSpice({ sweet: 5 }, "chocolate")).toEqual({ sweet: 5, spice: 1 });
+  it("crunch and spice are preferences you can set", () => {
+    expect(readPreferences({ spice: 5, crunch: 4, flavour: 4 })).toEqual({ spice: 5, crunch: 4, flavour: 4 });
   });
 
-  it("leaves spicy snack types to their real ratings", () => {
-    expect(withImpliedSpice({ spice: 4.5 }, "crisps")).toEqual({ spice: 4.5 });
-    expect(withImpliedSpice({ salt: 3 }, "crisps")).toEqual({ salt: 3 });
+  it("doesn't mark chocolate down for having no spice or crunch", () => {
+    const prefs = { flavour: 4, sweet: 5, spice: 5, crunch: 5 };
+    expect(matchScore(prefs, { flavour: 4, sweet: 5 }, keys("chocolate"))).toBe(1);
   });
 
-  it("so a chilli fan gets hot crisps above chocolate", () => {
-    const prefs = { spice: 5, flavour: 5 };
+  it("still needs two relevant sliders in common", () => {
+    expect(matchScore({ flavour: 4, spice: 5 }, { flavour: 4 }, keys("chocolate"))).toBe(1);
+    expect(matchScore({ flavour: 4, salt: 2, spice: 5 }, { flavour: 4 }, keys("chocolate"))).toBeNull();
+  });
+
+  it("judges crisps on crunch and spice too", () => {
+    const prefs = { flavour: 5, crunch: 5, spice: 5 };
     const ranked = rankMatches(prefs, [
-      { id: "dairy-milk", averages: withImpliedSpice({ flavour: 5 }, "chocolate"), rating: 5 },
-      { id: "takis", averages: withImpliedSpice({ flavour: 5, spice: 5 }, "world"), rating: 3 },
+      { id: "soft-mild", averages: { flavour: 5, crunch: 1, spice: 1 }, keys: keys("crisps"), rating: 5 },
+      { id: "hot-crunchy", averages: { flavour: 5, crunch: 5, spice: 5 }, keys: keys("crisps"), rating: 3 },
     ]);
-    expect(ranked.map((s) => s.id)).toEqual(["takis", "dairy-milk"]);
+    expect(ranked.map((s) => s.id)).toEqual(["hot-crunchy", "soft-mild"]);
   });
 });

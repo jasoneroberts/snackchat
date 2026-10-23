@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CATEGORIES, getCategory, TASTE } from "../../shared/catalogue";
+import { CATEGORIES, getCategory, TASTE, tasteFor } from "../../shared/catalogue";
 import type { ExplorePage, Preferences, SnackSummary, Suggestion } from "../../shared/types";
 import { api, errorText } from "../api";
 import { CompareBars, CompareKey } from "../components/CompareBars";
@@ -193,7 +193,7 @@ function SuggestionCard({
         </span>
         <span className="match-badge">{Math.round(s.match * 100)}%</span>
       </Link>
-      <CompareBars attributes={TASTE} mine={prefs} theirs={s.averages} />
+      <CompareBars attributes={tasteFor(s.snack.category)} mine={prefs} theirs={s.averages} />
       <div className="suggestion-buttons">
         <button type="button" className="button secondary small" onClick={() => onChoose("discarded")}>
           {t("explore.discard")}
@@ -204,6 +204,13 @@ function SuggestionCard({
       </div>
     </article>
   );
+}
+
+// For a slider only some snack types are rated on, which ones: "crisps, nuts and pub snacks".
+function onlyFor(key: string): string | null {
+  const types = CATEGORIES.filter((c) => c.extra.some((a) => a.key === key)).map((c) => c.short);
+  if (!types.length) return null;
+  return types.length === 1 ? types[0] : `${types.slice(0, -1).join(", ")} and ${types[types.length - 1]}`;
 }
 
 // 0 on a slider means "don't mind": that slider is left out of matching.
@@ -267,6 +274,7 @@ function PreferenceEditor({
               <span>{a.low}</span>
               <span>{a.high}</span>
             </div>
+            {onlyFor(a.key) && <div className="small muted">Only counts for {onlyFor(a.key)}.</div>}
           </div>
         );
       })}
