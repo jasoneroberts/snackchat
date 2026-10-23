@@ -6,6 +6,7 @@ import { matchPath, navigate, usePath } from "./router";
 import { Boards } from "./pages/Boards";
 import { CheckIn } from "./pages/CheckIn";
 import { ComingSoon } from "./pages/ComingSoon";
+import { BrandLogos } from "./pages/BrandLogos";
 import { Explore } from "./pages/Explore";
 import { Feed } from "./pages/Feed";
 import { Group } from "./pages/Group";
@@ -187,6 +188,9 @@ export function App() {
   } else if (path === "/settings") {
     title = "Settings";
     page = <Settings me={me} onChanged={refreshMe} />;
+  } else if (path === "/brands" && me.isAdmin) {
+    title = "Brand logos";
+    page = <BrandLogos />;
   } else if (path === "/review" && me.isAdmin) {
     title = "Approvals";
     page = <Review onChanged={refresh} />;

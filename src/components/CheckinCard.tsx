@@ -6,6 +6,7 @@ import { useVoice } from "../lib/voice";
 import { Avatar } from "./Avatar";
 import { Link } from "./Link";
 import { PhotoViewer } from "./PhotoViewer";
+import { SnackTile } from "./SnackTile";
 import { Stars } from "./Stars";
 
 
@@ -49,11 +50,13 @@ export function CheckinCard({
       </header>
 
       <div className="checkin-snack">
-        {/* Their photo as a thumbnail that opens full screen; no photo, no thumbnail. */}
-        {item.photoId && (
+        {/* Their photo as a thumbnail that opens full screen, or else the maker's logo, or nothing. */}
+        {item.photoId ? (
           <button type="button" className="checkin-thumb" aria-label={`Show photo of ${item.snack.name}`} onClick={() => setViewing(true)}>
             <img src={photoUrl} alt="" loading="lazy" />
           </button>
+        ) : (
+          <SnackTile snack={{ brand: item.snack.brand }} size={64} className="checkin-thumb" />
         )}
         <div className="grow">
           <Link href={`/snack/${item.snack.id}`} className="snack-link">
