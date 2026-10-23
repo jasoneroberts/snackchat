@@ -6,6 +6,7 @@ import { POINTS } from "../../shared/catalogue";
 import { currentUser } from "../lib/currentUser";
 import { buildDemoData, DEMO_GROUPS, DEMO_PHOTO_PREFIX, DEMO_PREFIX, demoUserId, offSearchUrl, wantsPhoto } from "../lib/demo";
 import { newInviteCode } from "../lib/groups";
+import { findLogoCandidates, isLogoHost, type LogoCandidate } from "../lib/logoCandidates";
 import { brandKey } from "../../shared/brands";
 import { newId } from "../lib/crypto";
 import { avatarKey } from "./avatars";
@@ -321,17 +322,84 @@ admin.post("/brands/logo", async (c) => {
   if (!LOGO_TYPES.has(logo.type)) return c.json({ error: "Logos must be PNG, JPEG or WebP." }, 400);
   if (logo.size > MAX_LOGO_BYTES) return c.json({ error: "That logo is too big (512 KB max)." }, 400);
 
-  const old = await c.env.DB.prepare("SELECT logo_id FROM brand_logos WHERE brand_key = ?").bind(brand).first<{ logo_id: string }>();
+  return c.json({ logoId: await saveLogo(c.env, brand, logo.stream(), logo.type) }, 201);
+});
+
+/** Store a brand's logo in R2 and point the brand at it, replacing any old one. */
+async function saveLogo(env: AppContext["Bindings"], brand: string, body: ReadableStream | ArrayBuffer, type: string) {
+  const old = await env.DB.prepare("SELECT logo_id FROM brand_logos WHERE brand_key = ?").bind(brand).first<{ logo_id: string }>();
   const logoId = newId();
-  await c.env.PHOTOS.put(logoKey(logoId), logo.stream(), { httpMetadata: { contentType: logo.type } });
-  await c.env.DB.prepare(
+  await env.PHOTOS.put(logoKey(logoId), body, { httpMetadata: { contentType: type } });
+  await env.DB.prepare(
     `INSERT INTO brand_logos (brand_key, logo_id, updated_at) VALUES (?, ?, ?)
      ON CONFLICT (brand_key) DO UPDATE SET logo_id = excluded.logo_id, updated_at = excluded.updated_at`,
   )
     .bind(brand, logoId, Math.floor(Date.now() / 1000))
     .run();
-  if (old) await c.env.PHOTOS.delete(logoKey(old.logo_id));
-  return c.json({ logoId }, 201);
+  if (old) await env.PHOTOS.delete(logoKey(old.logo_id));
+  return logoId;
+}
+
+// Suggested logos (lib/logoCandidates.ts) ------------------------------------
+
+// Wikidata lookups are cached for a week, so paging through suggestions is quick.
+const CANDIDATE_TTL = 7 * 24 * 3600;
+
+/** The next suggestion for a brand that hasn't been rejected, and how many are left after it. */
+async function nextSuggestion(env: AppContext["Bindings"], brand: string) {
+  const cacheKey = `logo-candidates:v1:${brand}`;
+  let candidates = await env.CACHE.get<LogoCandidate[]>(cacheKey, "json");
+  if (!candidates) {
+    candidates = await findLogoCandidates(brand);
+    await env.CACHE.put(cacheKey, JSON.stringify(candidates), { expirationTtl: CANDIDATE_TTL });
+  }
+  const { results } = await env.DB.prepare("SELECT url FROM brand_logo_rejects WHERE brand_key = ?").bind(brand).all<{ url: string }>();
+  const rejected = new Set(results.map((r) => r.url));
+  const open = candidates.filter((c) => !rejected.has(c.url));
+  return { suggestion: open[0] ?? null, more: Math.max(0, open.length - 1) };
+}
+
+// The best logo suggestion for a brand: ?brand=Walkers
+admin.get("/brands/suggestion", async (c) => {
+  const brand = brandKey(c.req.query("brand") ?? "");
+  if (!brand) return c.json({ error: "Which brand?" }, 400);
+  try {
+    return c.json(await nextSuggestion(c.env, brand));
+  } catch {
+    return c.json({ error: "Couldn't look up logos just now. Try again in a minute." }, 502);
+  }
+});
+
+// Use a suggested logo: { brand, url }. The server downloads it and stores its own copy.
+admin.post("/brands/suggestion/approve", async (c) => {
+  const body = await c.req.json<{ brand?: string; url?: string }>().catch(() => ({}) as { brand?: string; url?: string });
+  const brand = brandKey(body.brand ?? "");
+  const url = body.url ?? "";
+  if (!brand || !isLogoHost(url)) return c.json({ error: "That isn't one of the suggestions." }, 400);
+
+  const res = await fetch(url, { headers: { "User-Agent": "Snackchat/1.0 (logo suggestions)" } }).catch(() => null);
+  const type = res?.headers.get("Content-Type")?.split(";")[0].trim() ?? "";
+  if (!res?.ok || !isLogoHost(res.url || url) || !LOGO_TYPES.has(type)) {
+    return c.json({ error: "Couldn't download that logo. Reject it to see the next one." }, 502);
+  }
+  const image = await res.arrayBuffer();
+  if (image.byteLength > MAX_LOGO_BYTES) return c.json({ error: "That logo is too big. Reject it to see the next one." }, 502);
+  return c.json({ logoId: await saveLogo(c.env, brand, image, type) }, 201);
+});
+
+// Say no to a suggestion: { brand, url }. Returns the next one.
+admin.post("/brands/suggestion/reject", async (c) => {
+  const body = await c.req.json<{ brand?: string; url?: string }>().catch(() => ({}) as { brand?: string; url?: string });
+  const brand = brandKey(body.brand ?? "");
+  if (!brand || !body.url) return c.json({ error: "Which suggestion?" }, 400);
+  await c.env.DB.prepare("INSERT OR IGNORE INTO brand_logo_rejects (brand_key, url, created_at) VALUES (?, ?, ?)")
+    .bind(brand, body.url, Math.floor(Date.now() / 1000))
+    .run();
+  try {
+    return c.json(await nextSuggestion(c.env, brand));
+  } catch {
+    return c.json({ error: "Couldn't look up logos just now. Try again in a minute." }, 502);
+  }
 });
 
 // Remove a brand's logo; its snacks go back to showing nothing.
