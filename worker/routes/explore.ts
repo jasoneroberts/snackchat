@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { getCategory } from "../../shared/catalogue";
 import type { ExplorePage, Preferences, SnackSummary, Suggestion } from "../../shared/types";
 import type { AppContext } from "../env";
 import { weightedRating } from "../lib/boards";
@@ -23,9 +24,11 @@ export async function getPreferences(db: D1Database, userId: string): Promise<Pr
 }
 
 // Your preferences, the best-matching snacks you haven't tried, and your saved list.
+// ?category=crisps narrows the suggestions to one snack type.
 explore.get("/", async (c) => {
   const user = currentUser(c);
   const db = c.env.DB;
+  const category = getCategory(c.req.query("category") ?? "")?.id ?? null;
 
   const [preferences, snacks, averages, saved] = await Promise.all([
     getPreferences(db, user.id),
@@ -39,9 +42,10 @@ explore.get("/", async (c) => {
           WHERE s.status = 'approved'
             AND s.id NOT IN (SELECT snack_id FROM checkins WHERE user_id = ?1)
             AND s.id NOT IN (SELECT snack_id FROM explore_choices WHERE user_id = ?1)
+            AND (?2 IS NULL OR s.category_id = ?2)
           GROUP BY s.id`,
       )
-      .bind(user.id)
+      .bind(user.id, category)
       .all<SnackSummary & { avg: number; count: number }>(),
     // Everyone's average for each universal slider, per snack.
     db
