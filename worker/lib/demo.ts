@@ -65,6 +65,18 @@ const SPICE: Record<string, number> = {
   "seed-discos-salt-vinegar": 1, "seed-pringles-salt-vinegar": 1, "seed-salted-pistachios": 1, "seed-popchips-sea-salt": 1,
 };
 
+// How crunchy the snacks whose type has a Crunch slider are (crisps, nuts,
+// biscuits and pub snacks).
+const CRUNCH: Record<string, number> = {
+  "seed-walkers-cheese-onion": 3, "seed-mccoys-flame-grilled-steak": 5, "seed-kettle-sea-salt-balsamic": 5,
+  "seed-tyrrells-sea-salted": 5, "seed-pipers-anglesey-sea-salt": 5, "seed-seabrook-original": 4,
+  "seed-scampi-fries": 4, "seed-bacon-fries": 3, "seed-pork-scratchings": 5, "seed-dry-roasted-peanuts": 4,
+  "seed-mccoys-salt-malt-vinegar": 5, "seed-doritos-chilli-heatwave": 4, "seed-monster-munch-flamin-hot": 3,
+  "seed-nik-naks-nice-spicy": 4, "seed-wasabi-peas": 5, "seed-walkers-ready-salted": 3, "seed-walkers-salt-vinegar": 3,
+  "seed-chipsticks-salt-vinegar": 3, "seed-discos-salt-vinegar": 3, "seed-pringles-salt-vinegar": 3,
+  "seed-salted-pistachios": 3, "seed-popchips-sea-salt": 2, "seed-chocolate-hobnobs": 4, "seed-jaffa-cakes": 1,
+};
+
 
 const REVIEWS = [
   "Proper crunch, would buy again.",
@@ -150,6 +162,7 @@ export function buildDemoData(now: number, seed = 7): DemoData {
           salt: nudge(TASTE[snackId][1]),
           sweet: nudge(TASTE[snackId][2]),
           ...(SPICE[snackId] ? { spice: nudge(SPICE[snackId]) } : {}),
+          ...(CRUNCH[snackId] ? { crunch: nudge(CRUNCH[snackId]) } : {}),
           value: 1 + Math.floor(random() * 5),
           more: 2 + Math.floor(random() * 4),
         },
