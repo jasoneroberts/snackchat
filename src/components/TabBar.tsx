@@ -15,6 +15,11 @@ const TABS: { href: string; label: LineKey; icon: ReactNode }[] = [
   { href: "/boards", label: "tab.boards", icon: icon("M4 20V12h4v8M10 20V6h4v14M16 20v-5h4v5") },
   { href: "/checkin", label: "tab.checkin", icon: null },
   {
+    href: "/explore",
+    label: "tab.explore",
+    icon: icon("M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM15.5 8.5l-2 5-5 2 2-5z"),
+  },
+  {
     href: "/groups",
     label: "tab.groups",
     icon: icon("M9 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20c1-3.5 3.6-5.5 6.5-5.5s5.5 2 6.5 5.5M17 11.8a2.8 2.8 0 1 0 0-5.6M16 14.6c2.6-.3 4.6 1.4 5.5 4.4"),

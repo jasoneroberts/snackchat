@@ -13,6 +13,7 @@ import { auth } from "./routes/auth";
 import { avatars } from "./routes/avatars";
 import { boards } from "./routes/boards";
 import { checkins } from "./routes/checkins";
+import { explore } from "./routes/explore";
 import { groups } from "./routes/groups";
 import { photos } from "./routes/photos";
 import { snacks } from "./routes/snacks";
@@ -42,6 +43,7 @@ app.route("/admin", admin);
 app.route("/users", users);
 app.route("/groups", groups);
 app.route("/boards", boards);
+app.route("/explore", explore);
 
 app.get("/me", async (c) => {
   const user = c.get("user");

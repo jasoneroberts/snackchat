@@ -6,6 +6,7 @@ import { matchPath, navigate, usePath } from "./router";
 import { Boards } from "./pages/Boards";
 import { CheckIn } from "./pages/CheckIn";
 import { ComingSoon } from "./pages/ComingSoon";
+import { Explore } from "./pages/Explore";
 import { Feed } from "./pages/Feed";
 import { Group } from "./pages/Group";
 import { Groups } from "./pages/Groups";
@@ -163,6 +164,10 @@ export function App() {
     tab = "/boards";
     title = line(voice, "title.boards");
     page = <Boards me={me} />;
+  } else if (path === "/explore") {
+    tab = "/explore";
+    title = line(voice, "title.explore");
+    page = <Explore />;
   } else if (path === "/groups") {
     tab = "/groups";
     title = line(voice, "title.groups");

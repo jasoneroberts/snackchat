@@ -83,12 +83,34 @@ export function Profile({
         </div>
       )}
 
-      {data.taste && Object.keys(data.taste).length > 0 && (
+      {data.preferences && Object.keys(data.preferences).length > 0 ? (
         <section className="card-plain">
-          <h2 className="section-title">Taste profile</h2>
-          <p className="small muted">Averages of the sliders across everything rated.</p>
-          <Bars attributes={UNIVERSAL} values={data.taste} dark />
+          <div className="row-between">
+            <h2 className="section-title">Taste profile</h2>
+            {isMe && (
+              <Link href="/explore" className="small">
+                Edit
+              </Link>
+            )}
+          </div>
+          <p className="small muted">{isMe ? "What you like. Explore uses it to suggest snacks." : "What they like."}</p>
+          <Bars
+            attributes={UNIVERSAL.filter((a) => data.preferences![a.key] != null)}
+            values={data.preferences as Record<string, number>}
+            dark
+          />
         </section>
+      ) : (
+        isMe &&
+        !data.private && (
+          <section className="card-plain">
+            <h2 className="section-title">Taste profile</h2>
+            <p className="small muted">Tell Snackchat what you like and Explore will suggest snacks to try.</p>
+            <Link href="/explore" className="button secondary small">
+              Set your taste
+            </Link>
+          </section>
+        )
       )}
 
       {data.checkins && (
