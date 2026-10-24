@@ -3,6 +3,8 @@ import { api, type Me } from "./api";
 import { Link } from "./components/Link";
 import { TabBar } from "./components/TabBar";
 import { matchPath, navigate, usePath } from "./router";
+import { AdminSnacks } from "./pages/AdminSnacks";
+import { AdminUsers } from "./pages/AdminUsers";
 import { Boards } from "./pages/Boards";
 import { CheckIn } from "./pages/CheckIn";
 import { ComingSoon } from "./pages/ComingSoon";
@@ -191,6 +193,12 @@ export function App() {
   } else if (path === "/brands" && me.isAdmin) {
     title = "Brand logos";
     page = <BrandLogos />;
+  } else if (path === "/admin/users" && me.isAdmin) {
+    title = "Users";
+    page = <AdminUsers meId={me.id} />;
+  } else if (path === "/admin/snacks" && me.isAdmin) {
+    title = "Snacks";
+    page = <AdminSnacks onChanged={refreshMe} />;
   } else if (path === "/review" && me.isAdmin) {
     title = "Approvals";
     page = <Review onChanged={refresh} />;

@@ -147,3 +147,36 @@ export interface LogoSuggestion {
   suggestion: { url: string; source: "wikidata" | "website"; label: string } | null;
   more: number; // how many other suggestions are left after this one
 }
+
+// Admin: Users page.
+export interface AdminUserRow {
+  id: string;
+  username: string;
+  avatarId: string | null;
+  isAdmin: boolean;
+  isDemo: boolean;
+  joinedAt: number;
+  lastActive: number | null; // newest sign-in or check-in
+  checkins: number;
+  points: number;
+  groups: number;
+}
+
+// Admin: Snacks page.
+export interface AdminSnackRow {
+  id: string;
+  name: string;
+  brand: string | null;
+  category: string;
+  status: "pending" | "approved" | "rejected";
+  checkins: number;
+  photoId: string | null;
+  addedBy: string | null; // username of whoever added it; null for the built-in catalogue
+  createdAt: number;
+}
+
+export interface AdminSnackPhoto {
+  id: string;
+  username: string;
+  createdAt: number;
+}

@@ -6,6 +6,7 @@ import { currentUser } from "../lib/currentUser";
 import { listCheckins } from "../lib/feed";
 import { LATEST_PHOTO } from "../lib/photoSql";
 import { searchPatterns } from "../lib/search";
+import { validateSnackFields } from "../lib/validation";
 
 export const snacks = new Hono<AppContext>();
 
@@ -54,14 +55,10 @@ snacks.get("/", async (c) => {
 // admin approves it (or, later, three people confirm it).
 snacks.post("/", async (c) => {
   const user = currentUser(c);
-  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
-  const name = typeof body?.name === "string" ? body.name.trim().replace(/\s+/g, " ") : "";
-  const brand = typeof body?.brand === "string" ? body.brand.trim().replace(/\s+/g, " ") : "";
-  const category = typeof body?.category === "string" ? body.category : "";
-
-  if (name.length < 2 || name.length > 80) return c.json({ error: "Snack names are 2 to 80 characters." }, 400);
-  if (brand.length > 60) return c.json({ error: "Keep the brand under 60 characters." }, 400);
-  if (!getCategory(category)) return c.json({ error: "Pick a snack type." }, 400);
+  const parsed = validateSnackFields(await c.req.json().catch(() => null), (id) => !!getCategory(id));
+  if (!parsed.ok) return c.json({ error: parsed.error }, 400);
+  const { name, category } = parsed.value;
+  const brand = parsed.value.brand ?? "";
 
   // Same name and brand as an existing snack? Use that one instead of a duplicate.
   const existing = await c.env.DB.prepare(

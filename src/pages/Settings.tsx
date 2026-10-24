@@ -94,20 +94,31 @@ export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<v
         <VoiceChoice current={me.voice} onSaved={onChanged} />
       </section>
 
-      {me.isAdmin && <DemoData onChanged={() => void onChanged()} />}
-
       {me.isAdmin && (
-        <Link href="/review" className="card-plain row settings-link">
-          <b className="grow">Photo approvals</b>
-          {me.reviewCount > 0 ? <span className="count-badge">{me.reviewCount}</span> : <span className="muted small">All clear</span>}
-        </Link>
-      )}
-
-      {me.isAdmin && (
-        <Link href="/brands" className="card-plain row settings-link">
-          <b className="grow">Brand logos</b>
-          <span className="muted small">Shown when a snack has no photo</span>
-        </Link>
+        <>
+          <h2 className="section-title admin-heading">Admin</h2>
+          <Link href="/review" className="card-plain row settings-link">
+            <b className="grow">Photo approvals</b>
+            {me.reviewCount > 0 ? <span className="count-badge">{me.reviewCount}</span> : <span className="muted small">All clear</span>}
+          </Link>
+          <Link href="/admin/snacks" className="card-plain row settings-link">
+            <b className="grow">Snacks</b>
+            {me.pendingSnacks > 0 ? (
+              <span className="count-badge">{me.pendingSnacks}</span>
+            ) : (
+              <span className="muted small">Fix names, makers and photos</span>
+            )}
+          </Link>
+          <Link href="/admin/users" className="card-plain row settings-link">
+            <b className="grow">Users</b>
+            <span className="muted small">Who's joined, PIN resets</span>
+          </Link>
+          <Link href="/brands" className="card-plain row settings-link">
+            <b className="grow">Brand logos</b>
+            <span className="muted small">Shown when a snack has no photo</span>
+          </Link>
+          <DemoData onChanged={() => void onChanged()} />
+        </>
       )}
     </div>
   );

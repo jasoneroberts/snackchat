@@ -1,14 +1,17 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import type { BrandRow, DemoStatus, ReviewQueue } from "../../shared/types";
+import type { AdminSnackPhoto, AdminSnackRow, AdminUserRow, BrandRow, DemoStatus, ReviewQueue } from "../../shared/types";
 import type { AppContext } from "../env";
-import { POINTS } from "../../shared/catalogue";
+import { getCategory, POINTS } from "../../shared/catalogue";
 import { currentUser } from "../lib/currentUser";
 import { buildDemoData, DEMO_GROUPS, DEMO_PHOTO_PREFIX, DEMO_PREFIX, demoUserId, offSearchUrl, wantsPhoto } from "../lib/demo";
 import { newInviteCode } from "../lib/groups";
 import { findLogoCandidates, isLogoHost, type LogoCandidate } from "../lib/logoCandidates";
 import { brandKey } from "../../shared/brands";
-import { newId } from "../lib/crypto";
+import { hashPassword, newId } from "../lib/crypto";
+import { LATEST_PHOTO } from "../lib/photoSql";
+import { newPin } from "../lib/quickSignIn";
+import { validateSnackFields } from "../lib/validation";
 import { avatarKey } from "./avatars";
 import { logoKey } from "./logos";
 
@@ -30,6 +33,12 @@ export async function reviewCount(db: D1Database): Promise<number> {
             + (SELECT COUNT(*) FROM users WHERE avatar_pending_id IS NOT NULL) AS n`,
     )
     .first<{ n: number }>();
+  return row?.n ?? 0;
+}
+
+/** New snacks people have added that are waiting for a yes or no. */
+export async function pendingSnackCount(db: D1Database): Promise<number> {
+  const row = await db.prepare("SELECT COUNT(*) AS n FROM snacks WHERE status = 'pending'").first<{ n: number }>();
   return row?.n ?? 0;
 }
 
@@ -409,5 +418,123 @@ admin.delete("/brands/logo", async (c) => {
     .bind(brand)
     .first<{ logo_id: string }>();
   if (old) await c.env.PHOTOS.delete(logoKey(old.logo_id));
+  return c.json({ ok: true });
+});
+
+// Users ---------------------------------------------------------------------
+
+// Everyone, newest first, with demo people at the end.
+admin.get("/users", async (c) => {
+  const { results } = await c.env.DB.prepare(
+    `SELECT u.id, u.username, u.avatar_id AS avatarId, u.is_admin AS isAdmin, u.created_at AS joinedAt,
+            u.id LIKE 'demo-%' AS isDemo,
+            (SELECT COUNT(*) FROM checkins c WHERE c.user_id = u.id) AS checkins,
+            (SELECT IFNULL(SUM(p.points), 0) FROM points_ledger p WHERE p.user_id = u.id) AS points,
+            (SELECT COUNT(*) FROM group_members g WHERE g.user_id = u.id) AS groups,
+            MAX(IFNULL((SELECT MAX(s.created_at) FROM sessions s WHERE s.user_id = u.id), 0),
+                IFNULL((SELECT MAX(c.created_at) FROM checkins c WHERE c.user_id = u.id), 0)) AS lastActive
+       FROM users u
+      ORDER BY isDemo, u.created_at DESC`,
+  ).all<Omit<AdminUserRow, "isAdmin" | "isDemo"> & { isAdmin: number; isDemo: number }>();
+  const users: AdminUserRow[] = results.map((u) => ({
+    ...u,
+    isAdmin: u.isAdmin === 1,
+    isDemo: u.isDemo === 1,
+    lastActive: u.lastActive || null,
+  }));
+  return c.json({ users });
+});
+
+// Give someone a new PIN when they've forgotten theirs. The new PIN is shown
+// to the admin once, to pass on; the person is signed out everywhere.
+admin.post("/users/:id/pin", async (c) => {
+  const id = c.req.param("id");
+  if (id === currentUser(c).id) return c.json({ error: "That's you. You can't reset your own PIN here." }, 400);
+  if (id.startsWith("demo-")) return c.json({ error: "Demo people can't sign in." }, 400);
+  const pin = newPin();
+  const db = c.env.DB;
+  const updated = await db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").bind(await hashPassword(pin), id).run();
+  if (updated.meta.changes !== 1) return c.json({ error: "Person not found." }, 404);
+  await db.prepare("DELETE FROM sessions WHERE user_id = ?").bind(id).run();
+  return c.json({ pin });
+});
+
+// Snacks --------------------------------------------------------------------
+
+// Every snack except merged ones: waiting ones first, then A to Z.
+admin.get("/snacks", async (c) => {
+  const { results } = await c.env.DB.prepare(
+    `SELECT s.id, s.name, s.brand, s.category_id AS category, s.status, s.created_at AS createdAt,
+            (SELECT COUNT(*) FROM checkins c WHERE c.snack_id = s.id) AS checkins,
+            (${LATEST_PHOTO}) AS photoId,
+            u.username AS addedBy
+       FROM snacks s LEFT JOIN users u ON u.id = s.created_by
+      WHERE s.status != 'merged'
+      ORDER BY s.status != 'pending', s.name COLLATE NOCASE`,
+  ).all<AdminSnackRow>();
+  return c.json({ snacks: results });
+});
+
+// Correct a snack's name, maker or type: { name, brand, category }.
+admin.patch("/snacks/:id", async (c) => {
+  const id = c.req.param("id");
+  const parsed = validateSnackFields(await c.req.json().catch(() => null), (key) => !!getCategory(key));
+  if (!parsed.ok) return c.json({ error: parsed.error }, 400);
+  const { name, brand, category } = parsed.value;
+  const db = c.env.DB;
+  const clash = await db
+    .prepare(
+      `SELECT 1 FROM snacks
+        WHERE id != ?1 AND status = 'approved'
+          AND name = ?2 COLLATE NOCASE AND IFNULL(brand, '') = ?3 COLLATE NOCASE`,
+    )
+    .bind(id, name, brand ?? "")
+    .first();
+  if (clash) return c.json({ error: "Another snack already has that name and maker." }, 409);
+  const updated = await db
+    .prepare("UPDATE snacks SET name = ?, brand = ?, category_id = ? WHERE id = ? AND status != 'merged'")
+    .bind(name, brand, category, id)
+    .run();
+  if (updated.meta.changes !== 1) return c.json({ error: "Snack not found." }, 404);
+  return c.json({ ok: true });
+});
+
+// Say yes or no to a snack someone added: { action: "approve" | "reject" }.
+// Approved snacks show for everyone; rejected ones disappear from search and
+// their page, but check-ins already made on them stay.
+admin.post("/snacks/:id/status", async (c) => {
+  const action = await readAction(c.req.raw);
+  if (!action) return c.json({ error: "Approve or reject?" }, 400);
+  const updated = await c.env.DB.prepare("UPDATE snacks SET status = ? WHERE id = ? AND status = 'pending'")
+    .bind(action === "approve" ? "approved" : "rejected", c.req.param("id"))
+    .run();
+  if (updated.meta.changes !== 1) return c.json({ error: "Already dealt with." }, 404);
+  return c.json({ ok: true });
+});
+
+// A snack's photos that everyone can see, newest first.
+admin.get("/snacks/:id/photos", async (c) => {
+  const { results } = await c.env.DB.prepare(
+    `SELECT p.id, u.username, p.created_at AS createdAt
+       FROM photos p
+       JOIN checkins c ON c.id = p.checkin_id
+       JOIN users u ON u.id = c.user_id
+      WHERE c.snack_id = ? AND p.status = 'visible'
+      ORDER BY p.created_at DESC
+      LIMIT 30`,
+  )
+    .bind(c.req.param("id"))
+    .all<AdminSnackPhoto>();
+  return c.json({ photos: results });
+});
+
+// Hide a photo that's wrong (the wrong snack, blurry, not a snack). It stops
+// showing everywhere; the check-in and its points stay. The file is kept, as
+// demo photos share one file between several check-ins.
+admin.post("/photos/:id/hide", async (c) => {
+  const updated = await c.env.DB.prepare("UPDATE photos SET status = 'hidden' WHERE id = ? AND status = 'visible'")
+    .bind(c.req.param("id"))
+    .run();
+  if (updated.meta.changes !== 1) return c.json({ error: "Already hidden." }, 404);
   return c.json({ ok: true });
 });

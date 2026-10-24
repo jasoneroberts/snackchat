@@ -33,7 +33,7 @@ export function Snack({ id, me }: { id: string; me: Me }) {
         <h1 className="title">{snack.name}</h1>
         <div className="muted">
           {[snack.brand, category?.name, snack.country === "GB" ? "UK" : snack.country].filter(Boolean).join(" · ")}
-          {snack.status === "pending" && <span className="tag">new, pending</span>}
+          {snack.status === "pending" && <span className="tag">new, waiting for approval</span>}
         </div>
       </div>
 

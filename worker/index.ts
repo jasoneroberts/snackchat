@@ -8,7 +8,7 @@ import { devLoginUsername, getDevUser } from "./lib/devLogin";
 import { quickSignInOn } from "./lib/quickSignIn";
 import { getSessionUser } from "./lib/session";
 import { turnstileInTestMode } from "./lib/turnstile";
-import { admin, reviewCount } from "./routes/admin";
+import { admin, pendingSnackCount, reviewCount } from "./routes/admin";
 import { auth } from "./routes/auth";
 import { avatars } from "./routes/avatars";
 import { boards } from "./routes/boards";
@@ -66,6 +66,8 @@ app.get("/me", async (c) => {
       isAdmin: user.is_admin === 1,
       // Admins see how many photos are waiting for them.
       reviewCount: user.is_admin === 1 ? await reviewCount(c.env.DB) : 0,
+      // ...and how many new snacks people have added.
+      pendingSnacks: user.is_admin === 1 ? await pendingSnackCount(c.env.DB) : 0,
     },
     devLogin: devLoginUsername(c.env) !== null,
     quickSignIn: quickSignInOn(c.env),

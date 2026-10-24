@@ -12,6 +12,7 @@ export interface Me {
   avatarPendingId: string | null;
   isAdmin: boolean;
   reviewCount: number;
+  pendingSnacks: number;
   /** null until they've picked lad mode or grown-up mode. */
   voice: Voice | null;
 }
