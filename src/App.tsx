@@ -226,7 +226,7 @@ export function App() {
               </button>
             )}
             <Link href="/" className="brand">
-              <img src="/logo.svg" alt="" width={32} height={32} />
+              <img src={voice === "lad" ? "/logo-lad.svg" : "/logo.svg"} alt="" width={32} height={32} />
               <span>{title}</span>
             </Link>
           </div>
