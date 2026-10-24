@@ -32,12 +32,6 @@ export const UNIVERSAL: Attribute[] = [
   { key: "more", label: "Moreishness", low: "One is plenty", high: "Gone in seconds" },
 ];
 
-// The sliders you can set a taste preference for on Explore: the universal
-// ones plus crunch and spice. Each snack is only compared on the ones its
-// type is rated on (tasteFor), so chocolate is never judged on spice and
-// sweets never on crunch.
-export const TASTE: Attribute[] = [...UNIVERSAL, crunch, { ...spice, label: "Spiciness" }];
-
 export const CATEGORIES: Category[] = [
   {
     id: "crisps",
@@ -114,12 +108,6 @@ const byId = new Map(CATEGORIES.map((c) => [c.id, c]));
 
 export function getCategory(id: string): Category | undefined {
   return byId.get(id);
-}
-
-/** The taste preferences that apply to a snack type: the TASTE sliders it's rated on. */
-export function tasteFor(categoryId: string): Attribute[] {
-  const rated = new Set(attributesFor(categoryId).map((a) => a.key));
-  return TASTE.filter((a) => rated.has(a.key));
 }
 
 /** All the sliders a snack in this category can be rated on. */

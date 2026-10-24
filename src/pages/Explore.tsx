@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CATEGORIES, getCategory, TASTE, tasteFor } from "../../shared/catalogue";
+import { attributesFor, CATEGORIES, getCategory } from "../../shared/catalogue";
 import type { ExplorePage, Preferences, SnackSummary, Suggestion } from "../../shared/types";
 import { api, errorText } from "../api";
 import { CompareBars, CompareKey } from "../components/CompareBars";
@@ -19,8 +19,10 @@ function loadFilter(): string {
 }
 
 /**
- * Explore: set what you like, then get the snacks whose community averages
- * are closest to it. Save one to try later, or discard it to stop seeing it.
+ * Explore: pick a snack type, say what you like in that type, then get the
+ * snacks whose community averages are closest to it. Each type has its own
+ * taste, so you can like hot crisps and mild chocolate. Save a suggestion to
+ * try later, or discard it to stop seeing it.
  */
 export function Explore() {
   const { t } = useVoice();
@@ -31,10 +33,7 @@ export function Explore() {
 
   const load = (type = category) =>
     api<ExplorePage>(`/explore?category=${encodeURIComponent(type)}`)
-      .then((page) => {
-        setData(page);
-        if (!page.preferences) setEditing(true);
-      })
+      .then(setData)
       .catch((err) => setError(errorText(err)));
 
   useEffect(() => {
@@ -43,6 +42,7 @@ export function Explore() {
 
   const filter = (type: string) => {
     setCategory(type);
+    setEditing(false);
     try {
       localStorage.setItem(SAVED_FILTER, type);
     } catch {
@@ -81,32 +81,79 @@ export function Explore() {
   if (error && !data) return <p className="error page">{error}</p>;
   if (!data) return <p className="muted page">Loading…</p>;
 
+  const type = getCategory(category);
+  const taste = type ? data.tastes[type.id] : undefined;
+  const setTypes = CATEGORIES.filter((c) => data.tastes[c.id]);
+  // Suggestions need a taste: for the chosen type, or for at least one type under "All".
+  const canSuggest = type ? !!taste : setTypes.length > 0;
+
   return (
     <div className="page stack">
-      {editing || !data.preferences ? (
-        <PreferenceEditor
-          initial={data.preferences}
-          onCancel={data.preferences ? () => setEditing(false) : undefined}
-          onSaved={() => {
-            setEditing(false);
-            load();
-          }}
-        />
+      <div className="chip-scroll">
+        <button type="button" className={category === "" ? "pill on" : "pill"} onClick={() => filter("")}>
+          All snacks
+        </button>
+        {CATEGORIES.map((c) => (
+          <button key={c.id} type="button" className={category === c.id ? "pill on" : "pill"} onClick={() => filter(c.id)}>
+            {c.name}
+          </button>
+        ))}
+      </div>
+
+      {type ? (
+        editing || !taste ? (
+          <PreferenceEditor
+            key={type.id}
+            category={type.id}
+            initial={taste ?? null}
+            onCancel={taste ? () => setEditing(false) : undefined}
+            onSaved={() => {
+              setEditing(false);
+              load();
+            }}
+          />
+        ) : (
+          <section className="card-plain">
+            <div className="row-between">
+              <h2 className="section-title">
+                {t("explore.yourTaste")} in {type.short}
+              </h2>
+              <button type="button" className="link-button" onClick={() => setEditing(true)}>
+                Edit
+              </button>
+            </div>
+            <div className="pref-summary small">
+              {attributesFor(type.id).map((a) => (
+                <span key={a.key} className="chip">
+                  {a.label} {taste[a.key] ?? "any"}
+                </span>
+              ))}
+            </div>
+          </section>
+        )
       ) : (
-        <section className="card-plain">
-          <div className="row-between">
-            <h2 className="section-title">{t("explore.yourTaste")}</h2>
-            <button type="button" className="link-button" onClick={() => setEditing(true)}>
-              Edit
-            </button>
-          </div>
-          <div className="pref-summary small">
-            {TASTE.map((a) => (
-              <span key={a.key} className="chip">
-                {a.label} {data.preferences![a.key] ?? "any"}
-              </span>
-            ))}
-          </div>
+        <section className="card-plain stack-sm">
+          <h2 className="section-title">{t("explore.yourTaste")}</h2>
+          {setTypes.length ? (
+            <>
+              <p className="small muted no-margin">
+                Each type has its own taste. Suggestions below use your taste for each snack's type. Tap a type to
+                change it.
+              </p>
+              <div className="pref-summary small">
+                {setTypes.map((c) => (
+                  <button key={c.id} type="button" className="chip chip-button" onClick={() => filter(c.id)}>
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="small muted no-margin">
+              Pick a snack type above and say what you like in it. You can set a different taste for each type, like
+              hot crunchy crisps but mild chocolate.
+            </p>
+          )}
         </section>
       )}
 
@@ -135,37 +182,24 @@ export function Explore() {
         </section>
       )}
 
-      {data.preferences && !editing && (
+      {canSuggest && !editing && (
         <>
           <div>
             <h2 className="section-title">{t("explore.suggestions")}</h2>
             <p className="small muted">Closest to your taste, from everyone's ratings. Snacks you've had are left out.</p>
           </div>
-          <div className="chip-scroll">
-            <button type="button" className={category === "" ? "pill on" : "pill"} onClick={() => filter("")}>
-              All snacks
-            </button>
-            {CATEGORIES.map((c) => (
-              <button key={c.id} type="button" className={category === c.id ? "pill on" : "pill"} onClick={() => filter(c.id)}>
-                {c.name}
-              </button>
-            ))}
-          </div>
           {data.suggestions.length === 0 ? (
-            <p className="muted">
-              {category ? `No ${getCategory(category)?.short ?? "snacks"} to suggest right now. Try another type.` : t("explore.none")}
-            </p>
+            <p className="muted">{type ? `No ${type.short} to suggest right now. Try another type.` : t("explore.none")}</p>
           ) : (
             <>
               <CompareKey />
               {data.suggestions.map((s) => (
-                <SuggestionCard key={s.snack.id} s={s} prefs={data.preferences!} onChoose={(c) => choose(s, c)} />
+                <SuggestionCard key={s.snack.id} s={s} prefs={data.tastes[s.snack.category] ?? {}} onChoose={(c) => choose(s, c)} />
               ))}
             </>
           )}
         </>
       )}
-
     </div>
   );
 }
@@ -193,7 +227,7 @@ function SuggestionCard({
         </span>
         <span className="match-badge">{Math.round(s.match * 100)}%</span>
       </Link>
-      <CompareBars attributes={tasteFor(s.snack.category)} mine={prefs} theirs={s.averages} />
+      <CompareBars attributes={attributesFor(s.snack.category)} mine={prefs} theirs={s.averages} />
       <div className="suggestion-buttons">
         <button type="button" className="button secondary small" onClick={() => onChoose("discarded")}>
           {t("explore.discard")}
@@ -206,26 +240,22 @@ function SuggestionCard({
   );
 }
 
-// For a slider only some snack types are rated on, which ones: "crisps, nuts and pub snacks".
-function onlyFor(key: string): string | null {
-  const types = CATEGORIES.filter((c) => c.extra.some((a) => a.key === key)).map((c) => c.short);
-  if (!types.length) return null;
-  return types.length === 1 ? types[0] : `${types.slice(0, -1).join(", ")} and ${types[types.length - 1]}`;
-}
-
 // 0 on a slider means "don't mind": that slider is left out of matching.
 function PreferenceEditor({
+  category,
   initial,
   onCancel,
   onSaved,
 }: {
+  category: string;
   initial: Preferences | null;
   onCancel?: () => void;
   onSaved: () => void;
 }) {
   const { t } = useVoice();
+  const sliders = attributesFor(category);
   const [prefs, setPrefs] = useState<Record<string, number>>(() =>
-    Object.fromEntries(TASTE.map((a) => [a.key, initial ? initial[a.key] ?? 0 : 3])),
+    Object.fromEntries(sliders.map((a) => [a.key, initial ? initial[a.key] ?? 0 : 3])),
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -235,8 +265,8 @@ function PreferenceEditor({
     setBusy(true);
     setError(null);
     try {
-      const body = Object.fromEntries(TASTE.map((a) => [a.key, prefs[a.key] || null]));
-      await api("/explore/preferences", { method: "PUT", body });
+      const body = Object.fromEntries(sliders.map((a) => [a.key, prefs[a.key] || null]));
+      await api(`/explore/taste/${encodeURIComponent(category)}`, { method: "PUT", body });
       onSaved();
     } catch (err) {
       setError(errorText(err));
@@ -247,13 +277,14 @@ function PreferenceEditor({
   return (
     <section className="card-plain stack-sm">
       <div>
-        <h2 className="section-title">{t("explore.setTaste")}</h2>
+        <h2 className="section-title">
+          {t("explore.setTaste")} <span className="muted">({getCategory(category)?.short})</span>
+        </h2>
         <p className="small muted">
-          Slide each one to what you like. All the way left means you don't mind. This is your taste profile, shown on
-          your profile too.
+          Slide each one to what you like in {getCategory(category)?.short}. All the way left means you don't mind.
         </p>
       </div>
-      {TASTE.map((a) => {
+      {sliders.map((a) => {
         const v = prefs[a.key];
         return (
           <div key={a.key} className="slider">
@@ -274,7 +305,6 @@ function PreferenceEditor({
               <span>{a.low}</span>
               <span>{a.high}</span>
             </div>
-            {onlyFor(a.key) && <div className="small muted">Only counts for {onlyFor(a.key)}.</div>}
           </div>
         );
       })}

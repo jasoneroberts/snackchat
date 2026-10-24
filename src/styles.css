@@ -357,3 +357,4 @@ select:focus { outline: 2px solid var(--orange); border-color: transparent; }
 .admin-photo .link-button { align-self: flex-start; }
 .admin-heading { margin: 8px 0 -4px; }
 @media (max-width: 420px) { .snack-editor { margin-left: 0; } }
+.chip-button { cursor: pointer; color: inherit; font-family: inherit; }
