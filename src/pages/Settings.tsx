@@ -114,6 +114,10 @@ export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<v
               <span className="muted small">Fix names, makers and photos</span>
             )}
           </Link>
+          <Link href="/admin/diet" className="card-plain row settings-link">
+            <b className="grow">Diet check</b>
+            <span className="muted small">Vegan and gluten-free labels</span>
+          </Link>
           <Link href="/admin/users" className="card-plain row settings-link">
             <b className="grow">Users</b>
             <span className="muted small">Who's joined, PIN resets</span>

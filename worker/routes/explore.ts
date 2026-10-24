@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { attributesFor, getCategory } from "../../shared/catalogue";
+import { dietSql, readDiets } from "../../shared/diet";
 import type { ExplorePage, Preferences, SnackSummary, Suggestion } from "../../shared/types";
 import type { AppContext } from "../env";
 import { weightedRating } from "../lib/boards";
@@ -30,6 +31,7 @@ explore.get("/", async (c) => {
   const user = currentUser(c);
   const db = c.env.DB;
   const category = getCategory(c.req.query("category") ?? "")?.id ?? null;
+  const diets = readDiets(c.req.query("diet"));
 
   const [tastes, snacks, averages, saved] = await Promise.all([
     getTastes(db, user.id),
@@ -43,7 +45,7 @@ explore.get("/", async (c) => {
           WHERE s.status = 'approved'
             AND s.id NOT IN (SELECT snack_id FROM checkins WHERE user_id = ?1)
             AND s.id NOT IN (SELECT snack_id FROM explore_choices WHERE user_id = ?1)
-            AND (?2 IS NULL OR s.category_id = ?2)
+            AND (?2 IS NULL OR s.category_id = ?2)${dietSql(diets)}
           GROUP BY s.id`,
       )
       .bind(user.id, category)

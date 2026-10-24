@@ -9,6 +9,7 @@ import { Boards } from "./pages/Boards";
 import { CheckIn } from "./pages/CheckIn";
 import { ComingSoon } from "./pages/ComingSoon";
 import { BrandLogos } from "./pages/BrandLogos";
+import { DietCheck } from "./pages/DietCheck";
 import { Explore } from "./pages/Explore";
 import { Feed } from "./pages/Feed";
 import { Group } from "./pages/Group";
@@ -218,6 +219,9 @@ export function App() {
   } else if (path === "/welcome") {
     title = "Welcome";
     page = <Welcome me={me} onDone={() => navigate("/")} />;
+  } else if (path === "/admin/diet" && me.isAdmin) {
+    title = "Diet check";
+    page = <DietCheck />;
   } else if (path === "/admin/users" && me.isAdmin) {
     title = "Users";
     page = <AdminUsers meId={me.id} />;
