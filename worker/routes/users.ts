@@ -2,11 +2,10 @@ import { Hono } from "hono";
 import type { AppContext } from "../env";
 import { currentUser } from "../lib/currentUser";
 import { listCheckins } from "../lib/feed";
-import { getPreferences } from "./explore";
 
 export const users = new Hono<AppContext>();
 
-// A profile: headline numbers, taste preferences and recent check-ins.
+// A profile: headline numbers and recent check-ins.
 users.get("/:username", async (c) => {
   const viewer = currentUser(c);
   const db = c.env.DB;
@@ -20,7 +19,7 @@ users.get("/:username", async (c) => {
   const profile = { username: user.username, avatarId: user.avatar_id, country: user.country, joinedAt: user.created_at };
   if (user.is_private && user.id !== viewer.id) return c.json({ profile, private: true });
 
-  const [stats, points, preferences, checkins] = await Promise.all([
+  const [stats, points, checkins] = await Promise.all([
     db
       .prepare(
         "SELECT COUNT(*) AS checkins, COUNT(DISTINCT snack_id) AS snacks, AVG(overall) AS avg FROM checkins WHERE user_id = ?",
@@ -31,7 +30,6 @@ users.get("/:username", async (c) => {
       .prepare("SELECT COALESCE(SUM(points), 0) AS total FROM points_ledger WHERE user_id = ?")
       .bind(user.id)
       .first<{ total: number }>(),
-    getPreferences(db, user.id),
     listCheckins(db, { viewerId: viewer.id, userId: user.id, limit: 20 }),
   ]);
 
@@ -44,7 +42,6 @@ users.get("/:username", async (c) => {
       avg: stats?.avg ?? null,
       points: points?.total ?? 0,
     },
-    preferences,
     checkins,
   });
 });

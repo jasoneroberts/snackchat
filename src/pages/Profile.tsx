@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
-import { TASTE } from "../../shared/catalogue";
 import type { ProfilePage } from "../../shared/types";
 import { api, errorText, type Me } from "../api";
 import { Avatar } from "../components/Avatar";
-import { Bars } from "../components/Bars";
 import { CheckinCard } from "../components/CheckinCard";
 import { Link } from "../components/Link";
 import { rating } from "../lib/format";
@@ -81,36 +79,6 @@ export function Profile({
             <span>Avg given</span>
           </div>
         </div>
-      )}
-
-      {data.preferences && Object.keys(data.preferences).length > 0 ? (
-        <section className="card-plain">
-          <div className="row-between">
-            <h2 className="section-title">Taste profile</h2>
-            {isMe && (
-              <Link href="/explore" className="small">
-                Edit
-              </Link>
-            )}
-          </div>
-          <p className="small muted">{isMe ? "What you like. Explore uses it to suggest snacks." : "What they like."}</p>
-          <Bars
-            attributes={TASTE.filter((a) => data.preferences![a.key] != null)}
-            values={data.preferences as Record<string, number>}
-            dark
-          />
-        </section>
-      ) : (
-        isMe &&
-        !data.private && (
-          <section className="card-plain">
-            <h2 className="section-title">Taste profile</h2>
-            <p className="small muted">Tell Snackchat what you like and Explore will suggest snacks to try.</p>
-            <Link href="/explore" className="button secondary small">
-              Set your taste
-            </Link>
-          </section>
-        )
       )}
 
       {data.checkins && (
