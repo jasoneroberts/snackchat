@@ -23,8 +23,10 @@ import { QuickSignIn } from "./pages/QuickSignIn";
 import { Settings } from "./pages/Settings";
 import { Review } from "./pages/Review";
 import { SignUp } from "./pages/SignUp";
+import { Welcome } from "./pages/Welcome";
 import { Snack } from "./pages/Snack";
 import { PickVoice } from "./pages/PickVoice";
+import { markWelcomed, welcomed } from "./lib/install";
 import { VoiceProvider } from "./lib/voice";
 import { line } from "../shared/voice";
 
@@ -39,6 +41,7 @@ export function App() {
   const [devLogin, setDevLogin] = useState(false);
   const [quickSignIn, setQuickSignIn] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
+  const [seenWelcome, setSeenWelcome] = useState(welcomed);
 
   const refreshMe = useCallback(async () => {
     const { user, devLogin, quickSignIn } = await api<{ user: Me | null; devLogin?: boolean; quickSignIn?: boolean }>(
@@ -135,6 +138,25 @@ export function App() {
     );
   }
 
+  // First time on this device: say hello and show how to add it to the home screen.
+  if (!seenWelcome) {
+    return (
+      <VoiceProvider voice={voice}>
+        <div className="app">
+          <main>
+            <Welcome
+              me={me}
+              onDone={() => {
+                markWelcomed();
+                setSeenWelcome(true);
+              }}
+            />
+          </main>
+        </div>
+      </VoiceProvider>
+    );
+  }
+
   // Signed in: the app shell with the bottom tab bar.
   const snackId = matchPath("/snack/", path);
   const groupId = path === "/groups/new" ? null : matchPath("/groups/", path);
@@ -193,6 +215,9 @@ export function App() {
   } else if (path === "/brands" && me.isAdmin) {
     title = "Brand logos";
     page = <BrandLogos />;
+  } else if (path === "/welcome") {
+    title = "Welcome";
+    page = <Welcome me={me} onDone={() => navigate("/")} />;
   } else if (path === "/admin/users" && me.isAdmin) {
     title = "Users";
     page = <AdminUsers meId={me.id} />;
