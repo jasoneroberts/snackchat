@@ -19,8 +19,12 @@ const USER_AGENT = "Snackchat/1.0 (https://snackchat.jasoneroberts.workers.dev; 
 // Words in a Wikidata description that suggest the right sort of company.
 const FOOD_WORDS = /\b(snack|crisp|chip|food|confection|chocolate|biscuit|sweet|candy|brand|nut|manufacturer|company|bakery|drink)/i;
 
-/** Wikimedia Commons serves any logo file (SVG too) as a PNG at this width. */
-export const commonsUrl = (file: string, width = 256) =>
+/**
+ * Wikimedia Commons serves any logo file (SVG too) as a PNG at this width.
+ * Commons only makes thumbnails at its standard widths (120, 250, 330, 500...)
+ * and refuses others, so this must stay one of those.
+ */
+export const commonsUrl = (file: string, width = 250) =>
   `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(file.replace(/ /g, "_"))}?width=${width}`;
 
 /** A site's icon at up to 256px, from Google's favicon service. */
@@ -101,4 +105,32 @@ export async function findLogoCandidates(brand: string, fetcher: typeof fetch = 
   if (!ids.length) return [];
   const data = await get({ action: "wbgetentities", ids: ids.join("|"), props: "claims|labels|descriptions", languages: "en" });
   return rankCandidates(readEntities(ids, data));
+}
+
+// The browser shrinks an uploaded logo first; a fetched one must already be small.
+export const MAX_LOGO_BYTES = 512 * 1024;
+// No SVG: it can carry scripts, and logos are served from the app's own address.
+export const LOGO_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+
+/**
+ * Download a suggested logo and check it's usable: an allowed host (after
+ * redirects), a PNG/JPEG/WebP, not empty and not too big. Google's favicon
+ * service answers 404 with a grey globe when a site has no icon, so a failed
+ * status counts as unusable too.
+ */
+export async function fetchLogo(
+  url: string,
+  fetcher: typeof fetch = fetch,
+): Promise<{ ok: true; body: ArrayBuffer; type: string } | { ok: false; reason: string }> {
+  if (!isLogoHost(url)) return { ok: false, reason: "not an allowed host" };
+  const res = await fetcher(url, { headers: { "User-Agent": USER_AGENT } }).catch(() => null);
+  if (!res) return { ok: false, reason: "couldn't connect" };
+  if (!res.ok) return { ok: false, reason: `status ${res.status}` };
+  if (!isLogoHost(res.url || url)) return { ok: false, reason: "redirected elsewhere" };
+  const type = res.headers.get("Content-Type")?.split(";")[0].trim() ?? "";
+  if (!LOGO_TYPES.has(type)) return { ok: false, reason: `type ${type || "unknown"}` };
+  const body = await res.arrayBuffer();
+  if (body.byteLength === 0) return { ok: false, reason: "empty" };
+  if (body.byteLength > MAX_LOGO_BYTES) return { ok: false, reason: "too big" };
+  return { ok: true, body, type };
 }

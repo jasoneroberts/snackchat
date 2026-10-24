@@ -44,7 +44,7 @@ export function AdminSnacks({ onChanged }: { onChanged: () => void }) {
   return (
     <div className="page stack">
       <p className="small muted no-margin">
-        Tap a snack to fix its name, maker or type, or hide a wrong photo. {snacks.length} snacks
+        Tap a snack to fix its name, maker or type, pick its main picture, or hide a wrong photo. {snacks.length} snacks
         {pending ? `, ${pending} waiting for a yes or no` : ""}.
       </p>
       <input type="search" placeholder="Search snacks or makers" value={query} onChange={(e) => setQuery(e.target.value)} />
@@ -155,6 +155,17 @@ function SnackEditor({ snack, onSaved }: { snack: AdminSnackRow; onSaved: () => 
     }
   };
 
+  // Choose which photo is the snack's main picture, or null to go back to the newest.
+  const makeMain = async (photoId: string | null) => {
+    if (await run(() => api(`/admin/snacks/${id}/cover`, { method: "PUT", body: { photoId } }))) {
+      setPhotos((list) => list?.map((p) => ({ ...p, isCover: p.id === photoId })) ?? null);
+      onSaved();
+    }
+  };
+  // The one showing now: the picked one, else the newest (photos come newest first).
+  const mainId = photos?.find((p) => p.isCover)?.id ?? photos?.[0]?.id;
+  const picked = photos?.some((p) => p.isCover) ?? false;
+
   return (
     <div className="snack-editor stack-sm">
       {snack.addedBy && (
@@ -201,6 +212,20 @@ function SnackEditor({ snack, onSaved }: { snack: AdminSnackRow; onSaved: () => 
 
       <div>
         <div className="field-label">Photos</div>
+        {photos && photos.length > 1 && (
+          <p className="small muted no-margin">
+            {picked ? "You picked the main picture. " : "The newest photo is the main picture. "}
+            Tap Use on any photo to show it instead.
+            {picked && (
+              <>
+                {" "}
+                <button type="button" className="link-button" disabled={busy} onClick={() => makeMain(null)}>
+                  Go back to newest
+                </button>
+              </>
+            )}
+          </p>
+        )}
         {photos === null ? (
           <p className="small muted no-margin">Loading…</p>
         ) : photos.length === 0 ? (
@@ -208,12 +233,21 @@ function SnackEditor({ snack, onSaved }: { snack: AdminSnackRow; onSaved: () => 
         ) : (
           <div className="admin-photos">
             {photos.map((p) => (
-              <figure key={p.id} className="admin-photo">
+              <figure key={p.id} className={p.id === mainId ? "admin-photo main" : "admin-photo"}>
                 <img src={`/api/photos/${p.id}`} alt="" loading="lazy" />
                 <figcaption className="small muted">@{p.username}</figcaption>
-                <button type="button" className="link-button small" disabled={busy} onClick={() => hide(p)}>
-                  Hide
-                </button>
+                <span className="admin-photo-actions small">
+                  {p.id === mainId ? (
+                    <b className="main-label">Main</b>
+                  ) : (
+                    <button type="button" className="link-button" disabled={busy} onClick={() => makeMain(p.id)}>
+                      Use
+                    </button>
+                  )}
+                  <button type="button" className="link-button" disabled={busy} onClick={() => hide(p)}>
+                    Hide
+                  </button>
+                </span>
               </figure>
             ))}
           </div>
