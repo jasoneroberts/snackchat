@@ -94,6 +94,11 @@ export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<v
         <VoiceChoice current={me.voice} onSaved={onChanged} />
       </section>
 
+      <Link href="/welcome" className="card-plain row settings-link">
+        <b className="grow">Add to home screen</b>
+        <span className="muted small">And how Snackchat works</span>
+      </Link>
+
       {me.isAdmin && (
         <>
           <h2 className="section-title admin-heading">Admin</h2>

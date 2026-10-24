@@ -358,3 +358,12 @@ select:focus { outline: 2px solid var(--orange); border-color: transparent; }
 .admin-heading { margin: 8px 0 -4px; }
 @media (max-width: 420px) { .snack-editor { margin-left: 0; } }
 .chip-button { cursor: pointer; color: inherit; font-family: inherit; }
+
+/* Welcome (first run) */
+.welcome-head { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding-top: 8px; }
+.welcome-head .title { margin: 4px 0 0; }
+.welcome-steps { margin: 0; padding: 14px 14px 14px 36px; display: flex; flex-direction: column; gap: 12px; }
+.welcome-steps li > * { display: block; }
+.welcome-steps li::marker { font-weight: 900; color: var(--orange-dark); }
+.how-to { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.inline-icon { vertical-align: -3px; }
