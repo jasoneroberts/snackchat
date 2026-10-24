@@ -354,7 +354,9 @@ select:focus { outline: 2px solid var(--orange); border-color: transparent; }
 .admin-photo { margin: 0; display: flex; flex-direction: column; gap: 2px; }
 .admin-photo img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; background: var(--line-soft); }
 .admin-photo figcaption { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.admin-photo .link-button { align-self: flex-start; }
+.admin-photo-actions { display: flex; gap: 10px; align-items: center; }
+.admin-photo.main img { outline: 3px solid var(--orange); outline-offset: -3px; }
+.main-label { color: var(--orange-dark); }
 .admin-heading { margin: 8px 0 -4px; }
 @media (max-width: 420px) { .snack-editor { margin-left: 0; } }
 .chip-button { cursor: pointer; color: inherit; font-family: inherit; }
@@ -374,3 +376,4 @@ select:focus { outline: 2px solid var(--orange); border-color: transparent; }
 .diet-badge { font-size: 0.8rem; font-weight: 800; color: var(--good); border: 1.5px solid var(--good); border-radius: 999px; padding: 2px 10px; }
 .diet-why { margin: 4px 0; padding-left: 18px; }
 .diet-choice { display: flex; flex-direction: column; gap: 4px; }
+.notice-inline { color: var(--orange-dark); font-weight: 700; }

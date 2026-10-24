@@ -116,22 +116,34 @@ function Suggestion({ brand, onApproved }: { brand: string; onApproved: () => vo
   const [state, setState] = useState<LogoSuggestion | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
 
-  useEffect(() => {
+  const look = () => {
+    setError(null);
+    setState(null);
     api<LogoSuggestion>(`/admin/brands/suggestion?brand=${encodeURIComponent(brand)}`)
       .then(setState)
       .catch((err) => setError(errorText(err)));
-  }, [brand]);
+  };
+
+  useEffect(look, [brand]);
 
   const act = async (action: "approve" | "reject") => {
     if (!state?.suggestion) return;
     setBusy(true);
     setError(null);
+    setNote(null);
     try {
       const body = { brand, url: state.suggestion.url };
       if (action === "approve") {
-        await api("/admin/brands/suggestion/approve", { body });
-        onApproved();
+        // A logo that won't download after all comes back as { failed, next suggestion }.
+        const result = await api<LogoSuggestion & { failed?: boolean }>("/admin/brands/suggestion/approve", { body });
+        if (result.failed) {
+          setNote("That one wouldn't download, so here's the next.");
+          setState(result);
+        } else {
+          onApproved();
+        }
       } else {
         setState(await api<LogoSuggestion>("/admin/brands/suggestion/reject", { body }));
       }
@@ -144,13 +156,26 @@ function Suggestion({ brand, onApproved }: { brand: string; onApproved: () => vo
 
   if (error) return <p className="small error brand-suggestion">{error}</p>;
   if (!state) return <p className="small muted brand-suggestion">Looking for a logo…</p>;
-  if (!state.suggestion) return <p className="small muted brand-suggestion">No more suggestions. Upload one if you like.</p>;
+  if (!state.suggestion) {
+    return state.more > 0 ? (
+      <p className="small muted brand-suggestion">
+        The last few suggestions wouldn't load.{" "}
+        <button type="button" className="link-button" onClick={look}>
+          Try {state.more} more
+        </button>
+      </p>
+    ) : (
+      <p className="small muted brand-suggestion">No more suggestions. Upload one if you like.</p>
+    );
+  }
 
   const { suggestion } = state;
   return (
     <div className="brand-suggestion">
-      <img className="snack-tile logo" src={suggestion.url} alt="" width={72} height={72} />
+      {/* If the picture won't show here either, skip it rather than offer a broken one. */}
+      <img className="snack-tile logo" src={suggestion.url} alt="" width={72} height={72} onError={() => !busy && act("reject")} />
       <span className="grow small">
+        {note && <span className="block notice-inline">{note}</span>}
         <span className="muted">Suggested: </span>
         {suggestion.label}
         {state.more > 0 && <span className="muted"> · {state.more} more</span>}

@@ -7,7 +7,7 @@ import { currentUser } from "../lib/currentUser";
 import { buildDemoData, DEMO_GROUPS, DEMO_PHOTO_PREFIX, DEMO_PREFIX, demoUserId, offSearchUrl, wantsPhoto } from "../lib/demo";
 import { type DietSuggestion, offDietSearchUrl, type OffProduct, pickProduct, suggestDiet } from "../lib/diet";
 import { newInviteCode } from "../lib/groups";
-import { findLogoCandidates, isLogoHost, type LogoCandidate } from "../lib/logoCandidates";
+import { fetchLogo, findLogoCandidates, LOGO_TYPES, type LogoCandidate, MAX_LOGO_BYTES } from "../lib/logoCandidates";
 import { brandKey } from "../../shared/brands";
 import { hashPassword, newId } from "../lib/crypto";
 import { LATEST_PHOTO } from "../lib/photoSql";
@@ -305,11 +305,6 @@ admin.delete("/demo", async (c) => {
 
 // Maker logos ---------------------------------------------------------------
 
-// The browser shrinks a logo to a small PNG first (src/lib/image.ts).
-const MAX_LOGO_BYTES = 512 * 1024;
-// No SVG: it can carry scripts, and logos are served from the app's own address.
-const LOGO_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
-
 // Every brand on a snack, most snacks first, with its logo if it has one.
 admin.get("/brands", async (c) => {
   const { results } = await c.env.DB.prepare(
@@ -355,9 +350,17 @@ async function saveLogo(env: AppContext["Bindings"], brand: string, body: Readab
 // Wikidata lookups are cached for a week, so paging through suggestions is quick.
 const CANDIDATE_TTL = 7 * 24 * 3600;
 
-/** The next suggestion for a brand that hasn't been rejected, and how many are left after it. */
+// How many candidates one request will try before giving up for now.
+const MAX_TRIES = 4;
+
+/**
+ * The next suggestion for a brand that hasn't been rejected and actually
+ * downloads as a usable image, and how many are left after it. Candidates
+ * that don't download are rejected automatically, so the admin never sees a
+ * suggestion that can't be approved.
+ */
 async function nextSuggestion(env: AppContext["Bindings"], brand: string) {
-  const cacheKey = `logo-candidates:v1:${brand}`;
+  const cacheKey = `logo-candidates:v2:${brand}`;
   let candidates = await env.CACHE.get<LogoCandidate[]>(cacheKey, "json");
   if (!candidates) {
     candidates = await findLogoCandidates(brand);
@@ -366,8 +369,21 @@ async function nextSuggestion(env: AppContext["Bindings"], brand: string) {
   const { results } = await env.DB.prepare("SELECT url FROM brand_logo_rejects WHERE brand_key = ?").bind(brand).all<{ url: string }>();
   const rejected = new Set(results.map((r) => r.url));
   const open = candidates.filter((c) => !rejected.has(c.url));
-  return { suggestion: open[0] ?? null, more: Math.max(0, open.length - 1) };
+  for (let i = 0; i < open.length && i < MAX_TRIES; i++) {
+    const check = await fetchLogo(open[i].url);
+    if (check.ok) return { suggestion: open[i], more: open.length - i - 1 };
+    console.log("logo suggestion skipped", brand, open[i].url, check.reason);
+    await rejectSuggestion(env, brand, open[i].url);
+  }
+  // Tried a few that didn't work; any left get tried next time.
+  const left = Math.max(0, open.length - MAX_TRIES);
+  return { suggestion: null, more: left };
 }
+
+const rejectSuggestion = (env: AppContext["Bindings"], brand: string, url: string) =>
+  env.DB.prepare("INSERT OR IGNORE INTO brand_logo_rejects (brand_key, url, created_at) VALUES (?, ?, ?)")
+    .bind(brand, url, Math.floor(Date.now() / 1000))
+    .run();
 
 // The best logo suggestion for a brand: ?brand=Walkers
 admin.get("/brands/suggestion", async (c) => {
@@ -381,20 +397,24 @@ admin.get("/brands/suggestion", async (c) => {
 });
 
 // Use a suggested logo: { brand, url }. The server downloads it and stores its own copy.
+// If it won't download after all, it's rejected and the next suggestion comes back instead.
 admin.post("/brands/suggestion/approve", async (c) => {
   const body = await c.req.json<{ brand?: string; url?: string }>().catch(() => ({}) as { brand?: string; url?: string });
   const brand = brandKey(body.brand ?? "");
   const url = body.url ?? "";
-  if (!brand || !isLogoHost(url)) return c.json({ error: "That isn't one of the suggestions." }, 400);
+  if (!brand || !url) return c.json({ error: "That isn't one of the suggestions." }, 400);
 
-  const res = await fetch(url, { headers: { "User-Agent": "Snackchat/1.0 (logo suggestions)" } }).catch(() => null);
-  const type = res?.headers.get("Content-Type")?.split(";")[0].trim() ?? "";
-  if (!res?.ok || !isLogoHost(res.url || url) || !LOGO_TYPES.has(type)) {
-    return c.json({ error: "Couldn't download that logo. Reject it to see the next one." }, 502);
+  const logo = await fetchLogo(url);
+  if (!logo.ok) {
+    if (logo.reason === "not an allowed host") return c.json({ error: "That isn't one of the suggestions." }, 400);
+    await rejectSuggestion(c.env, brand, url);
+    try {
+      return c.json({ failed: true, ...(await nextSuggestion(c.env, brand)) });
+    } catch {
+      return c.json({ error: "Couldn't look up logos just now. Try again in a minute." }, 502);
+    }
   }
-  const image = await res.arrayBuffer();
-  if (image.byteLength > MAX_LOGO_BYTES) return c.json({ error: "That logo is too big. Reject it to see the next one." }, 502);
-  return c.json({ logoId: await saveLogo(c.env, brand, image, type) }, 201);
+  return c.json({ logoId: await saveLogo(c.env, brand, logo.body, logo.type) }, 201);
 });
 
 // Say no to a suggestion: { brand, url }. Returns the next one.
@@ -402,9 +422,7 @@ admin.post("/brands/suggestion/reject", async (c) => {
   const body = await c.req.json<{ brand?: string; url?: string }>().catch(() => ({}) as { brand?: string; url?: string });
   const brand = brandKey(body.brand ?? "");
   if (!brand || !body.url) return c.json({ error: "Which suggestion?" }, 400);
-  await c.env.DB.prepare("INSERT OR IGNORE INTO brand_logo_rejects (brand_key, url, created_at) VALUES (?, ?, ?)")
-    .bind(brand, body.url, Math.floor(Date.now() / 1000))
-    .run();
+  await rejectSuggestion(c.env, brand, body.url);
   try {
     return c.json(await nextSuggestion(c.env, brand));
   } catch {
@@ -513,20 +531,44 @@ admin.post("/snacks/:id/status", async (c) => {
   return c.json({ ok: true });
 });
 
-// A snack's photos that everyone can see, newest first.
+// A snack's photos that everyone can see, newest first, marking the one picked
+// as its main picture. (Photos from private profiles never show on a snack.)
 admin.get("/snacks/:id/photos", async (c) => {
   const { results } = await c.env.DB.prepare(
-    `SELECT p.id, u.username, p.created_at AS createdAt
+    `SELECT p.id, u.username, p.created_at AS createdAt,
+            p.id = (SELECT cover_photo_id FROM snacks WHERE id = c.snack_id) AS isCover
        FROM photos p
        JOIN checkins c ON c.id = p.checkin_id
        JOIN users u ON u.id = c.user_id
-      WHERE c.snack_id = ? AND p.status = 'visible'
+      WHERE c.snack_id = ? AND p.status = 'visible' AND u.is_private = 0
       ORDER BY p.created_at DESC
       LIMIT 30`,
   )
     .bind(c.req.param("id"))
-    .all<AdminSnackPhoto>();
-  return c.json({ photos: results });
+    .all<Omit<AdminSnackPhoto, "isCover"> & { isCover: number | null }>();
+  return c.json({ photos: results.map((p) => ({ ...p, isCover: p.isCover === 1 })) });
+});
+
+// Pick a snack's main picture from its photos: { photoId }, or { photoId: null }
+// to go back to the newest photo.
+admin.put("/snacks/:id/cover", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as { photoId?: unknown } | null;
+  const photoId = typeof body?.photoId === "string" ? body.photoId : null;
+  const db = c.env.DB;
+  if (photoId) {
+    const ok = await db
+      .prepare(
+        `SELECT 1 FROM photos p JOIN checkins c ON c.id = p.checkin_id
+           JOIN users u ON u.id = c.user_id
+          WHERE p.id = ? AND c.snack_id = ? AND p.status = 'visible' AND u.is_private = 0`,
+      )
+      .bind(photoId, c.req.param("id"))
+      .first();
+    if (!ok) return c.json({ error: "That photo isn't one of this snack's." }, 400);
+  }
+  const updated = await db.prepare("UPDATE snacks SET cover_photo_id = ? WHERE id = ?").bind(photoId, c.req.param("id")).run();
+  if (updated.meta.changes !== 1) return c.json({ error: "Snack not found." }, 404);
+  return c.json({ ok: true });
 });
 
 // Hide a photo that's wrong (the wrong snack, blurry, not a snack). It stops

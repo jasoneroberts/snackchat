@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { commonsUrl, findLogoCandidates, isLogoHost, rankCandidates, readEntities } from "../worker/lib/logoCandidates";
+import { commonsUrl, fetchLogo, findLogoCandidates, isLogoHost, rankCandidates, readEntities } from "../worker/lib/logoCandidates";
 
 // A trimmed-down Wikidata wbgetentities response.
 const claim = (value: string) => [{ mainsnak: { datavalue: { value } } }];
@@ -40,7 +40,7 @@ describe("logo candidates", () => {
 
   it("asks Commons for a PNG of the logo file and Google for the site icon", () => {
     expect(ranked[0].url).toBe(commonsUrl("Walkers logo.svg"));
-    expect(ranked[0].url).toBe("https://commons.wikimedia.org/wiki/Special:FilePath/Walkers_logo.svg?width=256");
+    expect(ranked[0].url).toBe("https://commons.wikimedia.org/wiki/Special:FilePath/Walkers_logo.svg?width=250");
     expect(ranked[3].url).toBe("https://www.google.com/s2/favicons?domain=www.walkers.co.uk&sz=256");
   });
 
@@ -69,5 +69,39 @@ describe("logo candidates", () => {
   it("finds nothing for an unknown brand", async () => {
     const fake = (async () => new Response(JSON.stringify({ search: [] }))) as unknown as typeof fetch;
     expect(await findLogoCandidates("Zzxq", fake)).toEqual([]);
+  });
+});
+
+describe("fetchLogo", () => {
+  const png = new Uint8Array([137, 80, 78, 71]);
+  const reply = (status: number, type: string, body: BodyInit | null = png, url = "https://upload.wikimedia.org/x.png") => {
+    const res = new Response(body, { status, headers: { "Content-Type": type } });
+    Object.defineProperty(res, "url", { value: url });
+    return async () => res;
+  };
+  const commons = "https://commons.wikimedia.org/wiki/Special:FilePath/X.svg?width=250";
+
+  it("accepts a small PNG from an allowed host", async () => {
+    expect(await fetchLogo(commons, reply(200, "image/png") as typeof fetch)).toMatchObject({ ok: true, type: "image/png" });
+  });
+
+  it("skips Google's 404 globe, wrong types, empty and huge files", async () => {
+    const icon = "https://www.google.com/s2/favicons?domain=x.com&sz=256";
+    expect(await fetchLogo(icon, reply(404, "image/png") as typeof fetch)).toEqual({ ok: false, reason: "status 404" });
+    expect(await fetchLogo(commons, reply(200, "image/svg+xml") as typeof fetch)).toMatchObject({ ok: false });
+    expect(await fetchLogo(commons, reply(200, "image/png", new Uint8Array(0)) as typeof fetch)).toEqual({ ok: false, reason: "empty" });
+    expect(await fetchLogo(commons, reply(200, "image/png", new Uint8Array(600 * 1024)) as typeof fetch)).toEqual({ ok: false, reason: "too big" });
+  });
+
+  it("won't fetch from, or follow a redirect to, other hosts", async () => {
+    expect(await fetchLogo("https://evil.example/x.png", reply(200, "image/png") as typeof fetch)).toMatchObject({ ok: false });
+    expect(await fetchLogo(commons, reply(200, "image/png", png, "https://evil.example/x.png") as typeof fetch)).toEqual({
+      ok: false,
+      reason: "redirected elsewhere",
+    });
+  });
+
+  it("asks Commons for a standard thumbnail width", () => {
+    expect(commonsUrl("A b.svg")).toContain("width=250");
   });
 });

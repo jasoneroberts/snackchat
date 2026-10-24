@@ -184,6 +184,7 @@ export interface AdminSnackPhoto {
   id: string;
   username: string;
   createdAt: number;
+  isCover: boolean; // picked as the snack's main picture
 }
 
 // Admin: Diet check page.
