@@ -337,3 +337,23 @@ fieldset legend { padding: 0; margin-bottom: 6px; }
 .brand-logo-slot { width: 44px; height: 44px; flex-shrink: 0; border-radius: 10px; border: 1px dashed var(--line); display: flex; align-items: center; justify-content: center; }
 .brand-row .button { position: relative; overflow: hidden; }
 .brand-row input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+/* Admin: users and snacks */
+.stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat { display: flex; flex-direction: column; align-items: center; padding: 12px 6px; text-align: center; }
+.stat b { font-size: 1.5rem; font-weight: 900; }
+.user-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--line-soft); }
+.user-row:first-of-type { border-top: 0; }
+.admin-snack-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.admin-snack-row .chevron { color: var(--muted); padding: 0 4px; }
+.tag.waiting { background: var(--orange); color: var(--on-orange, #fff); }
+.snack-editor { margin: 10px 0 6px 54px; }
+select { font-size: 1rem; padding: 11px 13px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: inherit; width: 100%; }
+select:focus { outline: 2px solid var(--orange); border-color: transparent; }
+.admin-photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; margin-top: 6px; }
+.admin-photo { margin: 0; display: flex; flex-direction: column; gap: 2px; }
+.admin-photo img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; background: var(--line-soft); }
+.admin-photo figcaption { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-photo .link-button { align-self: flex-start; }
+.admin-heading { margin: 8px 0 -4px; }
+@media (max-width: 420px) { .snack-editor { margin-left: 0; } }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { placeholderEmail, quickSignInOn, validateQuickSignIn } from "../worker/lib/quickSignIn";
+import { newPin, PIN_RE, placeholderEmail, quickSignInOn, validateQuickSignIn } from "../worker/lib/quickSignIn";
 
 describe("validateQuickSignIn", () => {
   it("accepts a name and a 4 to 8 digit PIN, invite code optional", () => {
@@ -33,4 +33,15 @@ describe("quickSignInOn", () => {
 
 it("makes a lowercase placeholder email", () => {
   expect(placeholderEmail("Sam_K")).toBe("sam_k@quick.snackchat.invalid");
+});
+
+describe("newPin", () => {
+  it("makes 6-digit PINs that pass the PIN rule, keeping leading zeros", () => {
+    const pins = Array.from({ length: 200 }, newPin);
+    for (const pin of pins) {
+      expect(pin).toMatch(/^\d{6}$/);
+      expect(PIN_RE.test(pin)).toBe(true);
+    }
+    expect(new Set(pins).size).toBeGreaterThan(190);
+  });
 });

@@ -26,3 +26,27 @@ export function validateSignUp(body: unknown): { ok: true; value: SignUpInput } 
   if (!inviteCode) return { ok: false, error: "Snackchat is invite-only for now. Enter your invite code." };
   return { ok: true, value: { username, email, password, inviteCode, turnstileToken } };
 }
+
+export interface SnackFields {
+  name: string;
+  brand: string | null;
+  category: string;
+}
+
+/**
+ * A snack's name, maker and type, as typed when adding a snack or when an
+ * admin corrects one. Extra spaces are squashed; a blank maker becomes null.
+ */
+export function validateSnackFields(
+  body: unknown,
+  isCategory: (id: string) => boolean,
+): { ok: true; value: SnackFields } | { ok: false; error: string } {
+  const b = (body ?? {}) as Record<string, unknown>;
+  const name = typeof b.name === "string" ? b.name.trim().replace(/\s+/g, " ") : "";
+  const brand = typeof b.brand === "string" ? b.brand.trim().replace(/\s+/g, " ") : "";
+  const category = typeof b.category === "string" ? b.category : "";
+  if (name.length < 2 || name.length > 80) return { ok: false, error: "Snack names are 2 to 80 characters." };
+  if (brand.length > 60) return { ok: false, error: "Keep the brand under 60 characters." };
+  if (!isCategory(category)) return { ok: false, error: "Pick a snack type." };
+  return { ok: true, value: { name, brand: brand || null, category } };
+}
