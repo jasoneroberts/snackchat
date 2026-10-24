@@ -3,6 +3,7 @@ import { CATEGORIES, getCategory } from "../../shared/catalogue";
 import type { BoardPeriod, GroupCard, PeopleMetric, PeopleRow, SnackRow } from "../../shared/types";
 import { api, errorText, type Me } from "../api";
 import { Avatar } from "../components/Avatar";
+import { dietQuery, DietFilter, useDiets } from "../components/DietFilter";
 import { Link } from "../components/Link";
 import { SnackTile } from "../components/SnackTile";
 import { rating } from "../lib/format";
@@ -48,6 +49,7 @@ export function Boards({ me }: { me: Me }) {
   const [snacks, setSnacks] = useState<SnackRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { t } = useVoice();
+  const [diets, setDiets] = useDiets();
 
   const update = (change: Partial<View>) => {
     const next = { ...view, ...change };
@@ -79,11 +81,11 @@ export function Boards({ me }: { me: Me }) {
         .catch((err) => setError(errorText(err)));
     } else {
       setSnacks(null);
-      api<{ rows: SnackRow[] }>(`/boards/snacks?${q}&category=${view.category}`)
+      api<{ rows: SnackRow[] }>(`/boards/snacks?${q}&category=${view.category}${dietQuery(diets)}`)
         .then((r) => setSnacks(r.rows))
         .catch((err) => setError(errorText(err)));
     }
-  }, [view.kind, view.scope, view.period, view.metric, view.category]);
+  }, [view.kind, view.scope, view.period, view.metric, view.category, diets.join()]);
 
   const scopeName = view.scope === "global" ? "Everyone" : groups.find((g) => g.id === view.scope)?.name ?? "Group";
   const periodName = PERIODS.find((p) => p.id === view.period)!.label.toLowerCase();
@@ -127,16 +129,19 @@ export function Boards({ me }: { me: Me }) {
           ))}
         </div>
       ) : (
-        <div className="chip-scroll">
-          <button type="button" className={view.category === "" ? "pill on" : "pill"} onClick={() => update({ category: "" })}>
-            All snacks
-          </button>
-          {CATEGORIES.map((c) => (
-            <button key={c.id} type="button" className={view.category === c.id ? "pill on" : "pill"} onClick={() => update({ category: c.id })}>
-              {c.name}
+        <>
+          <div className="chip-scroll">
+            <button type="button" className={view.category === "" ? "pill on" : "pill"} onClick={() => update({ category: "" })}>
+              All snacks
             </button>
-          ))}
-        </div>
+            {CATEGORIES.map((c) => (
+              <button key={c.id} type="button" className={view.category === c.id ? "pill on" : "pill"} onClick={() => update({ category: c.id })}>
+                {c.name}
+              </button>
+            ))}
+          </div>
+          <DietFilter diets={diets} onChange={setDiets} />
+        </>
       )}
 
       <p className="small muted no-margin">

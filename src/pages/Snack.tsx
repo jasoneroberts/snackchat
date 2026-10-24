@@ -5,6 +5,7 @@ import { api, errorText, type Me } from "../api";
 import { Bars } from "../components/Bars";
 import { CheckinCard } from "../components/CheckinCard";
 import { Link } from "../components/Link";
+import { DietBadges } from "../components/DietFilter";
 import { SnackTile } from "../components/SnackTile";
 import { rating } from "../lib/format";
 
@@ -36,6 +37,7 @@ export function Snack({ id, me }: { id: string; me: Me }) {
           {snack.status === "pending" && <span className="tag">new, waiting for approval</span>}
         </div>
       </div>
+      <DietBadges vegan={snack.vegan} glutenFree={snack.glutenFree} />
 
       <div className="tiles three">
         <div className="tile">

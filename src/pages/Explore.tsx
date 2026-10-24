@@ -3,6 +3,7 @@ import { attributesFor, CATEGORIES, getCategory } from "../../shared/catalogue";
 import type { ExplorePage, Preferences, SnackSummary, Suggestion } from "../../shared/types";
 import { api, errorText } from "../api";
 import { CompareBars, CompareKey } from "../components/CompareBars";
+import { dietQuery, DietFilter, useDiets } from "../components/DietFilter";
 import { Link } from "../components/Link";
 import { SnackTile } from "../components/SnackTile";
 import { rating } from "../lib/format";
@@ -30,9 +31,10 @@ export function Explore() {
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [category, setCategory] = useState(loadFilter);
+  const [diets, setDiets] = useDiets();
 
-  const load = (type = category) =>
-    api<ExplorePage>(`/explore?category=${encodeURIComponent(type)}`)
+  const load = (type = category, diet = diets) =>
+    api<ExplorePage>(`/explore?category=${encodeURIComponent(type)}${dietQuery(diet)}`)
       .then(setData)
       .catch((err) => setError(errorText(err)));
 
@@ -188,8 +190,21 @@ export function Explore() {
             <h2 className="section-title">{t("explore.suggestions")}</h2>
             <p className="small muted">Closest to your taste, from everyone's ratings. Snacks you've had are left out.</p>
           </div>
+          <DietFilter
+            diets={diets}
+            onChange={(next) => {
+              setDiets(next);
+              load(category, next);
+            }}
+          />
           {data.suggestions.length === 0 ? (
-            <p className="muted">{type ? `No ${type.short} to suggest right now. Try another type.` : t("explore.none")}</p>
+            <p className="muted">
+              {diets.length
+                ? "Nothing checked for that diet to suggest yet."
+                : type
+                  ? `No ${type.short} to suggest right now. Try another type.`
+                  : t("explore.none")}
+            </p>
           ) : (
             <>
               <CompareKey />

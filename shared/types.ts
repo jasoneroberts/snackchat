@@ -27,8 +27,14 @@ export interface SnackSummary {
   photoId?: string | null; // newest community photo, used as the thumbnail
 }
 
+/** A snack's confirmed diet labels: true, false, or null if not checked or not known. */
+export interface DietLabels {
+  vegan: boolean | null;
+  glutenFree: boolean | null;
+}
+
 export interface SnackPage {
-  snack: SnackSummary & { country: string };
+  snack: SnackSummary & DietLabels & { country: string };
   count: number;
   avg: number | null;
   attributes: Record<string, number>;
@@ -178,4 +184,14 @@ export interface AdminSnackPhoto {
   id: string;
   username: string;
   createdAt: number;
+}
+
+// Admin: Diet check page.
+export interface DietRow extends DietLabels {
+  id: string;
+  name: string;
+  brand: string | null;
+  category: string;
+  checkedAt: number | null;
+  photoId: string | null;
 }

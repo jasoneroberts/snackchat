@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { getCategory } from "../../shared/catalogue";
+import { dietSql, readDiets } from "../../shared/diet";
 import type { BoardPeriod, PeopleMetric, PeopleRow, SnackRow } from "../../shared/types";
 import type { AppContext } from "../env";
 import { BOARD_PERIODS, boardStart, weightedRating } from "../lib/boards";
@@ -79,6 +80,7 @@ boards.get("/snacks", async (c) => {
   const scope = await resolveScope(c, c.req.query("scope") ?? "global", user.id);
   if (!scope) return c.json({ error: "Group not found." }, 404);
   const category = getCategory(c.req.query("category") ?? "")?.id ?? null;
+  const diets = readDiets(c.req.query("diet"));
 
   const { results } = await c.env.DB.prepare(
     `SELECT s.id, s.name, s.brand, s.category_id AS category, s.status,
@@ -87,7 +89,7 @@ boards.get("/snacks", async (c) => {
        JOIN snacks s ON s.id = c.snack_id
        JOIN users u ON u.id = c.user_id
       WHERE c.created_at >= ?2 AND s.status = 'approved' AND ${WHO} AND ${TYPES}
-        AND (?5 IS NULL OR s.category_id = ?5)
+        AND (?5 IS NULL OR s.category_id = ?5)${dietSql(diets)}
       GROUP BY s.id`,
   )
     .bind(user.id, boardStart(readPeriod(c.req.query("period")), now()), scope.groupId, scope.categories, category)

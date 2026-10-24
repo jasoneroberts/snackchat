@@ -1,10 +1,11 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import type { AdminSnackPhoto, AdminSnackRow, AdminUserRow, BrandRow, DemoStatus, ReviewQueue } from "../../shared/types";
+import type { AdminSnackPhoto, AdminSnackRow, AdminUserRow, BrandRow, DemoStatus, DietRow, ReviewQueue } from "../../shared/types";
 import type { AppContext } from "../env";
 import { getCategory, POINTS } from "../../shared/catalogue";
 import { currentUser } from "../lib/currentUser";
 import { buildDemoData, DEMO_GROUPS, DEMO_PHOTO_PREFIX, DEMO_PREFIX, demoUserId, offSearchUrl, wantsPhoto } from "../lib/demo";
+import { type DietSuggestion, offDietSearchUrl, type OffProduct, pickProduct, suggestDiet } from "../lib/diet";
 import { newInviteCode } from "../lib/groups";
 import { findLogoCandidates, isLogoHost, type LogoCandidate } from "../lib/logoCandidates";
 import { brandKey } from "../../shared/brands";
@@ -536,5 +537,60 @@ admin.post("/photos/:id/hide", async (c) => {
     .bind(c.req.param("id"))
     .run();
   if (updated.meta.changes !== 1) return c.json({ error: "Already hidden." }, 404);
+  return c.json({ ok: true });
+});
+
+// Diet check (lib/diet.ts) ----------------------------------------------------
+
+// Every snack with its diet labels; ones nobody has checked yet first.
+admin.get("/diet", async (c) => {
+  const { results } = await c.env.DB.prepare(
+    `SELECT s.id, s.name, s.brand, s.category_id AS category, s.vegan, s.gluten_free AS glutenFree,
+            s.diet_checked_at AS checkedAt, (${LATEST_PHOTO}) AS photoId
+       FROM snacks s
+      WHERE s.status IN ('approved', 'pending')
+      ORDER BY s.diet_checked_at IS NOT NULL, s.name COLLATE NOCASE`,
+  ).all<Omit<DietRow, "vegan" | "glutenFree"> & { vegan: number | null; glutenFree: number | null }>();
+  const flag = (v: number | null) => (v === null ? null : v === 1);
+  return c.json({ snacks: results.map((r) => ({ ...r, vegan: flag(r.vegan), glutenFree: flag(r.glutenFree) })) });
+});
+
+// Looked-up suggestions are kept for 30 days: products rarely change and
+// Open Food Facts asks for no more than about 10 searches a minute.
+const DIET_TTL = 30 * 24 * 3600;
+
+// What Open Food Facts says about one snack.
+admin.get("/diet/:id/suggestion", async (c) => {
+  const id = c.req.param("id");
+  const cacheKey = `diet-off:v1:${id}`;
+  const cached = await c.env.CACHE.get<DietSuggestion>(cacheKey, "json");
+  if (cached) return c.json(cached);
+  const snack = await c.env.DB.prepare("SELECT name, brand FROM snacks WHERE id = ?").bind(id).first<{ name: string; brand: string | null }>();
+  if (!snack) return c.json({ error: "Snack not found." }, 404);
+  try {
+    const res = await fetch(offDietSearchUrl(snack.name, snack.brand), {
+      headers: { "User-Agent": "Snackchat/1.0 (diet check; github.com/jasoneroberts)" },
+    });
+    if (!res.ok) return c.json({ error: "Open Food Facts is busy. Try again in a minute." }, 502);
+    const { products } = (await res.json()) as { products?: OffProduct[] };
+    const suggestion = suggestDiet(pickProduct(products ?? [], snack.brand));
+    await c.env.CACHE.put(cacheKey, JSON.stringify(suggestion), { expirationTtl: DIET_TTL });
+    return c.json(suggestion);
+  } catch {
+    return c.json({ error: "Couldn't reach Open Food Facts. Try again in a minute." }, 502);
+  }
+});
+
+// Confirm a snack's labels: { vegan, glutenFree }, each true, false or null (don't know).
+admin.put("/diet/:id", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as { vegan?: unknown; glutenFree?: unknown } | null;
+  const value = (v: unknown) => (v === true ? 1 : v === false ? 0 : v === null ? null : undefined);
+  const vegan = value(body?.vegan);
+  const glutenFree = value(body?.glutenFree);
+  if (vegan === undefined || glutenFree === undefined) return c.json({ error: "Say yes, no or don't know for each." }, 400);
+  const updated = await c.env.DB.prepare("UPDATE snacks SET vegan = ?, gluten_free = ?, diet_checked_at = ? WHERE id = ?")
+    .bind(vegan, glutenFree, Math.floor(Date.now() / 1000), c.req.param("id"))
+    .run();
+  if (updated.meta.changes !== 1) return c.json({ error: "Snack not found." }, 404);
   return c.json({ ok: true });
 });

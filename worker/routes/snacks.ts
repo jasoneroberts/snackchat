@@ -88,7 +88,8 @@ snacks.get("/:id", async (c) => {
 
   const snack = await db
     .prepare(
-      `SELECT s.id, s.name, s.brand, s.category_id AS category, s.status, s.country, (${LATEST_PHOTO}) AS photoId
+      `SELECT s.id, s.name, s.brand, s.category_id AS category, s.status, s.country, (${LATEST_PHOTO}) AS photoId,
+              s.vegan, s.gluten_free
          FROM snacks s WHERE s.id = ?`,
     )
     .bind(id)
@@ -100,6 +101,8 @@ snacks.get("/:id", async (c) => {
       status: string;
       country: string;
       photoId: string | null;
+      vegan: number | null;
+      gluten_free: number | null;
     }>();
   if (!snack || snack.status === "rejected") return c.json({ error: "Snack not found." }, 404);
 
@@ -133,7 +136,17 @@ snacks.get("/:id", async (c) => {
   ]);
 
   return c.json({
-    snack,
+    snack: {
+      id: snack.id,
+      name: snack.name,
+      brand: snack.brand,
+      category: snack.category,
+      status: snack.status,
+      country: snack.country,
+      photoId: snack.photoId,
+      vegan: snack.vegan === null ? null : snack.vegan === 1,
+      glutenFree: snack.gluten_free === null ? null : snack.gluten_free === 1,
+    },
     count: stats?.count ?? 0,
     avg: stats?.avg ?? null,
     attributes: Object.fromEntries(attrs.results.map((a) => [a.attribute, a.avg])),
