@@ -9,7 +9,9 @@ import { Boards } from "./pages/Boards";
 import { CheckIn } from "./pages/CheckIn";
 import { ComingSoon } from "./pages/ComingSoon";
 import { BrandLogos } from "./pages/BrandLogos";
+import { AdminReports } from "./pages/AdminReports";
 import { Health } from "./pages/Health";
+import { Privacy, Terms } from "./pages/Legal";
 import { DietCheck } from "./pages/DietCheck";
 import { Explore } from "./pages/Explore";
 import { Feed } from "./pages/Feed";
@@ -89,7 +91,9 @@ export function App() {
   // Signed out: the welcome page, sign-up and log-in, without the tab bar.
   if (!me) {
     let page;
-    if (quickSignIn) {
+    if (path === "/privacy") page = <Privacy />;
+    else if (path === "/terms") page = <Terms />;
+    else if (quickSignIn) {
       // Testing mode: one name-and-PIN form instead of sign-up and log-in.
       if (path.startsWith("/join/")) savePendingJoin(path);
       page = (
@@ -229,6 +233,15 @@ export function App() {
   } else if (path === "/admin/snacks" && me.isAdmin) {
     title = "Snacks";
     page = <AdminSnacks onChanged={refreshMe} />;
+  } else if (path === "/privacy") {
+    title = "Privacy";
+    page = <Privacy />;
+  } else if (path === "/terms") {
+    title = "Terms";
+    page = <Terms />;
+  } else if (path === "/admin/reports" && me.isAdmin) {
+    title = "Reports";
+    page = <AdminReports onChanged={refresh} />;
   } else if (path === "/admin/health" && me.isAdmin) {
     title = "Health";
     page = <Health />;

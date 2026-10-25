@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { AppContext } from "../env";
 import { currentUser } from "../lib/currentUser";
 import { listCheckins } from "../lib/feed";
+import { blockedEitherWay } from "../lib/blocks";
 
 export const users = new Hono<AppContext>();
 
@@ -16,8 +17,18 @@ users.get("/:username", async (c) => {
     .first<{ id: string; username: string; avatar_id: string | null; country: string; is_private: number; created_at: number }>();
   if (!user) return c.json({ error: "No one by that name." }, 404);
 
-  const profile = { username: user.username, avatarId: user.avatar_id, country: user.country, joinedAt: user.created_at };
-  if (user.is_private && user.id !== viewer.id) return c.json({ profile, private: true });
+  const profile = { id: user.id, username: user.username, avatarId: user.avatar_id, country: user.country, joinedAt: user.created_at };
+  // "you": you blocked them (you can unblock). "hidden": they blocked you, which isn't spelt out.
+  const block = await db
+    .prepare(
+      `SELECT CASE WHEN EXISTS (SELECT 1 FROM blocks WHERE blocker_id = ?1 AND blocked_id = ?2) THEN 'you'
+                   WHEN ${blockedEitherWay("?1", "?2")} THEN 'hidden' END AS state`,
+    )
+    .bind(viewer.id, user.id)
+    .first<{ state: "you" | "hidden" | null }>();
+  const blocked = block?.state ?? null;
+  if (blocked) return c.json({ profile, private: blocked === "hidden", blocked });
+  if (user.is_private && user.id !== viewer.id) return c.json({ profile, private: true, blocked });
 
   const [stats, points, checkins] = await Promise.all([
     db
@@ -36,6 +47,7 @@ users.get("/:username", async (c) => {
   return c.json({
     profile,
     private: false,
+    blocked,
     stats: {
       checkins: stats?.checkins ?? 0,
       snacks: stats?.snacks ?? 0,

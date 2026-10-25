@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { Link } from "../components/Link";
 import { api, ApiError } from "../api";
 
 /**
@@ -61,6 +62,9 @@ export function QuickSignIn({ onSignedIn }: { onSignedIn: () => void }) {
       <button className="button" disabled={busy}>
         {busy ? "Signing in…" : "Let's go"}
       </button>
+      <p className="small muted no-margin">
+        By joining you agree to the <Link href="/terms">terms</Link> and <Link href="/privacy">privacy policy</Link>.
+      </p>
     </form>
   );
 }

@@ -4,6 +4,7 @@ import { Avatar } from "../components/Avatar";
 import { DemoData } from "../components/DemoData";
 import { Link } from "../components/Link";
 import { VoiceChoice } from "../components/VoiceChoice";
+import { YourData } from "../components/YourData";
 import { squareAvatar } from "../lib/image";
 
 export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<void> }) {
@@ -99,12 +100,18 @@ export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<v
         <span className="muted small">And how Snackchat works</span>
       </Link>
 
+      <YourData />
+
       {me.isAdmin && (
         <>
           <h2 className="section-title admin-heading">Admin</h2>
           <Link href="/review" className="card-plain row settings-link">
             <b className="grow">Photo approvals</b>
             {me.reviewCount > 0 ? <span className="count-badge">{me.reviewCount}</span> : <span className="muted small">All clear</span>}
+          </Link>
+          <Link href="/admin/reports" className="card-plain row settings-link">
+            <b className="grow">Reports</b>
+            {me.openReports > 0 ? <span className="count-badge">{me.openReports}</span> : <span className="muted small">All clear</span>}
           </Link>
           <Link href="/admin/snacks" className="card-plain row settings-link">
             <b className="grow">Snacks</b>

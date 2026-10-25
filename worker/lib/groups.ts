@@ -1,3 +1,4 @@
+import { badWordError } from "../../shared/badWords";
 import { getCategory } from "../../shared/catalogue";
 import type { ResetPeriod, ScoringMode } from "../../shared/types";
 
@@ -21,6 +22,8 @@ export function validateGroup(raw: unknown): Result<GroupInput> {
 
   const name = typeof body.name === "string" ? body.name.trim().replace(/\s+/g, " ") : "";
   if (name.length < 2 || name.length > 40) return { ok: false, error: "Group names are 2 to 40 characters." };
+  const rude = badWordError({ "group name": name });
+  if (rude) return { ok: false, error: rude };
 
   const scoringMode = body.scoringMode ?? "points";
   if (!SCORING_MODES.includes(scoringMode as ScoringMode)) return { ok: false, error: "Pick how to rank people." };

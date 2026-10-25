@@ -1,8 +1,9 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import type { AdminSnackPhoto, AdminSnackRow, AdminUserRow, BrandRow, DemoStatus, DietRow, ReviewQueue } from "../../shared/types";
+import type { AdminReport, AdminSnackPhoto, AdminSnackRow, AdminUserRow, BrandRow, DemoStatus, DietRow, ReviewQueue } from "../../shared/types";
 import type { AppContext } from "../env";
 import { getCategory, POINTS } from "../../shared/catalogue";
+import { deleteAccount } from "../lib/account";
 import { currentUser } from "../lib/currentUser";
 import { buildDemoData, DEMO_GROUPS, DEMO_PHOTO_PREFIX, DEMO_PREFIX, demoUserId, offSearchUrl, wantsPhoto } from "../lib/demo";
 import { type DietSuggestion, offDietSearchUrl, type OffProduct, pickProduct, suggestDiet } from "../lib/diet";
@@ -73,6 +74,14 @@ export async function reviewCount(db: D1Database): Promise<number> {
 /** New snacks people have added that are waiting for a yes or no. */
 export async function pendingSnackCount(db: D1Database): Promise<number> {
   const row = await db.prepare("SELECT COUNT(*) AS n FROM snacks WHERE status = 'pending'").first<{ n: number }>();
+  return row?.n ?? 0;
+}
+
+/** Reported things waiting for an admin (several reports of one thing count once). */
+export async function openReportCount(db: D1Database): Promise<number> {
+  const row = await db
+    .prepare("SELECT COUNT(*) AS n FROM (SELECT 1 FROM reports WHERE resolved = 0 GROUP BY target_type, target_id)")
+    .first<{ n: number }>();
   return row?.n ?? 0;
 }
 
@@ -667,5 +676,111 @@ admin.put("/diet/:id", async (c) => {
     .bind(vegan, glutenFree, Math.floor(Date.now() / 1000), c.req.param("id"))
     .run();
   if (updated.meta.changes !== 1) return c.json({ error: "Snack not found." }, 404);
+  return c.json({ ok: true });
+});
+
+// Reports (routes/safety.ts) ---------------------------------------------------
+
+// Everything reported and not dealt with yet, oldest first, with a look at
+// what was reported so it can be judged here.
+admin.get("/reports", async (c) => {
+  const db = c.env.DB;
+  const { results } = await db
+    .prepare(
+      `SELECT r.target_type AS targetType, r.target_id AS targetId, r.reason, r.note, u.username AS reporter, r.created_at AS createdAt
+         FROM reports r JOIN users u ON u.id = r.reporter_id
+        WHERE r.resolved = 0
+        ORDER BY r.created_at
+        LIMIT 200`,
+    )
+    .all<{ targetType: AdminReport["targetType"]; targetId: string; reason: string; note: string | null; reporter: string; createdAt: number }>();
+
+  const byTarget = new Map<string, AdminReport>();
+  for (const { targetType, targetId, ...report } of results) {
+    const key = `${targetType}:${targetId}`;
+    if (!byTarget.has(key)) byTarget.set(key, { targetType, targetId, reports: [] });
+    byTarget.get(key)!.reports.push(report);
+  }
+  const items = [...byTarget.values()];
+  await Promise.all(
+    items.map(async (item) => {
+      if (item.targetType === "checkin") {
+        item.checkin =
+          (await db
+            .prepare(
+              `SELECT u.username, s.name AS snackName, c.review, c.venue_text AS venue, c.paired_with AS pairedWith, c.created_at AS createdAt,
+                      (SELECT id FROM photos WHERE checkin_id = c.id AND status IN ('visible', 'pending') LIMIT 1) AS photoId
+                 FROM checkins c JOIN users u ON u.id = c.user_id JOIN snacks s ON s.id = c.snack_id
+                WHERE c.id = ?`,
+            )
+            .bind(item.targetId)
+            .first<NonNullable<AdminReport["checkin"]>>()) ?? undefined;
+      } else if (item.targetType === "user") {
+        const u = await db
+          .prepare(
+            `SELECT username, avatar_id AS avatarId, created_at AS joinedAt, is_admin AS isAdmin,
+                    (SELECT COUNT(*) FROM checkins WHERE user_id = users.id) AS checkins
+               FROM users WHERE id = ?`,
+          )
+          .bind(item.targetId)
+          .first<Omit<NonNullable<AdminReport["user"]>, "isAdmin"> & { isAdmin: number }>();
+        item.user = u ? { ...u, isAdmin: u.isAdmin === 1 } : undefined;
+      } else {
+        item.snack =
+          (await db.prepare("SELECT id, name, brand, status FROM snacks WHERE id = ?").bind(item.targetId).first<NonNullable<AdminReport["snack"]>>()) ??
+          undefined;
+      }
+    }),
+  );
+  return c.json({ reports: items });
+});
+
+const REPORT_ACTIONS = {
+  checkin: ["dismiss", "remove-text", "hide-photo", "delete-checkin"],
+  user: ["dismiss", "remove-avatar", "delete-account"],
+  snack: ["dismiss"],
+} as const;
+
+// Deal with a reported thing: { action }. Every open report about it is
+// marked done with what was decided.
+admin.post("/reports/:type/:id", async (c) => {
+  const type = c.req.param("type") as keyof typeof REPORT_ACTIONS;
+  const id = c.req.param("id");
+  const body = (await c.req.json().catch(() => null)) as { action?: unknown } | null;
+  const action = body?.action;
+  if (!(type in REPORT_ACTIONS) || !(REPORT_ACTIONS[type] as readonly unknown[]).includes(action)) {
+    return c.json({ error: "Unknown action." }, 400);
+  }
+  const db = c.env.DB;
+  const me = currentUser(c);
+
+  if (action === "remove-text") {
+    await db.prepare("UPDATE checkins SET review = NULL, venue_text = NULL, paired_with = NULL WHERE id = ?").bind(id).run();
+  } else if (action === "hide-photo") {
+    await db.prepare("UPDATE photos SET status = 'hidden' WHERE checkin_id = ? AND status IN ('visible', 'pending')").bind(id).run();
+  } else if (action === "delete-checkin") {
+    const photos = await db.prepare("SELECT r2_key FROM photos WHERE checkin_id = ?").bind(id).all<{ r2_key: string }>();
+    await db.prepare("UPDATE snacks SET cover_photo_id = NULL WHERE cover_photo_id IN (SELECT id FROM photos WHERE checkin_id = ?)").bind(id).run();
+    await db.prepare("DELETE FROM checkins WHERE id = ?").bind(id).run();
+    const keys = photos.results.map((p) => p.r2_key).filter((k) => !k.startsWith(DEMO_PHOTO_PREFIX));
+    if (keys.length) await c.env.PHOTOS.delete(keys);
+  } else if (action === "remove-avatar") {
+    const user = await db.prepare("SELECT avatar_id FROM users WHERE id = ?").bind(id).first<{ avatar_id: string | null }>();
+    await db.prepare("UPDATE users SET avatar_id = NULL WHERE id = ?").bind(id).run();
+    if (user?.avatar_id) await c.env.PHOTOS.delete(avatarKey(id, user.avatar_id));
+  } else if (action === "delete-account") {
+    const user = await db.prepare("SELECT is_admin FROM users WHERE id = ?").bind(id).first<{ is_admin: number }>();
+    if (!user) return c.json({ error: "Already gone." }, 404);
+    if (id === me.id || user.is_admin === 1) return c.json({ error: "Admins can't be deleted from here." }, 400);
+    await deleteAccount(c.env, id);
+  }
+
+  await db
+    .prepare(
+      `UPDATE reports SET resolved = 1, resolved_at = ?, outcome = ?
+        WHERE resolved = 0 AND target_type = ? AND target_id = ?`,
+    )
+    .bind(Math.floor(Date.now() / 1000), action as string, type, id)
+    .run();
   return c.json({ ok: true });
 });

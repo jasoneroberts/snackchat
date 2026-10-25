@@ -1,3 +1,4 @@
+import { badWordError } from "../../shared/badWords";
 import { POINTS, REVIEW_BONUS_CHARS, attributesFor, getCategory } from "../../shared/catalogue";
 
 export interface CheckinInput {
@@ -56,6 +57,8 @@ export function validateCheckin(raw: unknown, categoryId: string): Result<Checki
   if (venue === false) return { ok: false, error: "Keep \"Where?\" under 80 characters." };
   const pairedWith = optionalText(body.pairedWith, 80);
   if (pairedWith === false) return { ok: false, error: "Keep \"With?\" under 80 characters." };
+  const rude = badWordError({ review, '"Where?"': venue, '"With?"': pairedWith });
+  if (rude) return { ok: false, error: rude };
 
   return { ok: true, value: { snackId: body.snackId, overall, attributes, review, venue, pairedWith } };
 }

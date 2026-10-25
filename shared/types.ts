@@ -43,8 +43,10 @@ export interface SnackPage {
 }
 
 export interface ProfilePage {
-  profile: { username: string; avatarId: string | null; country: string; joinedAt: number };
+  profile: { id: string; username: string; avatarId: string | null; country: string; joinedAt: number };
   private: boolean;
+  /** "you": you've blocked them. "hidden": they've blocked you. */
+  blocked: "you" | "hidden" | null;
   stats?: { checkins: number; snacks: number; avg: number | null; points: number };
   checkins?: FeedItem[];
 }
@@ -235,4 +237,22 @@ export interface HealthSummary {
   errors: ErrorRow[];
   audit: AuditRow[];
   backups: BackupRow[];
+}
+
+// Admin Reports page: one entry per reported thing, with every report about it.
+export interface AdminReport {
+  targetType: "checkin" | "user" | "snack";
+  targetId: string;
+  reports: { reason: string; note: string | null; reporter: string; createdAt: number }[];
+  checkin?: {
+    username: string;
+    snackName: string;
+    review: string | null;
+    venue: string | null;
+    pairedWith: string | null;
+    photoId: string | null;
+    createdAt: number;
+  };
+  user?: { username: string; avatarId: string | null; checkins: number; joinedAt: number; isAdmin: boolean };
+  snack?: { id: string; name: string; brand: string | null; status: string };
 }

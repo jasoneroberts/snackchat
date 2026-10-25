@@ -10,7 +10,8 @@ import { quickSignInOn } from "./lib/quickSignIn";
 import { checkErrorSpike, logError, pruneLogs, readClientError } from "./lib/health";
 import { getSessionUser } from "./lib/session";
 import { turnstileInTestMode } from "./lib/turnstile";
-import { admin, pendingSnackCount, reviewCount } from "./routes/admin";
+import { account } from "./routes/account";
+import { admin, openReportCount, pendingSnackCount, reviewCount } from "./routes/admin";
 import { auth } from "./routes/auth";
 import { avatars } from "./routes/avatars";
 import { boards } from "./routes/boards";
@@ -19,6 +20,7 @@ import { explore } from "./routes/explore";
 import { groups } from "./routes/groups";
 import { logos } from "./routes/logos";
 import { photos } from "./routes/photos";
+import { blocks, reports } from "./routes/safety";
 import { snacks } from "./routes/snacks";
 import { users } from "./routes/users";
 
@@ -48,6 +50,9 @@ app.route("/users", users);
 app.route("/groups", groups);
 app.route("/boards", boards);
 app.route("/explore", explore);
+app.route("/reports", reports);
+app.route("/blocks", blocks);
+app.route("/account", account);
 
 app.get("/me", async (c) => {
   const user = c.get("user");
@@ -70,6 +75,8 @@ app.get("/me", async (c) => {
       reviewCount: user.is_admin === 1 ? await reviewCount(c.env.DB) : 0,
       // ...and how many new snacks people have added.
       pendingSnacks: user.is_admin === 1 ? await pendingSnackCount(c.env.DB) : 0,
+      // ...and how many reports are waiting.
+      openReports: user.is_admin === 1 ? await openReportCount(c.env.DB) : 0,
     },
     devLogin: devLoginUsername(c.env) !== null,
     quickSignIn: quickSignInOn(c.env),

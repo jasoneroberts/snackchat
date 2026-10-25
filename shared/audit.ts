@@ -18,8 +18,17 @@ const RULES: [method: string, pattern: RegExp, label: string | ((action: string 
   ["PUT", /^\/snacks\/[^/]+\/cover$/, "Picked a snack's main picture"],
   ["PUT", /^\/diet\/[^/]+$/, "Set diet labels"],
   ["POST", /^\/health\/backups$/, "Made a backup"],
-  ["POST", /^\/reports\/[^/]+$/, "Dealt with a report"],
+  ["POST", /^\/reports\/[^/]+\/[^/]+$/, (a) => REPORT_OUTCOMES[a ?? ""] ?? "Dealt with a report"],
 ];
+
+const REPORT_OUTCOMES: Record<string, string> = {
+  dismiss: "Dismissed a report",
+  "remove-text": "Removed a reported review",
+  "hide-photo": "Hid a reported photo",
+  "delete-checkin": "Deleted a reported check-in",
+  "remove-avatar": "Removed a reported profile picture",
+  "delete-account": "Deleted a reported account",
+};
 
 /** "Reset a PIN" for POST /users/abc/pin. Unknown requests show as-is. */
 export function describeAdminAction(method: string, path: string, detail: string | null): string {

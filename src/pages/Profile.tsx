@@ -4,6 +4,7 @@ import { api, errorText, type Me } from "../api";
 import { Avatar } from "../components/Avatar";
 import { CheckinCard } from "../components/CheckinCard";
 import { Link } from "../components/Link";
+import { ReportButton } from "../components/Report";
 import { rating } from "../lib/format";
 import { useVoice } from "../lib/voice";
 
@@ -35,6 +36,18 @@ export function Profile({
     load();
   }, [username]);
 
+  // Block or unblock this person, then reload so their check-ins hide or come back.
+  const setBlock = async (block: boolean) => {
+    const name = data?.profile.username ?? username;
+    if (block && !confirm(`Block @${name}? You won't see each other's check-ins. They aren't told.`)) return;
+    try {
+      await api(`/blocks/${encodeURIComponent(name)}`, { method: block ? "PUT" : "DELETE" });
+      load();
+    } catch (err) {
+      setError(errorText(err));
+    }
+  };
+
   if (error) return <p className="error page">{error}</p>;
   if (!data) return <p className="muted page">Loading…</p>;
 
@@ -58,7 +71,28 @@ export function Profile({
         )}
       </div>
 
-      {data.private && <p className="muted">This profile is private.</p>}
+      {!isMe && (
+        <div className="row profile-actions">
+          <ReportButton type="user" id={data.profile.id} />
+          {data.blocked === "you" ? (
+            <button type="button" className="link-button small" onClick={() => setBlock(false)}>
+              Unblock
+            </button>
+          ) : (
+            data.blocked === null && (
+              <button type="button" className="link-button small delete" onClick={() => setBlock(true)}>
+                Block
+              </button>
+            )
+          )}
+        </div>
+      )}
+
+      {data.blocked === "you" ? (
+        <p className="muted">You've blocked @{data.profile.username}. You won't see each other's check-ins.</p>
+      ) : (
+        data.private && <p className="muted">{data.blocked === "hidden" ? "You can't see this profile." : "This profile is private."}</p>
+      )}
 
       {data.stats && (
         <div className="tiles four">

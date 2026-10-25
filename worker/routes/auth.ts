@@ -7,6 +7,7 @@ import { createSession, destroySession } from "../lib/session";
 import { placeholderEmail, quickSignInOn, validateQuickSignIn } from "../lib/quickSignIn";
 import { verifyTurnstile } from "../lib/turnstile";
 import { validateSignUp } from "../lib/validation";
+import { badWordError } from "../../shared/badWords";
 
 const VERIFY_TOKEN_HOURS = 24;
 const now = () => Math.floor(Date.now() / 1000);
@@ -118,7 +119,11 @@ auth.post("/quick", async (c) => {
     return c.json({ ok: true, created: false });
   }
 
-  // A new account: use up one invite, the same way as the full sign-up.
+  // A new account. (Existing names are left alone above, so nobody gets locked out.)
+  const rude = badWordError({ name: username });
+  if (rude) return c.json({ error: rude }, 400);
+
+  // Use up one invite, the same way as the full sign-up.
   const used = await db
     .prepare(
       `UPDATE invite_codes SET uses = uses + 1

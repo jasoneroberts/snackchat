@@ -6,6 +6,7 @@ import { Bars } from "../components/Bars";
 import { CheckinCard } from "../components/CheckinCard";
 import { Link } from "../components/Link";
 import { DietBadges } from "../components/DietFilter";
+import { ReportButton } from "../components/Report";
 import { SnackTile } from "../components/SnackTile";
 import { rating } from "../lib/format";
 
@@ -70,6 +71,9 @@ export function Snack({ id, me }: { id: string; me: Me }) {
       {data.checkins.map((item) => (
         <CheckinCard key={item.id} item={item} mine={item.username === me.username} />
       ))}
+      <p className="small muted center">
+        Wrong name, maker or photo? <ReportButton type="snack" id={snack.id} />
+      </p>
     </div>
   );
 }
