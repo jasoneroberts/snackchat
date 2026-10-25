@@ -55,6 +55,9 @@ export function SignUp({ onSignedIn }: { onSignedIn: () => void }) {
       <button className="button" disabled={busy || !token}>
         {busy ? "Creating your account…" : "Create account"}
       </button>
+      <p className="small muted no-margin">
+        By joining you agree to the <Link href="/terms">terms</Link> and <Link href="/privacy">privacy policy</Link>.
+      </p>
       <p className="muted">
         Already joined? <Link href="/login">Log in</Link>
       </p>

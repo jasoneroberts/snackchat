@@ -2,6 +2,7 @@
 // person's profile. Each row comes back with its sliders, photo and points.
 
 import type { FeedItem } from "../../shared/types";
+import { blockedEitherWay } from "./blocks";
 
 export type { FeedItem };
 
@@ -51,6 +52,8 @@ export async function listCheckins(db: D1Database, f: FeedFilter): Promise<FeedI
          -- they get a "waiting for approval" note instead (photo_pending).
          LEFT JOIN photos p ON p.checkin_id = c.id AND p.status = 'visible'
         WHERE (u.is_private = 0 OR u.id = ?1)
+          -- Nothing from people you've blocked, or who've blocked you.
+          AND NOT ${blockedEitherWay("?1", "c.user_id")}
           AND (?2 IS NULL OR c.snack_id = ?2)
           AND (?3 IS NULL OR c.user_id = ?3)
           AND (?4 IS NULL OR c.created_at < ?4 OR (c.created_at = ?4 AND c.id < ?5))

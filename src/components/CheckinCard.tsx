@@ -6,6 +6,7 @@ import { useVoice } from "../lib/voice";
 import { Avatar } from "./Avatar";
 import { Link } from "./Link";
 import { PhotoViewer } from "./PhotoViewer";
+import { ReportButton } from "./Report";
 import { SnackTile } from "./SnackTile";
 import { Stars } from "./Stars";
 
@@ -80,26 +81,26 @@ export function CheckinCard({
       {item.review && <p className="checkin-review">{item.review}</p>}
       {item.pairedWith && <p className="small muted checkin-with">{t("card.pairedWith", { ...about, vars: { with: item.pairedWith } })}</p>}
 
-      {(chips.length > 0 || mine) && (
-        <div className="chips">
-          {chips.map((a) => (
-            <span key={a.key} className="chip">
-              {attributeLabel(a.key)} <b>{item.attributes[a.key]}</b>
-            </span>
-          ))}
-          {mine && onDelete && (
-            <button
-              type="button"
-              className="link-button small delete"
-              onClick={() => {
-                if (confirm(`Delete your check-in of ${item.snack.name}? Its points go too.`)) onDelete(item.id);
-              }}
-            >
-              Delete
-            </button>
-          )}
-        </div>
-      )}
+      {/* Sliders, then Delete on your own check-ins or Report on everyone else's. */}
+      <div className="chips">
+        {chips.map((a) => (
+          <span key={a.key} className="chip">
+            {attributeLabel(a.key)} <b>{item.attributes[a.key]}</b>
+          </span>
+        ))}
+        {mine && onDelete && (
+          <button
+            type="button"
+            className="link-button small delete"
+            onClick={() => {
+              if (confirm(`Delete your check-in of ${item.snack.name}? Its points go too.`)) onDelete(item.id);
+            }}
+          >
+            Delete
+          </button>
+        )}
+        {!mine && <ReportButton type="checkin" id={item.id} className="checkin-report" />}
+      </div>
     </article>
   );
 }

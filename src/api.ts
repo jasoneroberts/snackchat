@@ -13,6 +13,7 @@ export interface Me {
   isAdmin: boolean;
   reviewCount: number;
   pendingSnacks: number;
+  openReports: number;
   /** null until they've picked lad mode or grown-up mode. */
   voice: Voice | null;
 }

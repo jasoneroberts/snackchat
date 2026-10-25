@@ -1,5 +1,7 @@
 // Input rules shared by sign-up and log-in.
 
+import { badWordError } from "../../shared/badWords";
+
 export const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -24,6 +26,8 @@ export function validateSignUp(body: unknown): { ok: true; value: SignUpInput } 
   if (password.length < 10) return { ok: false, error: "Passwords need at least 10 characters." };
   if (password.length > 200) return { ok: false, error: "That password is too long." };
   if (!inviteCode) return { ok: false, error: "Snackchat is invite-only for now. Enter your invite code." };
+  const rude = badWordError({ username });
+  if (rude) return { ok: false, error: rude };
   return { ok: true, value: { username, email, password, inviteCode, turnstileToken } };
 }
 
@@ -48,5 +52,7 @@ export function validateSnackFields(
   if (name.length < 2 || name.length > 80) return { ok: false, error: "Snack names are 2 to 80 characters." };
   if (brand.length > 60) return { ok: false, error: "Keep the brand under 60 characters." };
   if (!isCategory(category)) return { ok: false, error: "Pick a snack type." };
+  const rude = badWordError({ "snack name": name, maker: brand });
+  if (rude) return { ok: false, error: rude };
   return { ok: true, value: { name, brand: brand || null, category } };
 }
