@@ -2,10 +2,12 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { csrf } from "hono/csrf";
 import { isVoice } from "../shared/voice";
-import type { AppContext } from "./env";
+import type { AppContext, Env } from "./env";
+import { runBackup } from "./lib/backup";
 import { currentUser } from "./lib/currentUser";
 import { devLoginUsername, getDevUser } from "./lib/devLogin";
 import { quickSignInOn } from "./lib/quickSignIn";
+import { checkErrorSpike, logError, pruneLogs, readClientError } from "./lib/health";
 import { getSessionUser } from "./lib/session";
 import { turnstileInTestMode } from "./lib/turnstile";
 import { admin, pendingSnackCount, reviewCount } from "./routes/admin";
@@ -83,6 +85,18 @@ app.put("/me/voice", async (c) => {
   return c.json({ voice });
 });
 
+// The app reports its own crashes here (see src/lib/reportError.ts). Works
+// signed out too, since a crash on the sign-in page matters as much.
+app.post("/errors", async (c) => {
+  const ip = c.req.header("CF-Connecting-IP") ?? "unknown";
+  // A phone stuck in a crash loop shouldn't flood the log.
+  if (!(await c.env.AUTH_LIMITER.limit({ key: `errors:${ip}` })).success) return c.json({ ok: false }, 429);
+  const report = readClientError(await c.req.json().catch(() => null));
+  if (!report) return c.json({ error: "Not an error report." }, 400);
+  await logError(c.env.DB, { source: "client", ...report, userId: c.get("user")?.id, userAgent: c.req.header("User-Agent") });
+  return c.json({ ok: true });
+});
+
 // "turnstile": "test" means the bot check is not protecting anything yet.
 // "devLogin": true means anyone with the link is signed in automatically.
 app.get("/health", (c) =>
@@ -99,7 +113,30 @@ app.onError((err, c) => {
   // Errors raised on purpose (such as the CSRF check) keep their own status.
   if (err instanceof HTTPException) return c.json({ error: err.message || "Forbidden" }, err.status);
   console.error(err);
+  // Written to the error log for Settings > Health, without slowing the reply.
+  const entry = {
+    source: "server" as const,
+    message: err.message || String(err),
+    detail: err.stack ?? null,
+    path: `${c.req.method} ${c.req.path}`,
+    userId: c.get("user")?.id,
+    userAgent: c.req.header("User-Agent"),
+  };
+  c.executionCtx.waitUntil(logError(c.env.DB, entry).catch((e) => console.error("error log", e)));
   return c.json({ error: "Something went wrong." }, 500);
 });
 
-export default app;
+// Timed jobs, set in wrangler.jsonc "triggers". Every hour: check for an
+// error spike. At 03:00 UTC: back up the database and clear old logs.
+async function scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext) {
+  if (controller.cron === "0 3 * * *") {
+    const result = await runBackup(env.DB, env.PHOTOS);
+    console.log(`[backup] ${result.key}: ${result.rows} rows, ${result.bytes} bytes`);
+    ctx.waitUntil(pruneLogs(env.DB));
+  } else {
+    const result = await checkErrorSpike(env);
+    if (result.alerted) console.log(`[alert] sent for ${result.errors} errors`);
+  }
+}
+
+export default { fetch: app.fetch, scheduled } satisfies ExportedHandler<Env>;

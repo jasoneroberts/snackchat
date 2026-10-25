@@ -122,6 +122,10 @@ export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<v
             <b className="grow">Users</b>
             <span className="muted small">Who's joined, PIN resets</span>
           </Link>
+          <Link href="/admin/health" className="card-plain row settings-link">
+            <b className="grow">Health</b>
+            <span className="muted small">Errors, admin changes, backups</span>
+          </Link>
           <Link href="/brands" className="card-plain row settings-link">
             <b className="grow">Brand logos</b>
             <span className="muted small">Shown when a snack has no photo</span>

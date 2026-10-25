@@ -14,6 +14,7 @@ import { LATEST_PHOTO } from "../lib/photoSql";
 import { newPin } from "../lib/quickSignIn";
 import { validateSnackFields } from "../lib/validation";
 import { avatarKey } from "./avatars";
+import { health } from "./health";
 import { logoKey } from "./logos";
 
 // Photo approval. Every new check-in photo and profile picture waits here
@@ -25,6 +26,38 @@ admin.use("*", async (c, next) => {
   if (currentUser(c).is_admin !== 1) throw new HTTPException(403, { message: "Admins only." });
   await next();
 });
+
+// Audit log: every change an admin makes (anything but a GET) is written
+// down with who did it and when. Settings > Health shows the list.
+admin.use("*", async (c, next) => {
+  await next();
+  const method = c.req.method;
+  const path = c.req.path.replace(/^\/api\/admin/, "") || "/";
+  // Demo photos are added one request per snack; one "Loaded demo data" line is enough.
+  if (method === "GET" || method === "HEAD" || path.startsWith("/demo/photos/")) return;
+  let detail: string | null = null;
+  if (c.req.header("Content-Type")?.includes("application/json")) {
+    // Hono keeps the body the route already read, so this reads it again for free.
+    detail = await c.req
+      .json()
+      .then((b) => JSON.stringify(b).slice(0, 500))
+      .catch(() => null);
+  }
+  const user = currentUser(c);
+  try {
+    await c.env.DB.prepare(
+      `INSERT INTO admin_audit_log (admin_id, admin_name, method, path, status, detail, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    )
+      .bind(user.id, user.username, method, path, c.res.status, detail, Math.floor(Date.now() / 1000))
+      .run();
+  } catch (err) {
+    // Never fail the admin's action just because the log couldn't be written.
+    console.error("audit log", err);
+  }
+});
+
+admin.route("/health", health);
 
 /** How many things are waiting, for the badge in Settings. */
 export async function reviewCount(db: D1Database): Promise<number> {

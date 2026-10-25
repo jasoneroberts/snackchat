@@ -110,3 +110,17 @@ still gate sign-up. Do step 1 before inviting people beyond a few testers.
 
 To read verification links in production: `npx wrangler tail`, or the Worker's
 Logs tab in the dashboard.
+
+## Errors, alerts and backups
+
+- **Crashes.** If a screen crashes, people see a "Something went wrong, reload" page instead of a blank one. Crashes on phones (sent to `POST /api/errors`) and server errors are written to `error_log`. Admins see them in Settings > Health.
+- **Alerts.** Every hour a cron job counts the last hour's errors. At 10 or more it emails `ALERT_EMAIL` (or every admin with a real email address), then stays quiet for 6 hours. Until `EMAIL_MODE` is `resend`, the alert only goes to the Worker logs.
+- **Admin changes.** Every admin action that changes something is written to `admin_audit_log`, shown in Settings > Health.
+- **Backups.** At 03:00 UTC every table is copied to R2 as `backups/YYYY-MM-DD.json`, and the last 14 are kept. Photos already live in R2 and aren't copied. Download a backup from Settings > Health, then restore it like this:
+
+  ```sh
+  npm run backup:restore -- snackchat-2026-10-25.json > restore.sql
+  npx wrangler d1 execute snackchat-db --remote --file restore.sql
+  ```
+
+  This replaces every table's rows with the backup's, so the tables must already exist (on a fresh database, run the migrations first). Add `--tables=users,checkins` to restore only some tables. D1 Time Travel can also roll the whole database back to any minute in the last 30 days: `npx wrangler d1 time-travel restore snackchat-db --timestamp=<when>`.
