@@ -123,4 +123,4 @@ Logs tab in the dashboard.
   npx wrangler d1 execute snackchat-db --remote --file restore.sql
   ```
 
-  This replaces every table's rows with the backup's, so the tables must already exist (on a fresh database, run the migrations first). Add `--tables=users,checkins` to restore only some tables. D1 Time Travel can also roll the whole database back to any minute in the last 30 days: `npx wrangler d1 time-travel restore snackchat-db --timestamp=<when>`.
+  This replaces every table's rows with the backup's, so the tables must already exist (on a fresh database, run the migrations first). Add `--tables=users,checkins` to restore only some tables. D1 Time Travel can also roll the whole database back to any minute in the last 30 days (7 on the free plan): `npx wrangler d1 time-travel restore snackchat-db --timestamp=<when>`.
