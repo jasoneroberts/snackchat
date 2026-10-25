@@ -49,5 +49,9 @@
     "QUICK_SIGNIN": "on"
   },
 
+  // Timed jobs (see scheduled() in worker/index.ts): an hourly check that
+  // emails the admin if errors spike, and a nightly backup at 03:00 UTC.
+  "triggers": { "crons": ["0 * * * *", "0 3 * * *"] },
+
   "observability": { "enabled": true }
 }

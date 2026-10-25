@@ -377,3 +377,10 @@ select:focus { outline: 2px solid var(--orange); border-color: transparent; }
 .diet-why { margin: 4px 0; padding-left: 18px; }
 .diet-choice { display: flex; flex-direction: column; gap: 4px; }
 .notice-inline { color: var(--orange-dark); font-weight: 700; }
+
+/* Crash screen and admin Health page */
+.crash { align-items: center; text-align: center; padding-top: 64px; }
+.health-item { padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
+.health-item:last-child { border-bottom: 0; }
+.break { overflow-wrap: anywhere; }
+.error-detail { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.72rem; background: var(--line-soft); border-radius: 8px; padding: 8px; margin: 6px 0 0; max-height: 240px; overflow: auto; }

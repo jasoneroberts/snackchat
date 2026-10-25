@@ -14,6 +14,8 @@ export interface Env {
   QUICK_SIGNIN?: string;
   TURNSTILE_SECRET_KEY?: string;
   RESEND_API_KEY?: string;
+  // Where error alerts go (comma-separated). Unset: every admin with a real email.
+  ALERT_EMAIL?: string;
 }
 
 export interface User {

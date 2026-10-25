@@ -196,3 +196,43 @@ export interface DietRow extends DietLabels {
   checkedAt: number | null;
   photoId: string | null;
 }
+
+// Admin Health page --------------------------------------------------------
+
+export interface ErrorRow {
+  id: number;
+  source: "client" | "server";
+  message: string;
+  detail: string | null;
+  path: string | null;
+  username: string | null;
+  userAgent: string | null;
+  createdAt: number;
+}
+
+export interface AuditRow {
+  id: number;
+  adminName: string;
+  method: string;
+  path: string;
+  status: number;
+  detail: string | null;
+  createdAt: number;
+}
+
+export interface BackupRow {
+  name: string; // 2026-10-25.json
+  bytes: number;
+  createdAt: number;
+}
+
+export interface HealthSummary {
+  errorsLastHour: number;
+  errorsLastDay: number;
+  alertThreshold: number;
+  alertsTo: string[];
+  emailMode: "log" | "resend";
+  errors: ErrorRow[];
+  audit: AuditRow[];
+  backups: BackupRow[];
+}

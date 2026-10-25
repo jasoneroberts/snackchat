@@ -9,6 +9,7 @@ import { Boards } from "./pages/Boards";
 import { CheckIn } from "./pages/CheckIn";
 import { ComingSoon } from "./pages/ComingSoon";
 import { BrandLogos } from "./pages/BrandLogos";
+import { Health } from "./pages/Health";
 import { DietCheck } from "./pages/DietCheck";
 import { Explore } from "./pages/Explore";
 import { Feed } from "./pages/Feed";
@@ -228,6 +229,9 @@ export function App() {
   } else if (path === "/admin/snacks" && me.isAdmin) {
     title = "Snacks";
     page = <AdminSnacks onChanged={refreshMe} />;
+  } else if (path === "/admin/health" && me.isAdmin) {
+    title = "Health";
+    page = <Health />;
   } else if (path === "/review" && me.isAdmin) {
     title = "Approvals";
     page = <Review onChanged={refresh} />;
