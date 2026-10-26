@@ -142,6 +142,7 @@ export interface ExplorePage {
   tastes: Record<string, Preferences>; // by snack type id; types you haven't set are missing
   suggestions: Suggestion[];
   saved: SnackSummary[];
+  discarded: SnackSummary[]; // "Not for me" / rejected, newest first
 }
 
 export interface BrandRow {

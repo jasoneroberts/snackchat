@@ -432,3 +432,11 @@ select:focus { outline: 2px solid var(--orange); border-color: transparent; }
 .cropper .segmented { width: 220px; }
 .checkin-edit { margin-left: auto; }
 .checkin-edit + .link-button.delete { margin-left: 16px; }
+
+/* Explore's three small toggles: your taste, saved, rejected. */
+.explore-tools { gap: 8px; }
+.explore-tools .pill { min-height: 34px; padding: 0 12px; font-size: 0.85rem; }
+.pill-count { opacity: 0.6; margin-left: 2px; }
+
+/* A group's recent check-ins. */
+.not-counted-note { margin: 0 0 4px; }

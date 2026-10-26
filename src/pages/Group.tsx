@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { getCategory } from "../../shared/catalogue";
-import type { GroupPage } from "../../shared/types";
+import type { FeedItem, GroupPage } from "../../shared/types";
 import { api, errorText, type Me } from "../api";
 import { Avatar } from "../components/Avatar";
+import { CheckinCard } from "../components/CheckinCard";
 import { GroupBadge } from "../components/GroupBadge";
 import { Link } from "../components/Link";
 import { SnackTile } from "../components/SnackTile";
@@ -15,12 +16,26 @@ export function Group({ id, me }: { id: string; me: Me }) {
   const { t } = useVoice();
   const [data, setData] = useState<GroupPage | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [recent, setRecent] = useState<FeedItem[] | null>(null);
+  const [next, setNext] = useState<string | null>(null);
+
+  const loadRecent = (before?: string) =>
+    api<{ items: FeedItem[]; next: string | null }>(
+      `/groups/${encodeURIComponent(id)}/checkins${before ? `?before=${encodeURIComponent(before)}` : ""}`,
+    )
+      .then((page) => {
+        setRecent((prev) => (before && prev ? [...prev, ...page.items] : page.items));
+        setNext(page.next);
+      })
+      .catch((err) => setError(errorText(err)));
 
   useEffect(() => {
     setData(null);
+    setRecent(null);
     api<GroupPage>(`/groups/${encodeURIComponent(id)}`)
       .then(setData)
       .catch((err) => setError(errorText(err)));
+    loadRecent();
   }, [id]);
 
   if (error) return <p className="error page">{error}</p>;
@@ -111,6 +126,42 @@ export function Group({ id, me }: { id: string; me: Me }) {
             </span>
           </span>
           <b className="big-text">{rating(Number(favourite.avg.toFixed(2)))}</b>
+        </Link>
+      )}
+
+      <section className="stack">
+        <h2 className="section-title no-margin">Recent check-ins</h2>
+        {!recent ? (
+          <p className="muted">Loading…</p>
+        ) : recent.length === 0 ? (
+          <p className="small muted">Nobody here has checked in a snack yet.</p>
+        ) : (
+          recent.map((item) => {
+            // Check-ins of other snack types still show, but say why they score nothing here.
+            const counts = !group.categories || group.categories.includes(item.snack.category);
+            return (
+              <div key={item.id}>
+                {!counts && (
+                  <p className="small muted not-counted-note">
+                    Doesn't count here: {getCategory(item.snack.category)?.short ?? "this type"} isn't one of this{" "}
+                    {t("title.group").toLowerCase()}'s snack types.
+                  </p>
+                )}
+                <CheckinCard item={item} mine={item.username === me.username} />
+              </div>
+            );
+          })
+        )}
+        {next && (
+          <button type="button" className="button secondary" onClick={() => loadRecent(next)}>
+            Show more
+          </button>
+        )}
+      </section>
+
+      {isOwner && (
+        <Link href={`/groups/${group.id}/edit`} className="button secondary">
+          Change settings
         </Link>
       )}
 

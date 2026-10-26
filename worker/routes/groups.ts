@@ -13,6 +13,7 @@ import {
   rank,
   validateGroup,
 } from "../lib/groups";
+import { listCheckins, nextCursor, parseCursor } from "../lib/feed";
 import { LATEST_PHOTO } from "../lib/photoSql";
 
 export const groups = new Hono<AppContext>();
@@ -226,6 +227,38 @@ groups.get("/:id", async (c) => {
     favourite: favourite ?? null,
   };
   return c.json(page);
+});
+
+// Recent check-ins by the group's members, newest first, all snack types.
+// The page marks the ones that don't count towards this group's board.
+groups.get("/:id/checkins", async (c) => {
+  const user = currentUser(c);
+  const g = await membership(c.env.DB, c.req.param("id"), user.id);
+  if (!g) return c.json({ error: "Group not found." }, 404);
+  const limit = 10;
+  const items = await listCheckins(c.env.DB, {
+    viewerId: user.id,
+    groupId: g.id,
+    before: parseCursor(c.req.query("before")),
+    limit,
+  });
+  return c.json({ items, next: nextCursor(items, limit) });
+});
+
+// Change a group's name, scoring, reset or snack types (owner only). The
+// board is worked out from check-ins each time, so it updates straight away.
+groups.patch("/:id", async (c) => {
+  const user = currentUser(c);
+  const g = await membership(c.env.DB, c.req.param("id"), user.id);
+  if (!g) return c.json({ error: "Group not found." }, 404);
+  if (g.role !== "owner") return c.json({ error: "Only the group's owner can change it." }, 403);
+  const parsed = validateGroup(await c.req.json().catch(() => null));
+  if (!parsed.ok) return c.json({ error: parsed.error }, 400);
+  const input = parsed.value;
+  await c.env.DB.prepare("UPDATE groups SET name = ?, scoring_mode = ?, reset_period = ?, categories = ? WHERE id = ?")
+    .bind(input.name, input.scoringMode, input.resetPeriod, input.categories ? JSON.stringify(input.categories) : null, g.id)
+    .run();
+  return c.json({ ok: true });
 });
 
 // Leave a group. The owner deletes it instead, so a group always has an owner.

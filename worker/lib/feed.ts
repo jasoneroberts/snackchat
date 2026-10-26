@@ -30,6 +30,7 @@ export interface FeedFilter {
   viewerId: string;
   snackId?: string;
   userId?: string;
+  groupId?: string; // only check-ins by this group's members
   // Cursor for the next page: the last item's createdAt and id.
   before?: { createdAt: number; id: string };
   limit?: number;
@@ -57,6 +58,7 @@ export async function listCheckins(db: D1Database, f: FeedFilter): Promise<FeedI
           AND (?2 IS NULL OR c.snack_id = ?2)
           AND (?3 IS NULL OR c.user_id = ?3)
           AND (?4 IS NULL OR c.created_at < ?4 OR (c.created_at = ?4 AND c.id < ?5))
+          AND (?7 IS NULL OR c.user_id IN (SELECT user_id FROM group_members WHERE group_id = ?7))
         ORDER BY c.created_at DESC, c.id DESC
         LIMIT ?6`,
     )
@@ -67,6 +69,7 @@ export async function listCheckins(db: D1Database, f: FeedFilter): Promise<FeedI
       f.before?.createdAt ?? null,
       f.before?.id ?? null,
       Math.min(f.limit ?? 20, 50),
+      f.groupId ?? null,
     )
     .all<Row>();
 
