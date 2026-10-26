@@ -28,13 +28,18 @@ const TABS: { href: string; label: LineKey; icon: ReactNode }[] = [
 ];
 
 /** The bottom navigation bar, like the prototype's. */
-export function TabBar({ active }: { active: string }) {
+export function TabBar({ active, meBadge = 0 }: { active: string; meBadge?: number }) {
   const { t } = useVoice();
   return (
     <nav className="tabbar" aria-label="Main">
       {TABS.map((tab) => (
         <Link key={tab.href} href={tab.href} className={tab.href === active ? "tab active" : "tab"} aria-current={tab.href === active ? "page" : undefined}>
-          {tab.icon ? <span className="tab-icon">{tab.icon}</span> : (
+          {tab.icon ? (
+            <span className="tab-icon">
+              {tab.icon}
+              {tab.href === "/me" && meBadge > 0 && <span className="tab-badge">{meBadge > 99 ? "99+" : meBadge}</span>}
+            </span>
+          ) : (
             <span className="tab-plus">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" aria-hidden="true">
                 <path d="M12 5v14M5 12h14" />

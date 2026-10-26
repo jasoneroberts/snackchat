@@ -1,8 +1,9 @@
 import { Hono } from "hono";
-import { readReport } from "../../shared/reports";
+import { readReport, reasonLabel } from "../../shared/reports";
 import type { AppContext } from "../env";
 import { newId } from "../lib/crypto";
 import { currentUser } from "../lib/currentUser";
+import { pingAdmins } from "../lib/notify";
 
 const now = () => Math.floor(Date.now() / 1000);
 
@@ -52,6 +53,8 @@ reports.post("/", async (c) => {
     )
     .bind(newId(), user.id, targetType, targetId, reason, note, now())
     .run();
+  const what = targetType === "checkin" ? "a check-in" : targetType === "user" ? "a person" : "a snack";
+  pingAdmins(c, { kind: "report", title: "New report", body: `@${user.username} reported ${what}: ${reasonLabel(reason)}.`, url: "/admin/reports" }, user.id);
   return c.json({ ok: true }, 201);
 });
 

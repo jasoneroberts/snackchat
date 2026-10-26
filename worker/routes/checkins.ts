@@ -5,6 +5,7 @@ import { newId } from "../lib/crypto";
 import { pointsFor, startOfUtcDay, validateCheckin } from "../lib/checkin";
 import { currentUser } from "../lib/currentUser";
 import { listCheckins, nextCursor, parseCursor } from "../lib/feed";
+import { pingAdmins } from "../lib/notify";
 
 export const checkins = new Hono<AppContext>();
 
@@ -41,9 +42,9 @@ checkins.post("/", async (c) => {
   const snack =
     typeof snackId === "string"
       ? await db
-          .prepare("SELECT id, category_id, status, created_by FROM snacks WHERE id = ?")
+          .prepare("SELECT id, name, category_id, status, created_by FROM snacks WHERE id = ?")
           .bind(snackId)
-          .first<{ id: string; category_id: string; status: string; created_by: string | null }>()
+          .first<{ id: string; name: string; category_id: string; status: string; created_by: string | null }>()
       : null;
   const usable = snack && (snack.status === "approved" || (snack.status === "pending" && snack.created_by === user.id));
   if (!snack || !usable) return c.json({ error: "Pick a snack." }, 400);
@@ -116,6 +117,9 @@ checkins.post("/", async (c) => {
     throw err;
   }
 
+  if (photoId) {
+    pingAdmins(c, { kind: "photo", title: "Photo to approve", body: `@${user.username} added a photo of ${snack.name}.`, url: "/review" }, user.id);
+  }
   return c.json({ id: checkinId, points: lines.reduce((sum, l) => sum + l.points, 0), lines }, 201);
 });
 
@@ -229,6 +233,9 @@ checkins.patch("/:id", async (c) => {
   }
   // Old files go once the database no longer points at them.
   if (old.length) await c.env.PHOTOS.delete(old.map((p) => p.r2_key));
+  if (photoId) {
+    pingAdmins(c, { kind: "photo", title: "Photo to approve", body: `@${user.username} changed the photo on a check-in.`, url: "/review" }, user.id);
+  }
   return c.json({ ok: true, photoPending: photoId !== null });
 });
 

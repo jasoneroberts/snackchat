@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, type Me } from "./api";
+import { adminToDo, api, type Me } from "./api";
 import { Link } from "./components/Link";
 import { TabBar } from "./components/TabBar";
 import { matchPath, navigate, usePath } from "./router";
@@ -31,6 +31,7 @@ import { Welcome } from "./pages/Welcome";
 import { Snack } from "./pages/Snack";
 import { PickVoice } from "./pages/PickVoice";
 import { markWelcomed, welcomed } from "./lib/install";
+import { setIconBadge } from "./lib/push";
 import { VoiceProvider } from "./lib/voice";
 import { line } from "../shared/voice";
 
@@ -85,6 +86,27 @@ export function App() {
   };
 
   const refresh = () => void refreshMe().catch(() => {});
+
+  // Admins: the to-do count goes on the app icon too, and is kept fresh while the app is open.
+  const todo = me ? adminToDo(me) : 0;
+  useEffect(() => {
+    if (me?.isAdmin) setIconBadge(todo);
+  }, [me?.isAdmin, todo]);
+  useEffect(() => {
+    if (!me?.isAdmin) return;
+    const onShow = () => document.visibilityState === "visible" && refresh();
+    document.addEventListener("visibilitychange", onShow);
+    const timer = setInterval(refresh, 60_000);
+    return () => {
+      document.removeEventListener("visibilitychange", onShow);
+      clearInterval(timer);
+    };
+  }, [me?.isAdmin]);
+  // Admin pages clear things off the list (opening Users clears "new people"), so recount on the way in.
+  const adminPage = /^\/(admin|review|settings)/.test(path);
+  useEffect(() => {
+    if (me?.isAdmin && adminPage) setTimeout(refresh, 1500);
+  }, [path]);
 
   if (me === undefined) return <p className="muted page">Loading…</p>;
 
@@ -318,7 +340,7 @@ export function App() {
             </button>
           </div>
         )}
-        <TabBar active={tab} />
+        <TabBar active={tab} meBadge={adminToDo(me)} />
       </div>
     </VoiceProvider>
   );
