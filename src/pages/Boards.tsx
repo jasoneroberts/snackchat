@@ -23,7 +23,9 @@ const METRICS: { id: PeopleMetric; label: string; unit: string }[] = [
   { id: "snacks", label: "Unique snacks", unit: "snacks" },
 ];
 
-// Remember the last view on this device, so the tab opens where you left it.
+// The board always opens on the snack table (lad mode's "The Crunch") for
+// everyone, this week. The people metric and snack type you last picked are
+// remembered on this device.
 const SAVED = "snackchat.boards";
 interface View {
   kind: Kind;
@@ -32,15 +34,19 @@ interface View {
   metric: PeopleMetric;
   category: string;
 }
-const DEFAULT_VIEW: View = { kind: "people", scope: "global", period: "week", metric: "points", category: "" };
+const DEFAULT_VIEW: View = { kind: "snacks", scope: "global", period: "week", metric: "points", category: "" };
 
 function loadView(): View {
   try {
-    return { ...DEFAULT_VIEW, ...JSON.parse(localStorage.getItem(SAVED) ?? "{}") };
+    const saved = JSON.parse(localStorage.getItem(SAVED) ?? "{}") as Partial<View>;
+    return { ...DEFAULT_VIEW, metric: saved.metric ?? DEFAULT_VIEW.metric, category: saved.category ?? DEFAULT_VIEW.category };
   } catch {
     return DEFAULT_VIEW;
   }
 }
+
+// This month and All time only rank snacks with this many ratings (worker/lib/boards.ts).
+const MIN_RATINGS = 3;
 
 export function Boards({ me }: { me: Me }) {
   const [view, setView] = useState<View>(loadView);
@@ -50,9 +56,16 @@ export function Boards({ me }: { me: Me }) {
   const [error, setError] = useState<string | null>(null);
   const { t } = useVoice();
   const [diets, setDiets] = useDiets();
+  // While true, an empty "This week" switches itself to All time. Any tap on a period ends that.
+  const [autoPeriod, setAutoPeriod] = useState(true);
+  const [fellBack, setFellBack] = useState(false);
 
   const update = (change: Partial<View>) => {
     const next = { ...view, ...change };
+    if (change.period) {
+      setAutoPeriod(false);
+      setFellBack(false);
+    }
     setView(next);
     try {
       localStorage.setItem(SAVED, JSON.stringify(next));
@@ -77,15 +90,28 @@ export function Boards({ me }: { me: Me }) {
     if (view.kind === "people") {
       setPeople(null);
       api<{ rows: PeopleRow[] }>(`/boards/people?${q}&metric=${view.metric}`)
-        .then((r) => setPeople(r.rows))
+        .then((r) => {
+          if (autoPeriod && view.period === "week" && r.rows.every((row) => row.checkins === 0)) return fallBack();
+          setPeople(r.rows);
+        })
         .catch((err) => setError(errorText(err)));
     } else {
       setSnacks(null);
       api<{ rows: SnackRow[] }>(`/boards/snacks?${q}&category=${view.category}${dietQuery(diets)}`)
-        .then((r) => setSnacks(r.rows))
+        .then((r) => {
+          if (autoPeriod && view.period === "week" && r.rows.length === 0) return fallBack();
+          setSnacks(r.rows);
+        })
         .catch((err) => setError(errorText(err)));
     }
   }, [view.kind, view.scope, view.period, view.metric, view.category, diets.join()]);
+
+  // Nothing this week yet: show All time instead, once, and say so.
+  function fallBack() {
+    setAutoPeriod(false);
+    setFellBack(true);
+    setView((v) => ({ ...v, period: "all" }));
+  }
 
   const scopeName = view.scope === "global" ? "Everyone" : groups.find((g) => g.id === view.scope)?.name ?? "Group";
   const periodName = PERIODS.find((p) => p.id === view.period)!.label.toLowerCase();
@@ -144,10 +170,11 @@ export function Boards({ me }: { me: Me }) {
         </>
       )}
 
+      {fellBack && <p className="small notice-inline no-margin">Nothing this week yet, so here's all time.</p>}
       <p className="small muted no-margin">
         {view.kind === "people"
           ? `${scopeName}, ${periodName}, ranked by ${metric.label.toLowerCase()}.`
-          : `Top-rated ${view.category ? getCategory(view.category)!.short : "snacks"}, ${scopeName.toLowerCase() === "everyone" ? "everyone's" : `${scopeName}'s`} ratings ${periodName}. Snacks with more ratings rank higher on a tie.`}
+          : `Top-rated ${view.category ? getCategory(view.category)!.short : "snacks"}, ${scopeName.toLowerCase() === "everyone" ? "everyone's" : `${scopeName}'s`} ratings ${periodName}.${view.period === "week" ? "" : ` Only snacks with ${MIN_RATINGS} or more ratings.`} Snacks with more ratings rank higher on a tie.`}
       </p>
 
       {error && <p className="error">{error}</p>}

@@ -3,7 +3,7 @@ import { getCategory } from "../../shared/catalogue";
 import { dietSql, readDiets } from "../../shared/diet";
 import type { BoardPeriod, PeopleMetric, PeopleRow, SnackRow } from "../../shared/types";
 import type { AppContext } from "../env";
-import { BOARD_PERIODS, boardStart, weightedRating } from "../lib/boards";
+import { BOARD_PERIODS, boardStart, minRatingsFor, weightedRating } from "../lib/boards";
 import { currentUser } from "../lib/currentUser";
 import { rank } from "../lib/groups";
 import { LATEST_PHOTO } from "../lib/photoSql";
@@ -81,6 +81,7 @@ boards.get("/snacks", async (c) => {
   if (!scope) return c.json({ error: "Group not found." }, 404);
   const category = getCategory(c.req.query("category") ?? "")?.id ?? null;
   const diets = readDiets(c.req.query("diet"));
+  const period = readPeriod(c.req.query("period"));
 
   const { results } = await c.env.DB.prepare(
     `SELECT s.id, s.name, s.brand, s.category_id AS category, s.status,
@@ -90,9 +91,10 @@ boards.get("/snacks", async (c) => {
        JOIN users u ON u.id = c.user_id
       WHERE c.created_at >= ?2 AND s.status = 'approved' AND ${WHO} AND ${TYPES}
         AND (?5 IS NULL OR s.category_id = ?5)${dietSql(diets)}
-      GROUP BY s.id`,
+      GROUP BY s.id
+     HAVING COUNT(*) >= ?6`,
   )
-    .bind(user.id, boardStart(readPeriod(c.req.query("period")), now()), scope.groupId, scope.categories, category)
+    .bind(user.id, boardStart(period, now()), scope.groupId, scope.categories, category, minRatingsFor(period))
     .all<{ id: string; name: string; brand: string | null; category: string; status: string; avg: number; count: number; photoId: string | null }>();
 
   const total = results.reduce((n, r) => n + r.count, 0);

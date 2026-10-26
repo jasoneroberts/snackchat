@@ -171,7 +171,7 @@ button.checkin-thumb img { width: 100%; height: 100%; object-fit: cover; display
 .photo-buttons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: 100%; }
 .photo-buttons .button { position: relative; gap: 6px; cursor: pointer; }
 .photo-preview { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.photo-preview img { width: 100%; max-height: 360px; object-fit: cover; border-radius: 16px; }
+.photo-preview img { max-width: 100%; max-height: 360px; object-fit: contain; border-radius: 16px; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .slider { display: flex; flex-direction: column; gap: 2px; }
 .slider-top { display: flex; justify-content: space-between; font-size: 0.875rem; }
@@ -407,3 +407,26 @@ select:focus { outline: 2px solid var(--orange); border-color: transparent; }
 .legal li { margin: 6px 0; }
 .legal p { margin: 0; }
 .legal-links { text-align: center; }
+
+/* Photo cropper: full screen, dark, photo framed in the middle */
+.cropper { position: fixed; inset: 0; z-index: 70; background: #14100b; color: #fff; display: flex; flex-direction: column; }
+.cropper-top { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: max(12px, env(safe-area-inset-top)) 16px 12px; }
+.cropper-top .link-button { color: #fff; }
+.cropper-stage { flex: 1; display: flex; align-items: center; justify-content: center; padding: 0 16px; min-height: 0; }
+.cropper-frame { position: relative; box-shadow: 0 0 0 9999px rgb(0 0 0 / 0.55); border-radius: 4px; }
+.cropper-frame canvas { display: block; touch-action: none; cursor: grab; border-radius: 4px; }
+.cropper-frame canvas:active { cursor: grabbing; }
+.cropper-grid { position: absolute; inset: 0; pointer-events: none; border: 2px solid rgb(255 255 255 / 0.9); border-radius: 4px;
+  background:
+    linear-gradient(to right, transparent 33.2%, rgb(255 255 255 / 0.35) 33.3%, transparent 33.6%, transparent 66.5%, rgb(255 255 255 / 0.35) 66.6%, transparent 66.9%),
+    linear-gradient(to bottom, transparent 33.2%, rgb(255 255 255 / 0.35) 33.3%, transparent 33.6%, transparent 66.5%, rgb(255 255 255 / 0.35) 66.6%, transparent 66.9%); }
+.cropper-note { color: #ddd; text-align: center; }
+.cropper-controls { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px 16px max(16px, env(safe-area-inset-bottom)); }
+.cropper-zoom { display: flex; align-items: center; gap: 12px; width: 100%; max-width: 420px; }
+.cropper-zoom input { flex: 1; accent-color: var(--orange); }
+.cropper-hint { color: #bbb; margin: 0; }
+.cropper .segmented { background: rgb(255 255 255 / 0.12); }
+.cropper .segmented button { color: #fff; }
+.cropper .segmented button.on { background: var(--orange); color: var(--ink); }
+.photo-preview-actions { display: flex; gap: 16px; justify-content: center; }
+.cropper .segmented { width: 220px; }

@@ -5,7 +5,8 @@ import { DemoData } from "../components/DemoData";
 import { Link } from "../components/Link";
 import { VoiceChoice } from "../components/VoiceChoice";
 import { YourData } from "../components/YourData";
-import { squareAvatar } from "../lib/image";
+import { Cropper } from "../components/Cropper";
+import { AVATAR_SIDE } from "../lib/image";
 
 export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<void> }) {
   const [busy, setBusy] = useState(false);
@@ -24,11 +25,13 @@ export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<v
     }
   };
 
-  const upload = (file: File | undefined) => {
-    if (!file) return;
+  // A picked photo opens the cropper (square only); "Use photo" uploads the square.
+  const [picked, setPicked] = useState<File | null>(null);
+  const upload = (square: Blob) => {
+    setPicked(null);
     void run(async () => {
       const body = new FormData();
-      body.append("photo", await squareAvatar(file), "avatar.jpg");
+      body.append("photo", square, "avatar.jpg");
       await api("/avatars", { body });
     });
   };
@@ -49,7 +52,10 @@ export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<v
                   capture="user"
                   className="visually-hidden"
                   disabled={busy}
-                  onChange={(e) => upload(e.target.files?.[0])}
+                  onChange={(e) => {
+                    setPicked(e.target.files?.[0] ?? null);
+                    e.target.value = "";
+                  }}
                 />
                 Take photo
               </label>
@@ -59,7 +65,10 @@ export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<v
                   accept="image/*"
                   className="visually-hidden"
                   disabled={busy}
-                  onChange={(e) => upload(e.target.files?.[0])}
+                  onChange={(e) => {
+                    setPicked(e.target.files?.[0] ?? null);
+                    e.target.value = "";
+                  }}
                 />
                 Choose photo
               </label>
@@ -81,11 +90,15 @@ export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<v
             Waiting for approval. {me.avatarId ? "Everyone else sees your old picture" : "Everyone else sees your initials"} until then.
           </p>
         ) : (
-          <p className="small muted">We crop it to a square from the middle of the photo. New pictures are checked before others see them.</p>
+          <p className="small muted">You can crop it to a square before it's saved. New pictures are checked before others see them.</p>
         )}
         {busy && <p className="small muted">Saving…</p>}
         {error && <p className="error">{error}</p>}
       </section>
+
+      {picked && (
+        <Cropper file={picked} squareOnly maxSide={AVATAR_SIDE} onDone={upload} onCancel={() => setPicked(null)} />
+      )}
 
       <section className="card-plain stack-sm">
         <div>

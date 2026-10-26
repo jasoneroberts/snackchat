@@ -2,39 +2,29 @@
 // upload makes posting quick on mobile data and keeps R2 storage small.
 
 const MAX_SIDE = 1600;
-const AVATAR_SIDE = 400;
+export const AVATAR_SIDE = 400;
 const LOGO_SIDE = 256;
 const QUALITY = 0.85;
 const SERVER_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const SERVER_MAX_BYTES = 5 * 1024 * 1024;
 
-/** A JPEG no bigger than 1600px on its longest side, upright. */
-export async function shrinkPhoto(file: File): Promise<Blob> {
-  const bitmap = await decode(file);
-  if (!bitmap) return file;
-
-  const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
-  return toJpeg(canvas);
+export interface CropRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
-/** A square JPEG for a profile picture, cut from the middle of the photo. */
-export async function squareAvatar(file: File): Promise<Blob> {
-  const bitmap = await decode(file);
-  if (!bitmap) return file;
-
-  const side = Math.min(bitmap.width, bitmap.height);
-  const out = Math.min(AVATAR_SIDE, side);
+/**
+ * Cut one part out of a photo (in the photo's own pixels) as an upright JPEG
+ * no bigger than maxSide (1600px for check-ins, 400px for profile pictures).
+ */
+export function cropToJpeg(bitmap: ImageBitmap, rect: CropRect, maxSide = MAX_SIDE): Promise<Blob> {
+  const scale = Math.min(1, maxSide / Math.max(rect.width, rect.height));
   const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = out;
-  canvas
-    .getContext("2d")!
-    .drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, out, out);
-  bitmap.close();
+  canvas.width = Math.max(1, Math.round(rect.width * scale));
+  canvas.height = Math.max(1, Math.round(rect.height * scale));
+  canvas.getContext("2d")!.drawImage(bitmap, rect.x, rect.y, rect.width, rect.height, 0, 0, canvas.width, canvas.height);
   return toJpeg(canvas);
 }
 
@@ -58,7 +48,7 @@ export async function shrinkLogo(file: File): Promise<Blob> {
  * Decode a photo the right way up. Returns null when the browser can't read
  * it (some HEIC files outside Safari) but the server will take it as it is.
  */
-async function decode(file: File): Promise<ImageBitmap | null> {
+export async function decode(file: File): Promise<ImageBitmap | null> {
   try {
     // "from-image" applies the phone's rotation tag, so photos aren't sideways.
     return await createImageBitmap(file, { imageOrientation: "from-image" });
