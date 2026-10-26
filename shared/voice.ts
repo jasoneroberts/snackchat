@@ -35,6 +35,7 @@ export const LINES = {
   "title.explore": { grownup: "Explore", lad: "The Hunt" },
   "title.groups": { grownup: "Groups", lad: "Squads" },
   "title.newGroup": { grownup: "New group", lad: "New squad" },
+  "title.editGroup": { grownup: "Group settings", lad: "Squad settings" },
   "title.group": { grownup: "Group", lad: "Squad" },
 
   // Feed
@@ -82,6 +83,7 @@ export const LINES = {
   "explore.save": { grownup: "Save to try", lad: "Bag it" },
   "explore.discard": { grownup: "Not for me", lad: "Bin it" },
   "explore.saved": { grownup: "Saved to try", lad: "Bagged for later" },
+  "explore.rejected": { grownup: "Rejected", lad: "Rejected" },
   "explore.tried": { grownup: "Check in", lad: "Log it" },
 
   // Boards

@@ -1,12 +1,14 @@
-import { useState, type FormEvent } from "react";
-import { CATEGORIES } from "../../shared/catalogue";
-import type { ResetPeriod, ScoringMode } from "../../shared/types";
+import { useEffect, useState, type FormEvent } from "react";
+import { getCategory } from "../../shared/catalogue";
+import { TYPE_ORDER } from "../../shared/typeFilters";
+import type { GroupPage, ResetPeriod, ScoringMode } from "../../shared/types";
 import { api, errorText } from "../api";
 import { MODE_CHOICES, RESET_CHOICES } from "../lib/groups";
 import { navigate } from "../router";
 import { useVoice } from "../lib/voice";
 
-export function NewGroup() {
+// Starts a group, or with editId changes one you run.
+export function NewGroup({ editId }: { editId?: string }) {
   const { t } = useVoice();
   const [name, setName] = useState("");
   const [scoringMode, setScoringMode] = useState<ScoringMode>("points");
@@ -14,6 +16,20 @@ export function NewGroup() {
   const [categories, setCategories] = useState<string[]>([]); // empty = all snack types
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(!editId);
+
+  useEffect(() => {
+    if (!editId) return;
+    api<GroupPage>(`/groups/${encodeURIComponent(editId)}`)
+      .then(({ group }) => {
+        setName(group.name);
+        setScoringMode(group.scoringMode);
+        setResetPeriod(group.resetPeriod);
+        setCategories(group.categories ?? []);
+        setLoaded(true);
+      })
+      .catch((err) => setError(errorText(err)));
+  }, [editId]);
 
   const toggle = (id: string) =>
     setCategories((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
@@ -23,6 +39,11 @@ export function NewGroup() {
     setBusy(true);
     setError(null);
     try {
+      if (editId) {
+        await api(`/groups/${encodeURIComponent(editId)}`, { method: "PATCH", body: { name, scoringMode, resetPeriod, categories } });
+        navigate(`/groups/${editId}`);
+        return;
+      }
       const { id } = await api<{ id: string }>("/groups", { body: { name, scoringMode, resetPeriod, categories } });
       // Straight to inviting people: an empty group isn't much of a league.
       navigate(`/groups/${id}/invite?new=1`);
@@ -31,6 +52,8 @@ export function NewGroup() {
       setBusy(false);
     }
   };
+
+  if (!loaded) return error ? <p className="error page">{error}</p> : <p className="muted page">Loading…</p>;
 
   return (
     <form className="page stack-lg" onSubmit={create}>
@@ -86,15 +109,15 @@ export function NewGroup() {
           >
             All snacks
           </button>
-          {CATEGORIES.map((c) => (
+          {TYPE_ORDER.map((id) => (
             <button
-              key={c.id}
+              key={id}
               type="button"
-              className={categories.includes(c.id) ? "pill on" : "pill"}
-              aria-pressed={categories.includes(c.id)}
-              onClick={() => toggle(c.id)}
+              className={categories.includes(id) ? "pill on" : "pill"}
+              aria-pressed={categories.includes(id)}
+              onClick={() => toggle(id)}
             >
-              {c.name}
+              {getCategory(id)!.name}
             </button>
           ))}
         </div>
@@ -102,7 +125,7 @@ export function NewGroup() {
 
       {error && <p className="error">{error}</p>}
       <button type="submit" className="button big" disabled={busy || name.trim().length < 2}>
-        {busy ? "Creating…" : t("groups.create")}
+        {editId ? (busy ? "Saving…" : "Save changes") : busy ? "Creating…" : t("groups.create")}
       </button>
     </form>
   );

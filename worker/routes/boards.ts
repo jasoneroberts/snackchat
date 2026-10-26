@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { getCategory } from "../../shared/catalogue";
 import { dietSql, readDiets } from "../../shared/diet";
+import { filterTypes } from "../../shared/typeFilters";
 import type { BoardPeriod, PeopleMetric, PeopleRow, SnackRow } from "../../shared/types";
 import type { AppContext } from "../env";
 import { BOARD_PERIODS, boardStart, minRatingsFor, weightedRating } from "../lib/boards";
@@ -73,13 +73,13 @@ boards.get("/people", async (c) => {
   return c.json({ rows: top satisfies PeopleRow[] });
 });
 
-// Snacks ranked by rating, optionally for one snack type. Only approved
+// Snacks ranked by rating, optionally for one snack type (or lad mode's "rest"). Only approved
 // snacks appear, and the ranking uses a weighted average (lib/boards.ts).
 boards.get("/snacks", async (c) => {
   const user = currentUser(c);
   const scope = await resolveScope(c, c.req.query("scope") ?? "global", user.id);
   if (!scope) return c.json({ error: "Group not found." }, 404);
-  const category = getCategory(c.req.query("category") ?? "")?.id ?? null;
+  const types = filterTypes(c.req.query("category"));
   const diets = readDiets(c.req.query("diet"));
   const period = readPeriod(c.req.query("period"));
 
@@ -90,11 +90,11 @@ boards.get("/snacks", async (c) => {
        JOIN snacks s ON s.id = c.snack_id
        JOIN users u ON u.id = c.user_id
       WHERE c.created_at >= ?2 AND s.status = 'approved' AND ${WHO} AND ${TYPES}
-        AND (?5 IS NULL OR s.category_id = ?5)${dietSql(diets)}
+        AND (?5 IS NULL OR s.category_id IN (SELECT value FROM json_each(?5)))${dietSql(diets)}
       GROUP BY s.id
      HAVING COUNT(*) >= ?6`,
   )
-    .bind(user.id, boardStart(period, now()), scope.groupId, scope.categories, category, minRatingsFor(period))
+    .bind(user.id, boardStart(period, now()), scope.groupId, scope.categories, types && JSON.stringify(types), minRatingsFor(period))
     .all<{ id: string; name: string; brand: string | null; category: string; status: string; avg: number; count: number; photoId: string | null }>();
 
   const total = results.reduce((n, r) => n + r.count, 0);

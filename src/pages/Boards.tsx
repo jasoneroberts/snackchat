@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { CATEGORIES, getCategory } from "../../shared/catalogue";
+import { getCategory } from "../../shared/catalogue";
+import { filterFor, filterShort, typeFilters } from "../../shared/typeFilters";
 import type { BoardPeriod, GroupCard, PeopleMetric, PeopleRow, SnackRow } from "../../shared/types";
 import { api, errorText, type Me } from "../api";
 import { Avatar } from "../components/Avatar";
@@ -7,6 +8,7 @@ import { dietQuery, DietFilter, useDiets } from "../components/DietFilter";
 import { Link } from "../components/Link";
 import { SnackTile } from "../components/SnackTile";
 import { rating } from "../lib/format";
+import { useViewState } from "../lib/viewState";
 import { useVoice } from "../lib/voice";
 
 type Kind = "people" | "snacks";
@@ -23,56 +25,45 @@ const METRICS: { id: PeopleMetric; label: string; unit: string }[] = [
   { id: "snacks", label: "Unique snacks", unit: "snacks" },
 ];
 
-// The board always opens on the snack table (lad mode's "The Crunch") for
-// everyone, this week. The people metric and snack type you last picked are
-// remembered on this device.
-const SAVED = "snackchat.boards";
+// The board opens on the snack table (lad mode's "The Crunch") for everyone,
+// this week. While the app is open, whatever you pick stays picked when you
+// move to another screen and back.
 interface View {
   kind: Kind;
   scope: string;
   period: BoardPeriod;
   metric: PeopleMetric;
-  category: string;
+  category: string; // a snack-type filter id (shared/typeFilters.ts)
+  // While true, an empty "This week" switches itself to All time. Any tap on a period ends that.
+  autoPeriod: boolean;
+  fellBack: boolean;
 }
-const DEFAULT_VIEW: View = { kind: "snacks", scope: "global", period: "week", metric: "points", category: "" };
-
-function loadView(): View {
-  try {
-    const saved = JSON.parse(localStorage.getItem(SAVED) ?? "{}") as Partial<View>;
-    return { ...DEFAULT_VIEW, metric: saved.metric ?? DEFAULT_VIEW.metric, category: saved.category ?? DEFAULT_VIEW.category };
-  } catch {
-    return DEFAULT_VIEW;
-  }
-}
+const DEFAULT_VIEW: View = {
+  kind: "snacks",
+  scope: "global",
+  period: "week",
+  metric: "points",
+  category: "",
+  autoPeriod: true,
+  fellBack: false,
+};
 
 // This month and All time only rank snacks with this many ratings (worker/lib/boards.ts).
 const MIN_RATINGS = 3;
 
 export function Boards({ me }: { me: Me }) {
-  const [view, setView] = useState<View>(loadView);
+  const [view, setView] = useViewState<View>("boards", DEFAULT_VIEW);
   const [groups, setGroups] = useState<GroupCard[]>([]);
   const [people, setPeople] = useState<PeopleRow[] | null>(null);
   const [snacks, setSnacks] = useState<SnackRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { t } = useVoice();
+  const { t, voice } = useVoice();
   const [diets, setDiets] = useDiets();
-  // While true, an empty "This week" switches itself to All time. Any tap on a period ends that.
-  const [autoPeriod, setAutoPeriod] = useState(true);
-  const [fellBack, setFellBack] = useState(false);
+  const filters = typeFilters(voice);
+  const category = filterFor(voice, view.category);
 
-  const update = (change: Partial<View>) => {
-    const next = { ...view, ...change };
-    if (change.period) {
-      setAutoPeriod(false);
-      setFellBack(false);
-    }
-    setView(next);
-    try {
-      localStorage.setItem(SAVED, JSON.stringify(next));
-    } catch {
-      // Storage blocked: the board still works, it just won't be remembered.
-    }
-  };
+  const update = (change: Partial<View>) =>
+    setView((v) => ({ ...v, ...change, ...(change.period ? { autoPeriod: false, fellBack: false } : {}) }));
 
   useEffect(() => {
     api<{ groups: GroupCard[] }>("/groups")
@@ -91,26 +82,24 @@ export function Boards({ me }: { me: Me }) {
       setPeople(null);
       api<{ rows: PeopleRow[] }>(`/boards/people?${q}&metric=${view.metric}`)
         .then((r) => {
-          if (autoPeriod && view.period === "week" && r.rows.every((row) => row.checkins === 0)) return fallBack();
+          if (view.autoPeriod && view.period === "week" && r.rows.every((row) => row.checkins === 0)) return fallBack();
           setPeople(r.rows);
         })
         .catch((err) => setError(errorText(err)));
     } else {
       setSnacks(null);
-      api<{ rows: SnackRow[] }>(`/boards/snacks?${q}&category=${view.category}${dietQuery(diets)}`)
+      api<{ rows: SnackRow[] }>(`/boards/snacks?${q}&category=${category}${dietQuery(diets)}`)
         .then((r) => {
-          if (autoPeriod && view.period === "week" && r.rows.length === 0) return fallBack();
+          if (view.autoPeriod && view.period === "week" && r.rows.length === 0) return fallBack();
           setSnacks(r.rows);
         })
         .catch((err) => setError(errorText(err)));
     }
-  }, [view.kind, view.scope, view.period, view.metric, view.category, diets.join()]);
+  }, [view.kind, view.scope, view.period, view.metric, category, diets.join()]);
 
   // Nothing this week yet: show All time instead, once, and say so.
   function fallBack() {
-    setAutoPeriod(false);
-    setFellBack(true);
-    setView((v) => ({ ...v, period: "all" }));
+    setView((v) => ({ ...v, period: "all", autoPeriod: false, fellBack: true }));
   }
 
   const scopeName = view.scope === "global" ? "Everyone" : groups.find((g) => g.id === view.scope)?.name ?? "Group";
@@ -120,7 +109,7 @@ export function Boards({ me }: { me: Me }) {
   return (
     <div className="page stack">
       <div className="segmented dark">
-        {(["people", "snacks"] as Kind[]).map((k) => (
+        {(["snacks", "people"] as Kind[]).map((k) => (
           <button key={k} type="button" className={view.kind === k ? "on" : ""} aria-pressed={view.kind === k} onClick={() => update({ kind: k })}>
             {k === "people" ? t("boards.people") : t("boards.snacks")}
           </button>
@@ -157,12 +146,9 @@ export function Boards({ me }: { me: Me }) {
       ) : (
         <>
           <div className="chip-scroll">
-            <button type="button" className={view.category === "" ? "pill on" : "pill"} onClick={() => update({ category: "" })}>
-              All snacks
-            </button>
-            {CATEGORIES.map((c) => (
-              <button key={c.id} type="button" className={view.category === c.id ? "pill on" : "pill"} onClick={() => update({ category: c.id })}>
-                {c.name}
+            {filters.map((f) => (
+              <button key={f.id} type="button" className={category === f.id ? "pill on" : "pill"} onClick={() => update({ category: f.id })}>
+                {f.label}
               </button>
             ))}
           </div>
@@ -170,11 +156,11 @@ export function Boards({ me }: { me: Me }) {
         </>
       )}
 
-      {fellBack && <p className="small notice-inline no-margin">Nothing this week yet, so here's all time.</p>}
+      {view.fellBack && <p className="small notice-inline no-margin">Nothing this week yet, so here's all time.</p>}
       <p className="small muted no-margin">
         {view.kind === "people"
           ? `${scopeName}, ${periodName}, ranked by ${metric.label.toLowerCase()}.`
-          : `Top-rated ${view.category ? getCategory(view.category)!.short : "snacks"}, ${scopeName.toLowerCase() === "everyone" ? "everyone's" : `${scopeName}'s`} ratings ${periodName}.${view.period === "week" ? "" : ` Only snacks with ${MIN_RATINGS} or more ratings.`} Snacks with more ratings rank higher on a tie.`}
+          : `Top-rated ${filterShort(category) ?? "snacks"}, ${scopeName.toLowerCase() === "everyone" ? "everyone's" : `${scopeName}'s`} ratings ${periodName}.${view.period === "week" ? "" : ` Only snacks with ${MIN_RATINGS} or more ratings.`} Snacks with more ratings rank higher on a tie.`}
       </p>
 
       {error && <p className="error">{error}</p>}

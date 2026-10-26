@@ -167,6 +167,7 @@ export function App() {
   const snackId = matchPath("/snack/", path);
   const groupId = path === "/groups/new" ? null : matchPath("/groups/", path);
   const inviteGroupId = path.match(/^\/groups\/([^/]+)\/invite$/)?.[1] ?? null;
+  const editGroupId = path.match(/^\/groups\/([^/]+)\/edit$/)?.[1] ?? null;
   const joinCode = matchPath("/join/", path);
   const profileName = path === "/me" ? me.username : matchPath("/u/", path);
 
@@ -212,6 +213,9 @@ export function App() {
   } else if (path === "/groups/new") {
     title = line(voice, "title.newGroup");
     page = <NewGroup />;
+  } else if (editGroupId) {
+    title = line(voice, "title.editGroup");
+    page = <NewGroup key={editGroupId} editId={editGroupId} />;
   } else if (inviteGroupId) {
     title = "Invite";
     page = <Invite id={inviteGroupId} />;

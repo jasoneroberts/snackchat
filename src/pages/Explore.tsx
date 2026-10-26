@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { attributesFor, CATEGORIES, getCategory } from "../../shared/catalogue";
+import { attributesFor, getCategory } from "../../shared/catalogue";
+import { filterFor, filterShort, filterTypes, TYPE_ORDER, typeFilters } from "../../shared/typeFilters";
 import type { ExplorePage, Preferences, SnackSummary, Suggestion } from "../../shared/types";
 import { api, errorText } from "../api";
 import { CompareBars, CompareKey } from "../components/CompareBars";
@@ -7,31 +8,29 @@ import { dietQuery, DietFilter, useDiets } from "../components/DietFilter";
 import { Link } from "../components/Link";
 import { SnackTile } from "../components/SnackTile";
 import { rating } from "../lib/format";
+import { useViewState } from "../lib/viewState";
 import { useVoice } from "../lib/voice";
 
-// Remember the snack-type filter on this device, like Boards does.
-const SAVED_FILTER = "snackchat.explore.category";
-function loadFilter(): string {
-  try {
-    return localStorage.getItem(SAVED_FILTER) ?? "";
-  } catch {
-    return "";
-  }
-}
+type Panel = "taste" | "saved" | "rejected" | null;
 
 /**
- * Explore: pick a snack type, say what you like in that type, then get the
- * snacks whose community averages are closest to it. Each type has its own
- * taste, so you can like hot crisps and mild chocolate. Save a suggestion to
- * try later, or discard it to stop seeing it.
+ * Explore (lad mode's "The Hunt"): pick a snack type and get the snacks whose
+ * community averages are closest to your taste for that type. Each type has
+ * its own taste, so you can like hot crisps and mild chocolate. Your taste,
+ * your saved list and your rejected list sit behind three small buttons, so
+ * the suggestions get the screen.
  */
 export function Explore() {
-  const { t } = useVoice();
+  const { t, voice } = useVoice();
   const [data, setData] = useState<ExplorePage | null>(null);
-  const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [category, setCategory] = useState(loadFilter);
+  // All snacks by default; kept while you move round the app.
+  const [filter, setFilter] = useViewState("explore.category", "");
+  const [panel, setPanel] = useViewState<Panel>("explore.panel", null);
   const [diets, setDiets] = useDiets();
+  const category = filterFor(voice, filter);
+  const types = filterTypes(category); // null = every type
+  const single = types?.length === 1 ? getCategory(types[0])! : null;
 
   const load = (type = category, diet = diets) =>
     api<ExplorePage>(`/explore?category=${encodeURIComponent(type)}${dietQuery(diet)}`)
@@ -42,16 +41,13 @@ export function Explore() {
     load();
   }, []);
 
-  const filter = (type: string) => {
-    setCategory(type);
-    setEditing(false);
-    try {
-      localStorage.setItem(SAVED_FILTER, type);
-    } catch {
-      // Storage blocked: the filter still works, it just won't be remembered.
-    }
-    load(type);
+  const pick = (id: string) => {
+    setFilter(id);
+    if (panel === "taste") setPanel(null);
+    load(id);
   };
+
+  const toggle = (p: Panel) => setPanel(panel === p ? null : p);
 
   // Save or discard: take the card away straight away, then tell the server.
   const choose = async (s: Suggestion, choice: "saved" | "discarded") => {
@@ -60,6 +56,7 @@ export function Explore() {
       ...data,
       suggestions: data.suggestions.filter((x) => x.snack.id !== s.snack.id),
       saved: choice === "saved" ? [s.snack, ...data.saved] : data.saved,
+      discarded: choice === "discarded" ? [s.snack, ...data.discarded] : data.discarded,
     });
     try {
       await api(`/explore/${encodeURIComponent(s.snack.id)}`, { body: { choice } });
@@ -69,12 +66,17 @@ export function Explore() {
     }
   };
 
-  const unsave = async (snack: SnackSummary) => {
+  // Take a snack off your saved or rejected list, so it can be suggested again.
+  const forget = async (snack: SnackSummary) => {
     if (!data) return;
-    setData({ ...data, saved: data.saved.filter((x) => x.id !== snack.id) });
+    setData({
+      ...data,
+      saved: data.saved.filter((x) => x.id !== snack.id),
+      discarded: data.discarded.filter((x) => x.id !== snack.id),
+    });
     try {
       await api(`/explore/${encodeURIComponent(snack.id)}`, { method: "DELETE" });
-      load(); // it can be suggested again
+      load();
     } catch (err) {
       setError(errorText(err));
     }
@@ -83,139 +85,183 @@ export function Explore() {
   if (error && !data) return <p className="error page">{error}</p>;
   if (!data) return <p className="muted page">Loading…</p>;
 
-  const type = getCategory(category);
-  const taste = type ? data.tastes[type.id] : undefined;
-  const setTypes = CATEGORIES.filter((c) => data.tastes[c.id]);
-  // Suggestions need a taste: for the chosen type, or for at least one type under "All".
-  const canSuggest = type ? !!taste : setTypes.length > 0;
+  // Types in this filter, in pill order, and which of them have a taste set.
+  const inFilter = TYPE_ORDER.filter((id) => !types || types.includes(id));
+  const canSuggest = inFilter.some((id) => data.tastes[id]);
+  const editing = panel === "taste";
 
   return (
     <div className="page stack">
       <div className="chip-scroll">
-        <button type="button" className={category === "" ? "pill on" : "pill"} onClick={() => filter("")}>
-          All snacks
-        </button>
-        {CATEGORIES.map((c) => (
-          <button key={c.id} type="button" className={category === c.id ? "pill on" : "pill"} onClick={() => filter(c.id)}>
-            {c.name}
+        {typeFilters(voice).map((f) => (
+          <button key={f.id} type="button" className={category === f.id ? "pill on" : "pill"} onClick={() => pick(f.id)}>
+            {f.label}
           </button>
         ))}
       </div>
 
-      {type ? (
-        editing || !taste ? (
-          <PreferenceEditor
-            key={type.id}
-            category={type.id}
-            initial={taste ?? null}
-            onCancel={taste ? () => setEditing(false) : undefined}
-            onSaved={() => {
-              setEditing(false);
-              load();
-            }}
-          />
-        ) : (
-          <section className="card-plain">
-            <div className="row-between">
-              <h2 className="section-title">
-                {t("explore.yourTaste")} in {type.short}
-              </h2>
-              <button type="button" className="link-button" onClick={() => setEditing(true)}>
-                Edit
-              </button>
-            </div>
-            <div className="pref-summary small">
-              {attributesFor(type.id).map((a) => (
-                <span key={a.key} className="chip">
-                  {a.label} {taste[a.key] ?? "any"}
-                </span>
-              ))}
-            </div>
-          </section>
-        )
-      ) : (
-        <section className="card-plain stack-sm">
-          <h2 className="section-title">{t("explore.yourTaste")}</h2>
-          {setTypes.length ? (
-            <>
-              <p className="small muted no-margin">
-                Each type has its own taste. Suggestions below use your taste for each snack's type. Tap a type to
-                change it.
-              </p>
-              <div className="pref-summary small">
-                {setTypes.map((c) => (
-                  <button key={c.id} type="button" className="chip chip-button" onClick={() => filter(c.id)}>
-                    {c.name}
-                  </button>
-                ))}
-              </div>
-            </>
-          ) : (
-            <p className="small muted no-margin">
-              Pick a snack type above and say what you like in it. You can set a different taste for each type, like
-              hot crunchy crisps but mild chocolate.
-            </p>
-          )}
-        </section>
+      <div className="row wrap explore-tools">
+        <button type="button" className={editing ? "pill on" : "pill"} aria-expanded={editing} onClick={() => toggle("taste")}>
+          {t("explore.yourTaste")}
+          {single ? ` (${single.short})` : ""}
+        </button>
+        <button type="button" className={panel === "saved" ? "pill on" : "pill"} aria-expanded={panel === "saved"} onClick={() => toggle("saved")}>
+          {t("explore.saved")} <span className="pill-count">{data.saved.length}</span>
+        </button>
+        <button type="button" className={panel === "rejected" ? "pill on" : "pill"} aria-expanded={panel === "rejected"} onClick={() => toggle("rejected")}>
+          {t("explore.rejected")} <span className="pill-count">{data.discarded.length}</span>
+        </button>
+      </div>
+
+      {editing && (
+        <TastePanel
+          key={category}
+          choices={inFilter}
+          tastes={data.tastes}
+          onCancel={() => setPanel(null)}
+          onSaved={() => {
+            setPanel(null);
+            load();
+          }}
+        />
+      )}
+
+      {panel === "saved" && (
+        <SnackList
+          snacks={data.saved}
+          empty={`Nothing yet. Tap "${t("explore.save")}" on a suggestion to keep it here.`}
+          onRemove={forget}
+          withCheckIn
+        />
+      )}
+
+      {panel === "rejected" && (
+        <SnackList
+          snacks={data.discarded}
+          empty="Nothing rejected. Snacks you turn down land here, and you can take them back out."
+          onRemove={forget}
+          note="Take one off the list and it can be suggested again."
+        />
       )}
 
       {error && <p className="error">{error}</p>}
 
-      {data.saved.length > 0 && !editing && (
-        <section className="stack-sm">
-          <h2 className="section-title">{t("explore.saved")}</h2>
-          {data.saved.map((snack) => (
-            <div key={snack.id} className="saved-row">
-              <Link href={`/snack/${snack.id}`} className="row grow saved-link">
-                <SnackTile snack={snack} size={44} />
-                <span className="grow">
-                  <b>{snack.name}</b>
-                  <span className="small muted"> {snack.brand ?? getCategory(snack.category)?.short}</span>
-                </span>
-              </Link>
-              <Link href={`/checkin?snack=${encodeURIComponent(snack.id)}`} className="button small">
-                {t("explore.tried")}
-              </Link>
-              <button type="button" className="icon-button" aria-label={`Remove ${snack.name}`} onClick={() => unsave(snack)}>
-                ×
-              </button>
+      {!editing &&
+        (canSuggest ? (
+          <>
+            <div>
+              <h2 className="section-title">{t("explore.suggestions")}</h2>
+              <p className="small muted no-margin">Closest to your taste, from everyone's ratings. Snacks you've had are left out.</p>
             </div>
-          ))}
-        </section>
-      )}
-
-      {canSuggest && !editing && (
-        <>
-          <div>
-            <h2 className="section-title">{t("explore.suggestions")}</h2>
-            <p className="small muted">Closest to your taste, from everyone's ratings. Snacks you've had are left out.</p>
-          </div>
-          <DietFilter
-            diets={diets}
-            onChange={(next) => {
-              setDiets(next);
-              load(category, next);
-            }}
-          />
-          {data.suggestions.length === 0 ? (
+            <DietFilter
+              diets={diets}
+              onChange={(next) => {
+                setDiets(next);
+                load(category, next);
+              }}
+            />
+            {data.suggestions.length === 0 ? (
+              <p className="muted">
+                {diets.length
+                  ? "Nothing checked for that diet to suggest yet."
+                  : types
+                    ? `No ${filterShort(category)} to suggest right now. Try another type.`
+                    : t("explore.none")}
+              </p>
+            ) : (
+              <>
+                <CompareKey />
+                {data.suggestions.map((s) => (
+                  <SuggestionCard key={s.snack.id} s={s} prefs={data.tastes[s.snack.category] ?? {}} onChoose={(c) => choose(s, c)} />
+                ))}
+              </>
+            )}
+          </>
+        ) : (
+          <div className="empty">
             <p className="muted">
-              {diets.length
-                ? "Nothing checked for that diet to suggest yet."
-                : type
-                  ? `No ${type.short} to suggest right now. Try another type.`
-                  : t("explore.none")}
+              Say what you like in {filterShort(category) ?? "a snack type"} and the suggestions show up here.
             </p>
-          ) : (
-            <>
-              <CompareKey />
-              {data.suggestions.map((s) => (
-                <SuggestionCard key={s.snack.id} s={s} prefs={data.tastes[s.snack.category] ?? {}} onChoose={(c) => choose(s, c)} />
-              ))}
-            </>
-          )}
-        </>
-      )}
+            <button type="button" className="button" onClick={() => setPanel("taste")}>
+              {t("explore.setTaste")}
+            </button>
+          </div>
+        ))}
     </div>
+  );
+}
+
+/**
+ * Your taste, opened on request. With one type picked it edits that type;
+ * under All or Rest you pick which type to edit first (ticked ones are set).
+ */
+function TastePanel({
+  choices,
+  tastes,
+  onCancel,
+  onSaved,
+}: {
+  choices: string[];
+  tastes: ExplorePage["tastes"];
+  onCancel: () => void;
+  onSaved: () => void;
+}) {
+  const [type, setType] = useState(() => (choices.length === 1 ? choices[0] : choices.find((id) => tastes[id]) ?? choices[0]));
+  return (
+    <div className="stack-sm">
+      {choices.length > 1 && (
+        <div className="chip-scroll">
+          {choices.map((id) => (
+            <button key={id} type="button" className={type === id ? "pill on" : "pill"} onClick={() => setType(id)}>
+              {tastes[id] ? "✓ " : ""}
+              {getCategory(id)!.name}
+            </button>
+          ))}
+        </div>
+      )}
+      <PreferenceEditor key={type} category={type} initial={tastes[type] ?? null} onCancel={onCancel} onSaved={onSaved} />
+    </div>
+  );
+}
+
+function SnackList({
+  snacks,
+  empty,
+  note,
+  withCheckIn = false,
+  onRemove,
+}: {
+  snacks: SnackSummary[];
+  empty: string;
+  note?: string;
+  withCheckIn?: boolean;
+  onRemove: (s: SnackSummary) => void;
+}) {
+  const { t } = useVoice();
+  if (!snacks.length) return <p className="small muted no-margin">{empty}</p>;
+  return (
+    <section className="stack-sm">
+      {note && <p className="small muted no-margin">{note}</p>}
+      {snacks.map((snack) => (
+        <div key={snack.id} className="saved-row">
+          <Link href={`/snack/${snack.id}`} className="row grow saved-link">
+            <SnackTile snack={snack} size={44} />
+            <span className="grow">
+              <b>{snack.name}</b>
+              <span className="small muted"> {snack.brand ?? getCategory(snack.category)?.short}</span>
+            </span>
+          </Link>
+          {withCheckIn && (
+            <Link href={`/checkin?snack=${encodeURIComponent(snack.id)}`} className="button small">
+              {t("explore.tried")}
+            </Link>
+          )}
+          <button type="button" className="icon-button" aria-label={`Take ${snack.name} off this list`} onClick={() => onRemove(snack)}>
+            ×
+          </button>
+        </div>
+      ))}
+    </section>
   );
 }
 

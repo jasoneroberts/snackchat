@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { attributesFor, getCategory } from "../../shared/catalogue";
+import { filterTypes } from "../../shared/typeFilters";
 import { dietSql, readDiets } from "../../shared/diet";
 import type { ExplorePage, Preferences, SnackSummary, Suggestion } from "../../shared/types";
 import type { AppContext } from "../env";
@@ -24,16 +25,16 @@ async function getTastes(db: D1Database, userId: string): Promise<Record<string,
 }
 
 // Your taste for each type, the best-matching snacks you haven't tried, and
-// your saved list. Each snack is matched on your taste for its own type, so
+// your saved and rejected lists. Each snack is matched on your taste for its own type, so
 // types you haven't set a taste for aren't suggested.
-// ?category=crisps narrows the suggestions to one snack type.
+// ?category=crisps narrows the suggestions to one snack type (or "rest").
 explore.get("/", async (c) => {
   const user = currentUser(c);
   const db = c.env.DB;
-  const category = getCategory(c.req.query("category") ?? "")?.id ?? null;
+  const types = filterTypes(c.req.query("category"));
   const diets = readDiets(c.req.query("diet"));
 
-  const [tastes, snacks, averages, saved] = await Promise.all([
+  const [tastes, snacks, averages, saved, discarded] = await Promise.all([
     getTastes(db, user.id),
     // Approved snacks with at least one check-in, leaving out ones you've
     // already checked in, saved or discarded.
@@ -45,10 +46,10 @@ explore.get("/", async (c) => {
           WHERE s.status = 'approved'
             AND s.id NOT IN (SELECT snack_id FROM checkins WHERE user_id = ?1)
             AND s.id NOT IN (SELECT snack_id FROM explore_choices WHERE user_id = ?1)
-            AND (?2 IS NULL OR s.category_id = ?2)${dietSql(diets)}
+            AND (?2 IS NULL OR s.category_id IN (SELECT value FROM json_each(?2)))${dietSql(diets)}
           GROUP BY s.id`,
       )
-      .bind(user.id, category)
+      .bind(user.id, types && JSON.stringify(types))
       .all<SnackSummary & { avg: number; count: number }>(),
     // Everyone's average for each slider, per snack.
     db
@@ -65,6 +66,16 @@ explore.get("/", async (c) => {
            FROM explore_choices e JOIN snacks s ON s.id = e.snack_id
           WHERE e.user_id = ?1 AND e.choice = 'saved'
             AND s.id NOT IN (SELECT snack_id FROM checkins WHERE user_id = ?1)
+          ORDER BY e.created_at DESC`,
+      )
+      .bind(user.id)
+      .all<SnackSummary>(),
+    // Snacks you said no to, so you can change your mind.
+    db
+      .prepare(
+        `SELECT s.id, s.name, s.brand, s.category_id AS category, s.status, (${LATEST_PHOTO}) AS photoId
+           FROM explore_choices e JOIN snacks s ON s.id = e.snack_id
+          WHERE e.user_id = ? AND e.choice = 'discarded'
           ORDER BY e.created_at DESC`,
       )
       .bind(user.id)
@@ -95,7 +106,7 @@ explore.get("/", async (c) => {
     }));
   }
 
-  return c.json({ tastes, suggestions, saved: saved.results } satisfies ExplorePage);
+  return c.json({ tastes, suggestions, saved: saved.results, discarded: discarded.results } satisfies ExplorePage);
 });
 
 // Set your taste for one snack type (replaces what was there): PUT /taste/crisps
