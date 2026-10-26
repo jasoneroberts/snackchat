@@ -43,7 +43,7 @@ export function Join({ code }: { code: string }) {
 
   return (
     <div className="page empty">
-      <GroupBadge name={group.name} size={72} />
+      <GroupBadge name={group.name} pictureId={group.pictureId} size={72} />
       <h2>{group.name}</h2>
       <p className="muted">
         {group.members} {group.members === 1 ? "member" : "members"}

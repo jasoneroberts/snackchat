@@ -29,7 +29,13 @@ interface GroupRow {
   categories: string | null;
   created_by: string;
   created_at: number;
+  picture_id: string | null;
 }
+
+// Squad pictures: the browser crops them to a small square JPEG first.
+const MAX_PICTURE_BYTES = 1024 * 1024;
+const PICTURE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+export const groupPictureKey = (groupId: string, pictureId: string) => `groups/${groupId}/${pictureId}`;
 
 // Only check-ins of the group's snack types count. ?3 is the JSON list of
 // types, or NULL for all of them.
@@ -91,6 +97,7 @@ groups.get("/", async (c) => {
         scoringMode: g.scoring_mode,
         resetPeriod: g.reset_period,
         myRank: board.find((r) => r.username === user.username)?.rank ?? null,
+        pictureId: g.picture_id,
       };
     }),
   );
@@ -150,12 +157,62 @@ groups.post("/", async (c) => {
 async function findByCode(db: D1Database, code: string) {
   return db
     .prepare(
-      `SELECT g.id, g.name, (SELECT COUNT(*) FROM group_members WHERE group_id = g.id) AS members
+      `SELECT g.id, g.name, g.picture_id AS pictureId, (SELECT COUNT(*) FROM group_members WHERE group_id = g.id) AS members
          FROM groups g WHERE g.invite_code = ?`,
     )
     .bind(normaliseCode(code))
-    .first<{ id: string; name: string; members: number }>();
+    .first<{ id: string; name: string; pictureId: string | null; members: number }>();
 }
+
+// A squad's picture. Anyone signed in can load one (invite pages show it
+// before you join); ids are random and change with every upload, so they
+// can't be guessed and the browser can keep each one for a year.
+groups.get("/picture/:pictureId", async (c) => {
+  const g = await c.env.DB.prepare("SELECT id FROM groups WHERE picture_id = ?")
+    .bind(c.req.param("pictureId"))
+    .first<{ id: string }>();
+  const object = g ? await c.env.PHOTOS.get(groupPictureKey(g.id, c.req.param("pictureId"))) : null;
+  if (!object) return c.json({ error: "Picture not found." }, 404);
+  return new Response(object.body, {
+    headers: {
+      "Content-Type": object.httpMetadata?.contentType ?? "image/jpeg",
+      "Cache-Control": "private, max-age=31536000, immutable",
+      ETag: object.httpEtag,
+    },
+  });
+});
+
+// Set or change the squad's picture (owner only): a form with one "photo" file.
+groups.post("/:id/picture", async (c) => {
+  const user = currentUser(c);
+  const g = await membership(c.env.DB, c.req.param("id"), user.id);
+  if (!g) return c.json({ error: "Group not found." }, 404);
+  if (g.role !== "owner") return c.json({ error: "Only the group's owner can change its picture." }, 403);
+  const form = await c.req.parseBody().catch(() => null);
+  const photo = form?.photo instanceof File && form.photo.size > 0 ? form.photo : null;
+  if (!photo) return c.json({ error: "Pick a photo." }, 400);
+  if (!PICTURE_TYPES.has(photo.type)) return c.json({ error: "Photos must be JPEG, PNG or WebP." }, 400);
+  if (photo.size > MAX_PICTURE_BYTES) return c.json({ error: "That photo is too big (1 MB max)." }, 400);
+
+  const pictureId = newId();
+  await c.env.PHOTOS.put(groupPictureKey(g.id, pictureId), photo.stream(), { httpMetadata: { contentType: photo.type } });
+  await c.env.DB.prepare("UPDATE groups SET picture_id = ? WHERE id = ?").bind(pictureId, g.id).run();
+  if (g.picture_id) await c.env.PHOTOS.delete(groupPictureKey(g.id, g.picture_id));
+  return c.json({ pictureId }, 201);
+});
+
+// Back to the initials.
+groups.delete("/:id/picture", async (c) => {
+  const user = currentUser(c);
+  const g = await membership(c.env.DB, c.req.param("id"), user.id);
+  if (!g) return c.json({ error: "Group not found." }, 404);
+  if (g.role !== "owner") return c.json({ error: "Only the group's owner can change its picture." }, 403);
+  if (g.picture_id) {
+    await c.env.DB.prepare("UPDATE groups SET picture_id = NULL WHERE id = ?").bind(g.id).run();
+    await c.env.PHOTOS.delete(groupPictureKey(g.id, g.picture_id));
+  }
+  return c.json({ ok: true });
+});
 
 // What an invite link points at, so the join screen can show the group's name.
 groups.get("/join/:code", async (c) => {
@@ -220,6 +277,7 @@ groups.get("/:id", async (c) => {
       resetPeriod: g.reset_period,
       categories: g.categories ? (JSON.parse(g.categories) as string[]) : null,
       createdAt: g.created_at,
+      pictureId: g.picture_id,
     },
     myRole: g.role,
     periodEnd: periodEnd(g.reset_period, now()),
@@ -278,5 +336,6 @@ groups.delete("/:id", async (c) => {
   if (!g) return c.json({ error: "Group not found." }, 404);
   if (g.role !== "owner") return c.json({ error: "Only the group's owner can delete it." }, 403);
   await c.env.DB.prepare("DELETE FROM groups WHERE id = ?").bind(g.id).run();
+  if (g.picture_id) await c.env.PHOTOS.delete(groupPictureKey(g.id, g.picture_id));
   return c.json({ ok: true });
 });

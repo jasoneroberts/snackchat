@@ -10,7 +10,8 @@ import { DEMO_PHOTO_PREFIX } from "./demo";
  * of that goes by itself (ON DELETE CASCADE); the rest is handled here:
  * - snacks they added stay, without their name on them,
  * - groups they started pass to the longest-standing member, or go if empty,
- * - their photo and profile picture files are removed from R2.
+ * - their photo and profile picture files are removed from R2, and so is
+ *   the picture of any group that went with them.
  */
 export async function deleteAccount(env: Env, userId: string): Promise<void> {
   const db = env.DB;
@@ -24,9 +25,13 @@ export async function deleteAccount(env: Env, userId: string): Promise<void> {
     .bind(userId)
     .all<{ id: string; r2_key: string }>();
 
-  const owned = await db.prepare("SELECT id FROM groups WHERE created_by = ?").bind(userId).all<{ id: string }>();
+  const owned = await db
+    .prepare("SELECT id, picture_id FROM groups WHERE created_by = ?")
+    .bind(userId)
+    .all<{ id: string; picture_id: string | null }>();
+  const groupPictures: string[] = [];
   const handover: D1PreparedStatement[] = [];
-  for (const { id } of owned.results) {
+  for (const { id, picture_id } of owned.results) {
     const heir = await db
       .prepare(
         `SELECT user_id FROM group_members WHERE group_id = ? AND user_id != ?
@@ -41,6 +46,7 @@ export async function deleteAccount(env: Env, userId: string): Promise<void> {
       );
     } else {
       handover.push(db.prepare("DELETE FROM groups WHERE id = ?").bind(id));
+      if (picture_id) groupPictures.push(`groups/${id}/${picture_id}`);
     }
   }
 
@@ -67,7 +73,7 @@ export async function deleteAccount(env: Env, userId: string): Promise<void> {
   ]);
 
   // Files last: if this fails the account is still gone, and the files can't be reached.
-  const keys = photos.results.map((p) => p.r2_key).filter((k) => !k.startsWith(DEMO_PHOTO_PREFIX));
+  const keys = [...photos.results.map((p) => p.r2_key).filter((k) => !k.startsWith(DEMO_PHOTO_PREFIX)), ...groupPictures];
   let cursor: string | undefined;
   do {
     const list = await env.PHOTOS.list({ prefix: `avatars/${userId}/`, cursor });

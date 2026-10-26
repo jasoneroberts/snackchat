@@ -61,6 +61,7 @@ export interface GroupCard {
   scoringMode: ScoringMode;
   resetPeriod: ResetPeriod;
   myRank: number | null;
+  pictureId: string | null;
 }
 
 export interface BoardRow {
@@ -80,6 +81,7 @@ export interface GroupPage {
     resetPeriod: ResetPeriod;
     categories: string[] | null;
     createdAt: number;
+    pictureId: string | null;
   };
   myRole: "owner" | "admin" | "member";
   periodEnd: number | null; // Unix seconds, null when the board never resets
@@ -91,6 +93,7 @@ export interface GroupPreview {
   id: string;
   name: string;
   members: number;
+  pictureId: string | null;
   isMember: boolean;
   full: boolean;
 }
