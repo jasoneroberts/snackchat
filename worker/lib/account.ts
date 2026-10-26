@@ -1,4 +1,4 @@
-// Deleting an account, and downloading everything Snackchat holds about
+// Deleting an account, and downloading everything Crunchd holds about
 // someone. Both are rights under UK GDPR; the Privacy page explains them.
 
 import type { Env } from "../env";
@@ -119,7 +119,7 @@ export async function exportAccount(db: D1Database, userId: string, origin: stri
 
   return {
     exportedAt: new Date().toISOString(),
-    note: "Everything Snackchat holds about you. Times are Unix seconds. Photo links work while you're signed in.",
+    note: "Everything Crunchd holds about you. Times are Unix seconds. Photo links work while you're signed in.",
     account,
     checkins: checkins.map((c) => ({
       ...c,

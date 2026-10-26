@@ -1,6 +1,6 @@
 {
-  "name": "Snackchat",
-  "short_name": "Snackchat",
+  "name": "Crunchd",
+  "short_name": "Crunchd",
   "description": "Log, rate and rank your snacks with friends.",
   "start_url": "/",
   "display": "standalone",

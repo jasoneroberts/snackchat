@@ -1,6 +1,6 @@
-# Snackchat
+# Crunchd
 
-Log, rate and rank your snacks with friends. Snackchat is a web app (installable
+Log, rate and rank your snacks with friends. Crunchd is a web app (installable
 on a phone's home screen) that runs entirely on Cloudflare.
 
 ## How it fits together
@@ -32,7 +32,7 @@ One Worker serves both: requests to `/api/*` run the Hono app in
 - **Sessions** are a random token in an HttpOnly cookie. The database keeps only
   the token's SHA-256 hash, so a database leak does not leak log-ins.
 - **Email verification.** A one-time link (valid 24 hours) is emailed on
-  sign-up. Until Snackchat has its own domain, `EMAIL_MODE` is `log`: the link
+  sign-up. Until Crunchd has its own domain, `EMAIL_MODE` is `log`: the link
   is written to the Worker logs instead of being emailed.
 
 ## Check-ins

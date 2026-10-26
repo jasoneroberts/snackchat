@@ -33,7 +33,7 @@ export function SignUp({ onSignedIn }: { onSignedIn: () => void }) {
 
   return (
     <form className="card" onSubmit={submit}>
-      <h1>Join Snackchat</h1>
+      <h1>Join Crunchd</h1>
       <label>
         Invite code
         <input value={form.inviteCode} onChange={update("inviteCode")} required autoComplete="off" />

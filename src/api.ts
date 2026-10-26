@@ -1,4 +1,4 @@
-// Small wrapper around fetch for the Snackchat API.
+// Small wrapper around fetch for the Crunchd API.
 
 import type { Voice } from "../shared/voice";
 

@@ -285,7 +285,7 @@ admin.post("/demo/photos/:snackId", async (c) => {
     .first<{ name: string; brand: string | null }>();
   if (!snack) return c.json({ error: "Snack not found." }, 404);
 
-  const headers = { "User-Agent": "Snackchat/0.1 (demo data; github.com/jasoneroberts)" };
+  const headers = { "User-Agent": "Crunchd/0.1 (demo data; github.com/jasoneroberts)" };
   // A snack with no photo is fine, so any failure here just reports "not found".
   let picture: { body: ArrayBuffer; type: string };
   try {
@@ -653,7 +653,7 @@ admin.get("/diet/:id/suggestion", async (c) => {
   if (!snack) return c.json({ error: "Snack not found." }, 404);
   try {
     const res = await fetch(offDietSearchUrl(snack.name, snack.brand), {
-      headers: { "User-Agent": "Snackchat/1.0 (diet check; github.com/jasoneroberts)" },
+      headers: { "User-Agent": "Crunchd/1.0 (diet check; github.com/jasoneroberts)" },
     });
     if (!res.ok) return c.json({ error: "Open Food Facts is busy. Try again in a minute." }, 502);
     const { products } = (await res.json()) as { products?: OffProduct[] };

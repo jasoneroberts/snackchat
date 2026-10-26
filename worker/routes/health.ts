@@ -71,7 +71,7 @@ health.get("/backups/:name", async (c) => {
   return new Response(object.body, {
     headers: {
       "Content-Type": "application/json",
-      "Content-Disposition": `attachment; filename="snackchat-${name}"`,
+      "Content-Disposition": `attachment; filename="crunchd-${name}"`,
       "Cache-Control": "no-store",
     },
   });

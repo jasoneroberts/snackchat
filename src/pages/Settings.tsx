@@ -110,7 +110,7 @@ export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<v
 
       <Link href="/welcome" className="card-plain row settings-link">
         <b className="grow">Add to home screen</b>
-        <span className="muted small">And how Snackchat works</span>
+        <span className="muted small">And how Crunchd works</span>
       </Link>
 
       <YourData />

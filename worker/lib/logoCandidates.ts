@@ -14,7 +14,7 @@ export interface LogoCandidate {
 
 const WIKIDATA_API = "https://www.wikidata.org/w/api.php";
 // Wikimedia asks for a descriptive User-Agent on API calls.
-const USER_AGENT = "Snackchat/1.0 (https://snackchat.jasoneroberts.workers.dev; logo suggestions)";
+const USER_AGENT = "Crunchd/1.0 (https://snackchat.jasoneroberts.workers.dev; logo suggestions)";
 
 // Words in a Wikidata description that suggest the right sort of company.
 const FOOD_WORDS = /\b(snack|crisp|chip|food|confection|chocolate|biscuit|sweet|candy|brand|nut|manufacturer|company|bakery|drink)/i;

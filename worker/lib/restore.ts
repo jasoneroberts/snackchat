@@ -29,7 +29,7 @@ const ident = (name: string) => `"${name.replaceAll('"', '""')}"`;
  * checks wait until the end, so the order rows go in doesn't matter.
  */
 export function restoreSql(backup: Backup, only?: string[]): string {
-  if (backup.version !== 1 || !Array.isArray(backup.tables)) throw new Error("Not a Snackchat backup file.");
+  if (backup.version !== 1 || !Array.isArray(backup.tables)) throw new Error("Not a Crunchd backup file.");
   const tables = only ? backup.tables.filter((t) => only.includes(t.name)) : backup.tables;
   const out = ["PRAGMA defer_foreign_keys = on;"];
   // Empty children before parents, then fill parents before children.

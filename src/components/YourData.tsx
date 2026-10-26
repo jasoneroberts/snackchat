@@ -11,7 +11,7 @@ export function YourData() {
       <section className="card-plain stack-sm">
         <h2 className="section-title">Your data</h2>
         <p className="small muted no-margin">
-          Get a copy of everything Snackchat keeps about you, or delete your account. See the{" "}
+          Get a copy of everything Crunchd keeps about you, or delete your account. See the{" "}
           <Link href="/privacy">privacy policy</Link> and <Link href="/terms">terms</Link>.
         </p>
         <a className="button secondary small" href="/api/account/export" download>
