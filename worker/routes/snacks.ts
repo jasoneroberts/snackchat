@@ -81,6 +81,16 @@ snacks.post("/", async (c) => {
 });
 
 // A snack's page: averages, slider averages, rank in its category, recent check-ins.
+// Makers people have used on approved snacks, most-used first, to suggest
+// as you type when adding a snack (so it's "KP", not a new spelling of it).
+snacks.get("/brands", async (c) => {
+  const { results } = await c.env.DB.prepare(
+    `SELECT brand FROM snacks WHERE status = 'approved' AND brand IS NOT NULL
+      GROUP BY brand COLLATE NOCASE ORDER BY COUNT(*) DESC, brand LIMIT 200`,
+  ).all<{ brand: string }>();
+  return c.json({ brands: results.map((r) => r.brand) });
+});
+
 snacks.get("/:id", async (c) => {
   const user = currentUser(c);
   const id = c.req.param("id");

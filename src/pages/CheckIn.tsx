@@ -2,9 +2,9 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { CATEGORIES, POINTS, REVIEW_BONUS_CHARS, attributesFor, getCategory } from "../../shared/catalogue";
 import type { SnackPage, SnackSummary } from "../../shared/types";
 import { api, errorText } from "../api";
+import { Cropper } from "../components/Cropper";
 import { SnackTile } from "../components/SnackTile";
 import { StarPicker } from "../components/Stars";
-import { shrinkPhoto } from "../lib/image";
 import { useVoice } from "../lib/voice";
 
 export function CheckIn({
@@ -19,6 +19,9 @@ export function CheckIn({
   const [venue, setVenue] = useState("");
   const [pairedWith, setPairedWith] = useState("");
   const [photo, setPhoto] = useState<{ blob: Blob; url: string } | null>(null);
+  // The photo as taken, kept so it can be cropped again. Set while the cropper is open.
+  const [original, setOriginal] = useState<File | null>(null);
+  const [cropping, setCropping] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const { t } = useVoice();
@@ -37,15 +40,22 @@ export function CheckIn({
     setAttrs({}); // sliders differ between snack types
   };
 
-  const onPhoto = async (file: File | undefined) => {
+  // A new photo opens the cropper first; "Use photo" there gives the cropped, shrunk JPEG.
+  const onPhoto = (file: File | undefined) => {
     if (!file) return;
     setError(null);
-    try {
-      const blob = await shrinkPhoto(file);
-      setPhoto({ blob, url: URL.createObjectURL(blob) });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't read that photo.");
-    }
+    setOriginal(file);
+    setCropping(true);
+  };
+
+  const onCropped = (blob: Blob) => {
+    setCropping(false);
+    setPhoto({ blob, url: URL.createObjectURL(blob) });
+  };
+
+  const removePhoto = () => {
+    setPhoto(null);
+    setOriginal(null);
   };
 
   const submit = async (e: FormEvent) => {
@@ -98,9 +108,16 @@ export function CheckIn({
           {photo ? (
             <div className="photo-preview">
               <img src={photo.url} alt="Your photo" />
-              <button type="button" className="link-button small" onClick={() => setPhoto(null)}>
-                Remove photo
-              </button>
+              <div className="photo-preview-actions">
+                {original && (
+                  <button type="button" className="link-button small" onClick={() => setCropping(true)}>
+                    Crop again
+                  </button>
+                )}
+                <button type="button" className="link-button small" onClick={removePhoto}>
+                  Remove photo
+                </button>
+              </div>
             </div>
           ) : (
             <div className="photo-drop">
@@ -114,7 +131,10 @@ export function CheckIn({
                     accept="image/*"
                     capture="environment"
                     className="visually-hidden"
-                    onChange={(e) => onPhoto(e.target.files?.[0])}
+                    onChange={(e) => {
+                      onPhoto(e.target.files?.[0]);
+                      e.target.value = "";
+                    }}
                   />
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
                     strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -129,7 +149,10 @@ export function CheckIn({
                     type="file"
                     accept="image/*"
                     className="visually-hidden"
-                    onChange={(e) => onPhoto(e.target.files?.[0])}
+                    onChange={(e) => {
+                      onPhoto(e.target.files?.[0]);
+                      e.target.value = "";
+                    }}
                   />
                   Choose photo
                 </label>
@@ -212,6 +235,17 @@ export function CheckIn({
           {busy ? t("checkin.busy", about) : overall === null ? t("checkin.needRating", about) : t("checkin.submit", about)}
         </button>
       )}
+      {cropping && original && (
+        <Cropper
+          file={original}
+          onDone={onCropped}
+          onCancel={() => {
+            setCropping(false);
+            // Cancelled before there was any photo: forget the one they picked.
+            if (!photo) setOriginal(null);
+          }}
+        />
+      )}
     </form>
   );
 }
@@ -288,9 +322,16 @@ function AddSnack({
   const [name, setName] = useState(initialName);
   const [brand, setBrand] = useState("");
   const [category, setCategory] = useState("");
+  const [brands, setBrands] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const { t } = useVoice();
+
+  useEffect(() => {
+    api<{ brands: string[] }>("/snacks/brands")
+      .then((r) => setBrands(r.brands))
+      .catch(() => {});
+  }, []);
 
   const add = async () => {
     setBusy(true);
@@ -315,8 +356,14 @@ function AddSnack({
         <input value={name} maxLength={80} onChange={(e) => setName(e.target.value)} placeholder="Prawn Cocktail" />
       </label>
       <label className="field">
-        <span>Brand (optional)</span>
-        <input value={brand} maxLength={60} onChange={(e) => setBrand(e.target.value)} placeholder="Skips" />
+        <span>Maker (optional)</span>
+        <input value={brand} maxLength={60} onChange={(e) => setBrand(e.target.value)} placeholder="e.g. Walkers" list="known-brands" autoComplete="off" />
+        {/* Makers already in Snackchat, suggested as you type. */}
+        <datalist id="known-brands">
+          {brands.map((b) => (
+            <option key={b} value={b} />
+          ))}
+        </datalist>
       </label>
       <div className="field">
         <span>Type</span>
