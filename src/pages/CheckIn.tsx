@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { CATEGORIES, POINTS, REVIEW_BONUS_CHARS, attributesFor, getCategory } from "../../shared/catalogue";
-import type { SnackPage, SnackSummary } from "../../shared/types";
+import type { CheckinForEdit, SnackPage, SnackSummary } from "../../shared/types";
 import { api, errorText } from "../api";
 import { Cropper } from "../components/Cropper";
 import { SnackTile } from "../components/SnackTile";
@@ -8,9 +8,14 @@ import { StarPicker } from "../components/Stars";
 import { useVoice } from "../lib/voice";
 
 export function CheckIn({
+  editId,
   onDone,
+  onSaved,
 }: {
+  /** Set to change one of your check-ins instead of making a new one. */
+  editId?: string;
   onDone: (snackName: string, points: number, withPhoto: boolean) => void;
+  onSaved?: (photoPending: boolean) => void;
 }) {
   const [snack, setSnack] = useState<SnackSummary | null>(null);
   const [overall, setOverall] = useState<number | null>(null);
@@ -22,12 +27,34 @@ export function CheckIn({
   // The photo as taken, kept so it can be cropped again. Set while the cropper is open.
   const [original, setOriginal] = useState<File | null>(null);
   const [cropping, setCropping] = useState(false);
+  // Editing: the photo the check-in already has, until it's removed or replaced.
+  const [existing, setExisting] = useState<CheckinForEdit["photo"]>(null);
+  const [removeExisting, setRemoveExisting] = useState(false);
+  const [loading, setLoading] = useState(!!editId);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const { t } = useVoice();
 
+  // Editing: fill the form in from the check-in as it is.
+  useEffect(() => {
+    if (!editId) return;
+    api<{ checkin: CheckinForEdit }>(`/checkins/${encodeURIComponent(editId)}`)
+      .then(({ checkin }) => {
+        setSnack(checkin.snack);
+        setOverall(checkin.overall);
+        setAttrs(checkin.attributes);
+        setReview(checkin.review ?? "");
+        setVenue(checkin.venue ?? "");
+        setPairedWith(checkin.pairedWith ?? "");
+        setExisting(checkin.photo);
+      })
+      .catch((err) => setError(errorText(err)))
+      .finally(() => setLoading(false));
+  }, [editId]);
+
   // Arriving from a snack page ("Check in this snack") picks that snack.
   useEffect(() => {
+    if (editId) return;
     const id = new URLSearchParams(window.location.search).get("snack");
     if (id) api<SnackPage>(`/snacks/${encodeURIComponent(id)}`).then((d) => setSnack(d.snack)).catch(() => {});
   }, []);
@@ -69,6 +96,20 @@ export function CheckIn({
       JSON.stringify({ snackId: snack.id, overall, attributes: attrs, review, venue, pairedWith }),
     );
     if (photo) form.set("photo", photo.blob, "photo.jpg");
+    if (editId) {
+      form.set(
+        "data",
+        JSON.stringify({ overall, attributes: attrs, review, venue, pairedWith, removePhoto: removeExisting && !photo }),
+      );
+      try {
+        const res = await api<{ photoPending: boolean }>(`/checkins/${encodeURIComponent(editId)}`, { method: "PATCH", body: form });
+        onSaved?.(res.photoPending);
+      } catch (err) {
+        setError(errorText(err));
+        setBusy(false);
+      }
+      return;
+    }
     try {
       const res = await api<{ points: number }>("/checkins", { body: form });
       onDone(snack.name, res.points, photo !== null);
@@ -83,8 +124,17 @@ export function CheckIn({
   // Kids snacks keep grown-up words, and crisps are "crunch" while chocolate is "munch".
   const about = { category: snack?.category };
 
+  if (loading) return <p className="muted page">Loading…</p>;
+  // The photo already on the check-in, while it's still being kept.
+  const kept = editId && existing && !removeExisting && !photo ? existing : null;
+
   return (
     <form className="page stack" onSubmit={submit}>
+      {editId && snack && (
+        <p className="small muted no-margin">
+          Change anything except the snack. Points stay as they were. A new photo is checked again before others see it.
+        </p>
+      )}
       {snack ? (
         <div className="snack-chosen">
           <SnackTile snack={snack} size={56} />
@@ -95,9 +145,11 @@ export function CheckIn({
               {snack.status === "pending" && <span className="tag">new, pending</span>}
             </div>
           </div>
-          <button type="button" className="link-button" onClick={() => pickSnack(null)}>
-            Change
-          </button>
+          {!editId && (
+            <button type="button" className="link-button" onClick={() => pickSnack(null)}>
+              Change
+            </button>
+          )}
         </div>
       ) : (
         <SnackSearch onPick={pickSnack} />
@@ -105,7 +157,29 @@ export function CheckIn({
 
       {snack && (
         <>
-          {photo ? (
+          {kept ? (
+            <div className="photo-preview">
+              <img src={`/api/photos/${kept.id}`} alt="Your photo" />
+              {kept.status === "pending" && <span className="tag">waiting for approval</span>}
+              <div className="photo-preview-actions">
+                <label className="link-button small">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="visually-hidden"
+                    onChange={(e) => {
+                      onPhoto(e.target.files?.[0]);
+                      e.target.value = "";
+                    }}
+                  />
+                  Replace photo
+                </label>
+                <button type="button" className="link-button small" onClick={() => setRemoveExisting(true)}>
+                  Remove photo
+                </button>
+              </div>
+            </div>
+          ) : photo ? (
             <div className="photo-preview">
               <img src={photo.url} alt="Your photo" />
               <div className="photo-preview-actions">
@@ -232,7 +306,15 @@ export function CheckIn({
 
       {snack && (
         <button type="submit" className="button big" disabled={overall === null || busy}>
-          {busy ? t("checkin.busy", about) : overall === null ? t("checkin.needRating", about) : t("checkin.submit", about)}
+          {editId
+            ? busy
+              ? "Saving…"
+              : "Save changes"
+            : busy
+              ? t("checkin.busy", about)
+              : overall === null
+                ? t("checkin.needRating", about)
+                : t("checkin.submit", about)}
         </button>
       )}
       {cropping && original && (

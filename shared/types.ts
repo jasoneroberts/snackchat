@@ -256,3 +256,15 @@ export interface AdminReport {
   user?: { username: string; avatarId: string | null; checkins: number; joinedAt: number; isAdmin: boolean };
   snack?: { id: string; name: string; brand: string | null; status: string };
 }
+
+/** One of your own check-ins, loaded to edit it. */
+export interface CheckinForEdit {
+  id: string;
+  snack: SnackSummary;
+  overall: number;
+  attributes: Record<string, number>;
+  review: string | null;
+  venue: string | null;
+  pairedWith: string | null;
+  photo: { id: string; status: "visible" | "pending" } | null;
+}
