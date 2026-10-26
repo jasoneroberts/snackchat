@@ -12,7 +12,7 @@ describe("hasBadWord", () => {
     for (const t of [
       "Scunthorpe pub snacks", "Cocktail sausages", "Dickens would approve", "Shiitake crisps", "spicy as you like",
       "Pussycat biscuits? no", "Hancock's toffee", "Grape and raspberry", "therapist recommended", "Skittles",
-      "A bit shit tbh", "bloody lovely", "absolute crap", "Snackchat", "Wotsits", "Peanuts", "classic", "assessment",
+      "A bit shit tbh", "bloody lovely", "absolute crap", "Crunchd", "Wotsits", "Peanuts", "classic", "assessment",
     ]) {
       expect(hasBadWord(t), t).toBe(false);
     }

@@ -7,7 +7,7 @@ interface Email {
 }
 
 /**
- * Send a transactional email. In "log" mode (the default until Snackchat has
+ * Send a transactional email. In "log" mode (the default until Crunchd has
  * its own domain) the message is written to the Worker logs instead, where
  * `wrangler tail` or the dashboard's Logs tab shows it.
  */

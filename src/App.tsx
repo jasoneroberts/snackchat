@@ -113,7 +113,7 @@ export function App() {
         <header className="topbar">
           <Link href="/" className="brand">
             <img src="/logo.svg" alt="" width={32} height={32} />
-            <span>snackchat</span>
+            <span>crunchd</span>
           </Link>
           <nav className={quickSignIn ? "hidden" : "row"}>
             <Link href="/login">Log in</Link>
@@ -134,7 +134,7 @@ export function App() {
         <header className="topbar">
           <span className="brand">
             <img src="/logo.svg" alt="" width={32} height={32} />
-            <span>snackchat</span>
+            <span>crunchd</span>
           </span>
         </header>
         <main>
@@ -171,7 +171,7 @@ export function App() {
   const profileName = path === "/me" ? me.username : matchPath("/u/", path);
 
   let page;
-  let title = "snackchat";
+  let title = "crunchd";
   let tab = "";
   if (path === "/") {
     tab = "/";

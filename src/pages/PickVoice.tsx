@@ -7,7 +7,7 @@ export function PickVoice({ me, onChanged }: { me: Me; onChanged: () => Promise<
     <div className="page stack">
       <div>
         <h1 className="title">Which are you, @{me.username}?</h1>
-        <p className="muted">Pick how Snackchat talks to you. Same snacks, same points, same boards. You can switch any time in Settings.</p>
+        <p className="muted">Pick how Crunchd talks to you. Same snacks, same points, same boards. You can switch any time in Settings.</p>
       </div>
       <VoiceChoice current={me.voice} onSaved={onChanged} />
     </div>

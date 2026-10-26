@@ -358,7 +358,7 @@ function AddSnack({
       <label className="field">
         <span>Maker (optional)</span>
         <input value={brand} maxLength={60} onChange={(e) => setBrand(e.target.value)} placeholder="e.g. Walkers" list="known-brands" autoComplete="off" />
-        {/* Makers already in Snackchat, suggested as you type. */}
+        {/* Makers already in Crunchd, suggested as you type. */}
         <datalist id="known-brands">
           {brands.map((b) => (
             <option key={b} value={b} />

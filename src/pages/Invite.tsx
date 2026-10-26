@@ -24,7 +24,7 @@ export function Invite({ id }: { id: string }) {
 
   const { group } = data;
   const link = inviteLink(group.inviteCode);
-  const message = `Join my Snackchat group "${group.name}" and let's see who's the snack champ: ${link}`;
+  const message = `Join my Crunchd group "${group.name}" and let's see who's the snack champ: ${link}`;
 
   const copy = async () => {
     try {
@@ -39,7 +39,7 @@ export function Invite({ id }: { id: string }) {
   // The phone's own share sheet (Messages, Instagram, email...) where there is one.
   const shareOther = async () => {
     if (navigator.share) {
-      await navigator.share({ title: `Join ${group.name} on Snackchat`, text: message, url: link }).catch(() => {});
+      await navigator.share({ title: `Join ${group.name} on Crunchd`, text: message, url: link }).catch(() => {});
     } else {
       await copy();
     }

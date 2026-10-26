@@ -1,4 +1,4 @@
-// Cloudflare configuration for the Snackchat Worker.
+// Cloudflare configuration for the Crunchd Worker.
 // Docs: https://developers.cloudflare.com/workers/wrangler/configuration/
 {
   "$schema": "node_modules/wrangler/config-schema.json",
@@ -37,11 +37,11 @@
   ],
 
   "vars": {
-    "APP_NAME": "Snackchat",
+    "APP_NAME": "Crunchd",
     // "log" prints verification links to the Worker logs (wrangler tail);
     // "resend" sends real email and needs RESEND_API_KEY and EMAIL_FROM.
     "EMAIL_MODE": "log",
-    "EMAIL_FROM": "Snackchat <hello@example.com>",
+    "EMAIL_FROM": "Crunchd <hello@example.com>",
     // Testing with friends: sign in with a name and a PIN (plus the invite
     // code the first time) instead of email and password. Set to "off" and
     // add real Turnstile keys before a wider launch.

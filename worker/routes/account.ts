@@ -15,7 +15,7 @@ account.get("/export", async (c) => {
   return new Response(JSON.stringify(data, null, 2), {
     headers: {
       "Content-Type": "application/json",
-      "Content-Disposition": `attachment; filename="snackchat-${user.username}.json"`,
+      "Content-Disposition": `attachment; filename="crunchd-${user.username}.json"`,
       "Cache-Control": "no-store",
     },
   });

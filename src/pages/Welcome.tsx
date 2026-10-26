@@ -5,7 +5,7 @@ import { useVoice } from "../lib/voice";
 
 /**
  * Shown once on each device after someone joins (and from Settings): what
- * Snackchat is for, and how to put it on the home screen so it opens like an
+ * Crunchd is for, and how to put it on the home screen so it opens like an
  * app. `onDone` closes it.
  */
 export function Welcome({ me, onDone }: { me: Me; onDone: () => void }) {
@@ -45,9 +45,9 @@ export function Welcome({ me, onDone }: { me: Me; onDone: () => void }) {
       </ol>
 
       <section className="card-plain stack-sm">
-        <h2 className="section-title">Put Snackchat on your home screen</h2>
+        <h2 className="section-title">Put Crunchd on your home screen</h2>
         {installed ? (
-          <p className="small no-margin">You're all set: Snackchat is on your home screen.</p>
+          <p className="small no-margin">You're all set: Crunchd is on your home screen.</p>
         ) : installReady ? (
           <>
             <p className="small muted no-margin">It opens full screen like an app, one tap away.</p>
@@ -81,7 +81,7 @@ export function Welcome({ me, onDone }: { me: Me; onDone: () => void }) {
           </ol>
         ) : (
           <p className="small muted no-margin">
-            Snackchat works best on your phone. Open this address there and add it to your home screen from the browser's
+            Crunchd works best on your phone. Open this address there and add it to your home screen from the browser's
             menu.
           </p>
         )}

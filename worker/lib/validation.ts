@@ -25,7 +25,7 @@ export function validateSignUp(body: unknown): { ok: true; value: SignUpInput } 
   if (!EMAIL_RE.test(email) || email.length > 254) return { ok: false, error: "That email address doesn't look right." };
   if (password.length < 10) return { ok: false, error: "Passwords need at least 10 characters." };
   if (password.length > 200) return { ok: false, error: "That password is too long." };
-  if (!inviteCode) return { ok: false, error: "Snackchat is invite-only for now. Enter your invite code." };
+  if (!inviteCode) return { ok: false, error: "Crunchd is invite-only for now. Enter your invite code." };
   const rude = badWordError({ username });
   if (rude) return { ok: false, error: rude };
   return { ok: true, value: { username, email, password, inviteCode, turnstileToken } };

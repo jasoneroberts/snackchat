@@ -1,4 +1,4 @@
-// Turn a Snackchat backup (from Settings > Health, or R2 backups/) into SQL.
+// Turn a Crunchd backup (from Settings > Health, or R2 backups/) into SQL.
 //
 //   node scripts/restore-backup.ts backup.json > restore.sql
 //   npx wrangler d1 execute snackchat-db --remote --file restore.sql

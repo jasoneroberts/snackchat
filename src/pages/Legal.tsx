@@ -1,11 +1,11 @@
 import { Link } from "../components/Link";
 
-// The privacy policy and terms, in plain English. Written for Snackchat as it
+// The privacy policy and terms, in plain English. Written for Crunchd as it
 // is now: a UK app for friends and family, run by one person. Have them
 // checked before a public launch, and update "Last updated" when they change.
 
 const UPDATED = "25 October 2026";
-// How to reach whoever runs Snackchat. Change this once there's a contact email.
+// How to reach whoever runs Crunchd. Change this once there's a contact email.
 const CONTACT = "message @jase in the app, or ask the person who invited you";
 
 export function Privacy() {
@@ -14,7 +14,7 @@ export function Privacy() {
       <h1 className="title">Privacy policy</h1>
       <p className="small muted">Last updated {UPDATED}</p>
       <p>
-        Snackchat is a small app for rating snacks with friends. This page says what we keep about you, why, who else
+        Crunchd is a small app for rating snacks with friends. This page says what we keep about you, why, who else
         handles it, and how to get a copy or delete it. To ask anything about your data, {CONTACT}.
       </p>
 
@@ -36,7 +36,7 @@ export function Privacy() {
           <b>Technical bits:</b> a cookie that keeps you signed in, and some settings stored on your phone (like
           whether you've seen the welcome page). If the app crashes we keep the error, the page you were on and your
           browser type, so we can fix it. Your IP address is used to stop people spamming sign-ins. It isn't saved in
-          Snackchat's database, though Cloudflare's own logs, kept for a few days, may include it.
+          Crunchd's database, though Cloudflare's own logs, kept for a few days, may include it.
         </li>
       </ul>
       <p>
@@ -101,7 +101,7 @@ export function Privacy() {
       </p>
 
       <h2>Age</h2>
-      <p>You need to be 13 or over to use Snackchat.</p>
+      <p>You need to be 13 or over to use Crunchd.</p>
 
       <p className="small muted">
         See also the <Link href="/terms">terms</Link>.
@@ -115,7 +115,7 @@ export function Terms() {
     <article className="page stack legal">
       <h1 className="title">Terms</h1>
       <p className="small muted">Last updated {UPDATED}</p>
-      <p>By using Snackchat you agree to these terms. They're short, so please read them.</p>
+      <p>By using Crunchd you agree to these terms. They're short, so please read them.</p>
 
       <h2>Be decent</h2>
       <ul>
@@ -131,25 +131,25 @@ export function Terms() {
 
       <h2>Your posts</h2>
       <p>
-        What you post is still yours. By posting it you let Snackchat show it in the app (on boards, snack pages,
+        What you post is still yours. By posting it you let Crunchd show it in the app (on boards, snack pages,
         Explore and so on) for as long as it's up. Delete it, or your account, and it goes.
       </p>
 
       <h2>Diet labels and allergies</h2>
       <p>
-        <b>Always check the pack.</b> Vegan and gluten-free labels in Snackchat are a guide, checked by hand from public
-        information, and recipes change. Never rely on Snackchat for an allergy.
+        <b>Always check the pack.</b> Vegan and gluten-free labels in Crunchd are a guide, checked by hand from public
+        information, and recipes change. Never rely on Crunchd for an allergy.
       </p>
 
       <h2>Brands</h2>
       <p>
         Snack names, brand names and logos belong to their owners and are used only to say which snack is which.
-        Snackchat isn't connected to or approved by any snack maker.
+        Crunchd isn't connected to or approved by any snack maker.
       </p>
 
       <h2>No promises</h2>
       <p>
-        Snackchat is a free hobby app, provided as it is. We try to keep it running and your data safe, but we can't
+        Crunchd is a free hobby app, provided as it is. We try to keep it running and your data safe, but we can't
         promise it'll always be available or error-free, and we can change or close it. Nothing in these terms limits
         your rights under UK consumer law.
       </p>
