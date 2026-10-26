@@ -88,6 +88,11 @@ export function CheckinCard({
             {attributeLabel(a.key)} <b>{item.attributes[a.key]}</b>
           </span>
         ))}
+        {mine && (
+          <Link href={`/checkin?edit=${encodeURIComponent(item.id)}`} className="link-button small checkin-edit">
+            Edit
+          </Link>
+        )}
         {mine && onDelete && (
           <button
             type="button"

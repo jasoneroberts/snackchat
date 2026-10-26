@@ -178,10 +178,16 @@ export function App() {
     page = <Feed me={me} onChanged={refresh} />;
   } else if (path === "/checkin") {
     tab = "/checkin";
-    title = line(voice, "title.checkin");
+    title = window.location.search.includes("edit=") ? "Edit check-in" : line(voice, "title.checkin");
     page = (
       <CheckIn
         key={window.location.search}
+        editId={new URLSearchParams(window.location.search).get("edit") ?? undefined}
+        onSaved={(photoPending) => {
+          setToast({ title: "Saved", body: photoPending ? "Your new photo shows once it's approved." : "Your check-in is updated." });
+          refresh();
+          history.back();
+        }}
         onDone={(name, points, withPhoto) => {
           const photoNote = withPhoto ? " Your photo shows once it's approved." : "";
           const checkedIn = line(voice, "toast.checkedIn");

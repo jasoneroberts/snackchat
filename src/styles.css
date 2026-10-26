@@ -430,3 +430,5 @@ select:focus { outline: 2px solid var(--orange); border-color: transparent; }
 .cropper .segmented button.on { background: var(--orange); color: var(--ink); }
 .photo-preview-actions { display: flex; gap: 16px; justify-content: center; }
 .cropper .segmented { width: 220px; }
+.checkin-edit { margin-left: auto; }
+.checkin-edit + .link-button.delete { margin-left: 16px; }
