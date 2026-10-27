@@ -55,7 +55,7 @@ avatars.post("/", async (c) => {
   await c.env.DB.prepare("UPDATE users SET avatar_pending_id = ? WHERE id = ?").bind(avatarId, user.id).run();
   // Replacing a picture that was still waiting? Its file isn't needed any more.
   if (user.avatar_pending_id) await c.env.PHOTOS.delete(avatarKey(user.id, user.avatar_pending_id));
-  pingAdmins(c, { kind: "photo", title: "Profile picture to approve", body: `@${user.username} wants a new profile picture.`, url: "/review" }, user.id);
+  pingAdmins(c, { kind: "photo", title: "Profile picture to approve", body: `${user.username} wants a new profile picture.`, url: "/review" }, user.id);
   return c.json({ avatarPendingId: avatarId }, 201);
 });
 

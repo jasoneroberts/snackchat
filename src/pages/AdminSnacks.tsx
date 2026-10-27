@@ -148,7 +148,7 @@ function SnackEditor({ snack, onSaved }: { snack: AdminSnackRow; onSaved: () => 
   };
 
   const hide = async (photo: AdminSnackPhoto) => {
-    if (!confirm(`Hide @${photo.username}'s photo? It stops showing everywhere. Their check-in and points stay.`)) return;
+    if (!confirm(`Hide ${photo.username}'s photo? It stops showing everywhere. Their check-in and points stay.`)) return;
     if (await run(() => api(`/admin/photos/${encodeURIComponent(photo.id)}/hide`, { body: {} }))) {
       setPhotos((list) => list?.filter((p) => p.id !== photo.id) ?? null);
       onSaved();
@@ -170,7 +170,7 @@ function SnackEditor({ snack, onSaved }: { snack: AdminSnackRow; onSaved: () => 
     <div className="snack-editor stack-sm">
       {snack.addedBy && (
         <p className="small muted no-margin">
-          Added by @{snack.addedBy} {timeAgo(snack.createdAt)}
+          Added by {snack.addedBy} {timeAgo(snack.createdAt)}
         </p>
       )}
       <label className="field">
@@ -235,7 +235,7 @@ function SnackEditor({ snack, onSaved }: { snack: AdminSnackRow; onSaved: () => 
             {photos.map((p) => (
               <figure key={p.id} className={p.id === mainId ? "admin-photo main" : "admin-photo"}>
                 <img src={`/api/photos/${p.id}`} alt="" loading="lazy" />
-                <figcaption className="small muted">@{p.username}</figcaption>
+                <figcaption className="small muted">{p.username}</figcaption>
                 <span className="admin-photo-actions small">
                   {p.id === mainId ? (
                     <b className="main-label">Main</b>

@@ -47,11 +47,11 @@ export function Review({ onChanged }: { onChanged: () => void }) {
 
       {queue.photos.map((p) => (
         <article key={p.id} className="card-plain stack-sm review-item">
-          <img className="review-photo" src={`/api/photos/${p.id}`} alt={`Photo of ${p.snackName} by @${p.username}`} />
+          <img className="review-photo" src={`/api/photos/${p.id}`} alt={`Photo of ${p.snackName} by ${p.username}`} />
           <div>
             <b>{p.snackName}</b>
             <div className="small muted">
-              @{p.username} · {timeAgo(p.createdAt)}
+              {p.username} · {timeAgo(p.createdAt)}
             </div>
             {p.review && <p className="small review-text">{p.review}</p>}
           </div>
@@ -67,9 +67,9 @@ export function Review({ onChanged }: { onChanged: () => void }) {
       {queue.avatars.length > 0 && <h2 className="section-title">Profile pictures</h2>}
       {queue.avatars.map((a) => (
         <article key={a.userId} className="card-plain row review-item">
-          <img className="review-avatar" src={`/api/avatars/${a.avatarId}`} alt={`New picture for @${a.username}`} />
+          <img className="review-avatar" src={`/api/avatars/${a.avatarId}`} alt={`New picture for ${a.username}`} />
           <div className="grow stack-sm">
-            <b>@{a.username}</b>
+            <b>{a.username}</b>
             <Buttons
               disabled={busy !== null}
               onPick={(action) =>

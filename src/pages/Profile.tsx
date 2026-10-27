@@ -39,7 +39,7 @@ export function Profile({
   // Block or unblock this person, then reload so their check-ins hide or come back.
   const setBlock = async (block: boolean) => {
     const name = data?.profile.username ?? username;
-    if (block && !confirm(`Block @${name}? You won't see each other's check-ins. They aren't told.`)) return;
+    if (block && !confirm(`Block ${name}? You won't see each other's check-ins. They aren't told.`)) return;
     try {
       await api(`/blocks/${encodeURIComponent(name)}`, { method: block ? "PUT" : "DELETE" });
       load();
@@ -58,7 +58,7 @@ export function Profile({
       <div className="profile-head">
         <Avatar username={data.profile.username} avatarId={data.profile.avatarId} size={72} />
         <div>
-          <h1 className="title">@{data.profile.username}</h1>
+          <h1 className="title">{data.profile.username}</h1>
           <div className="muted">
             {data.profile.country === "GB" ? "UK" : data.profile.country} · Snacking since {joined}
           </div>
@@ -89,7 +89,7 @@ export function Profile({
       )}
 
       {data.blocked === "you" ? (
-        <p className="muted">You've blocked @{data.profile.username}. You won't see each other's check-ins.</p>
+        <p className="muted">You've blocked {data.profile.username}. You won't see each other's check-ins.</p>
       ) : (
         data.private && <p className="muted">{data.blocked === "hidden" ? "You can't see this profile." : "This profile is private."}</p>
       )}

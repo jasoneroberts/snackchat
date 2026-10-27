@@ -114,6 +114,11 @@ export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<v
         <span className="muted small">And how Crunchd works</span>
       </Link>
 
+      <Link href="/snacks" className="card-plain row settings-link">
+        <b className="grow">All snacks</b>
+        <span className="muted small">Suggest a fix to a name or photo</span>
+      </Link>
+
       <YourData />
 
       {me.isAdmin && (
@@ -125,7 +130,7 @@ export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<v
             {me.reviewCount > 0 ? <span className="count-badge">{me.reviewCount}</span> : <span className="muted small">All clear</span>}
           </Link>
           <Link href="/admin/reports" className="card-plain row settings-link">
-            <b className="grow">Reports</b>
+            <b className="grow">Reports and requests</b>
             {me.openReports > 0 ? <span className="count-badge">{me.openReports}</span> : <span className="muted small">All clear</span>}
           </Link>
           <Link href="/admin/snacks" className="card-plain row settings-link">

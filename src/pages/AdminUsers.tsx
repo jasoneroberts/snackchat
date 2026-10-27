@@ -23,7 +23,7 @@ export function AdminUsers({ meId }: { meId: string }) {
   }, []);
 
   const resetPin = async (u: AdminUserRow) => {
-    if (!confirm(`Give @${u.username} a new PIN? Their old one stops working and they're signed out.`)) return;
+    if (!confirm(`Give ${u.username} a new PIN? Their old one stops working and they're signed out.`)) return;
     setBusy(u.id);
     setError(null);
     setNewPin(null);
@@ -65,7 +65,7 @@ export function AdminUsers({ meId }: { meId: string }) {
       {newPin && (
         <div className="notice good">
           <p>
-            <b>@{newPin.username}'s new PIN is {newPin.pin}</b>
+            <b>{newPin.username}'s new PIN is {newPin.pin}</b>
           </p>
           <p className="small no-margin">
             Send it to them. They sign in with their name and this PIN. It won't be shown again.
@@ -80,7 +80,7 @@ export function AdminUsers({ meId }: { meId: string }) {
             <Link href={`/u/${encodeURIComponent(u.username)}`} className="row grow saved-link">
               <Avatar username={u.username} avatarId={u.avatarId} size={40} />
               <span className="grow">
-                <b>@{u.username}</b>
+                <b>{u.username}</b>
                 {u.isAdmin && <span className="tag">admin</span>}
                 {u.isDemo && <span className="tag">demo</span>}
                 <span className="small muted block">

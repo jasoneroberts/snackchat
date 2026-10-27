@@ -66,8 +66,8 @@ export function AdminReports({ onChanged }: { onChanged: () => void }) {
   return (
     <div className="page stack">
       <p className="small muted no-margin">
-        Things people have reported. Take it down, or dismiss the report if it's fine. Reporters stay anonymous to
-        everyone but you.
+        Things people have reported, and changes they've asked for to snacks. Take it down, or dismiss the report if
+        it's fine. Reporters stay anonymous to everyone but you.
       </p>
       {error && <p className="error">{error}</p>}
       {reports.length === 0 && <p className="muted">No reports. All quiet.</p>}
@@ -79,8 +79,8 @@ export function AdminReports({ onChanged }: { onChanged: () => void }) {
             <ul className="report-list small">
               {r.reports.map((x, i) => (
                 <li key={i}>
-                  <b>{reasonLabel(x.reason)}</b> from @{x.reporter}, {timeAgo(x.createdAt)}
-                  {x.note && <span className="block muted">“{x.note}”</span>}
+                  <b>{reasonLabel(x.reason)}</b> from {x.reporter}, {timeAgo(x.createdAt)}
+                  {x.note && <span className="block muted pre-line">“{x.note}”</span>}
                 </li>
               ))}
             </ul>
@@ -113,7 +113,7 @@ function Target({ r }: { r: AdminReport }) {
     return (
       <div className="stack-xs">
         <div className="small muted">
-          Check-in by <Link href={`/u/${encodeURIComponent(c.username)}`}>@{c.username}</Link> of <b>{c.snackName}</b>,{" "}
+          Check-in by <Link href={`/u/${encodeURIComponent(c.username)}`}>{c.username}</Link> of <b>{c.snackName}</b>,{" "}
           {timeAgo(c.createdAt)}
         </div>
         {c.photoId && <img className="report-photo" src={`/api/photos/${c.photoId}`} alt="" loading="lazy" />}
@@ -130,7 +130,7 @@ function Target({ r }: { r: AdminReport }) {
       <Link href={`/u/${encodeURIComponent(u.username)}`} className="row saved-link">
         <Avatar username={u.username} avatarId={u.avatarId} size={44} />
         <span>
-          <b>@{u.username}</b>
+          <b>{u.username}</b>
           {u.isAdmin && <span className="tag">admin</span>}
           <span className="small muted block">
             Joined {timeAgo(u.joinedAt)} · {u.checkins} check-ins

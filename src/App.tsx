@@ -25,6 +25,7 @@ import { NewGroup } from "./pages/NewGroup";
 import { Profile } from "./pages/Profile";
 import { QuickSignIn } from "./pages/QuickSignIn";
 import { Settings } from "./pages/Settings";
+import { AllSnacks } from "./pages/AllSnacks";
 import { Review } from "./pages/Review";
 import { SignUp } from "./pages/SignUp";
 import { Welcome } from "./pages/Welcome";
@@ -247,6 +248,9 @@ export function App() {
   } else if (joinCode) {
     title = "Join a group";
     page = <Join code={joinCode} />;
+  } else if (path === "/snacks") {
+    title = "All snacks";
+    page = <AllSnacks />;
   } else if (path === "/settings") {
     title = "Settings";
     page = <Settings me={me} onChanged={refreshMe} />;
@@ -272,7 +276,7 @@ export function App() {
     title = "Terms";
     page = <Terms />;
   } else if (path === "/admin/reports" && me.isAdmin) {
-    title = "Reports";
+    title = "Reports and requests";
     page = <AdminReports onChanged={refresh} />;
   } else if (path === "/admin/health" && me.isAdmin) {
     title = "Health";

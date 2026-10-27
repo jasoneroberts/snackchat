@@ -249,7 +249,7 @@ admin.post("/demo", async (c) => {
     .bind(...data.users.map((u) => u.username))
     .all<{ username: string }>();
   if (taken.length) {
-    return c.json({ error: `Someone already uses ${taken.map((t) => "@" + t.username).join(", ")}.` }, 409);
+    return c.json({ error: `Someone already uses ${taken.map((t) => t.username).join(", ")}.` }, 409);
   }
   const statements: D1PreparedStatement[] = [];
   for (const u of data.users) {

@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { readReport, reasonLabel } from "../../shared/reports";
+import { isChangeRequest, readReport, reasonLabel } from "../../shared/reports";
 import type { AppContext } from "../env";
 import { newId } from "../lib/crypto";
 import { currentUser } from "../lib/currentUser";
@@ -35,15 +35,16 @@ reports.post("/", async (c) => {
   // Already reported it and not dealt with yet? Nothing more to do.
   const [already, today] = await Promise.all([
     db
-      .prepare("SELECT 1 FROM reports WHERE reporter_id = ? AND target_type = ? AND target_id = ? AND resolved = 0")
-      .bind(user.id, targetType, targetId)
+      .prepare("SELECT 1 FROM reports WHERE reporter_id = ? AND target_type = ? AND target_id = ? AND reason = ? AND resolved = 0")
+      .bind(user.id, targetType, targetId, reason)
       .first(),
     db
       .prepare("SELECT COUNT(*) AS n FROM reports WHERE reporter_id = ? AND created_at > ?")
       .bind(user.id, now() - 86400)
       .first<{ n: number }>(),
   ]);
-  if (already) return c.json({ ok: true });
+  // (A second change request is kept: it may ask for something different.)
+  if (already && !isChangeRequest(reason)) return c.json({ ok: true });
   if ((today?.n ?? 0) >= MAX_REPORTS_PER_DAY) return c.json({ error: "That's a lot of reports today. Try again tomorrow." }, 429);
 
   await db
@@ -54,7 +55,13 @@ reports.post("/", async (c) => {
     .bind(newId(), user.id, targetType, targetId, reason, note, now())
     .run();
   const what = targetType === "checkin" ? "a check-in" : targetType === "user" ? "a person" : "a snack";
-  pingAdmins(c, { kind: "report", title: "New report", body: `@${user.username} reported ${what}: ${reasonLabel(reason)}.`, url: "/admin/reports" }, user.id);
+  pingAdmins(
+    c,
+    isChangeRequest(reason)
+      ? { kind: "report", title: "Snack change request", body: `${user.username} asked: ${reasonLabel(reason)}. ${note ?? ""}`.trim(), url: "/admin/reports" }
+      : { kind: "report", title: "New report", body: `${user.username} reported ${what}: ${reasonLabel(reason)}.`, url: "/admin/reports" },
+    user.id,
+  );
   return c.json({ ok: true }, 201);
 });
 

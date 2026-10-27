@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readReport } from "../shared/reports";
+import { isChangeRequest, readReport, reasonLabel } from "../shared/reports";
 import { validateCheckin } from "../worker/lib/checkin";
 import { validateGroup } from "../worker/lib/groups";
 import { validateSnackFields } from "../worker/lib/validation";
@@ -34,5 +34,19 @@ describe("the bad-word filter is used", () => {
 
   it("on group names", () => {
     expect(validateGroup({ name: "Twats united", scoringMode: "points", resetPeriod: "never", categories: [] }).ok).toBe(false);
+  });
+});
+
+describe("snack change requests", () => {
+  it("are allowed for snacks only, and need a note", () => {
+    expect(readReport({ targetType: "snack", targetId: "s1", reason: "details", note: "Name: A → B" }).ok).toBe(true);
+    expect(readReport({ targetType: "snack", targetId: "s1", reason: "photo", note: "" }).ok).toBe(false);
+    expect(readReport({ targetType: "checkin", targetId: "c1", reason: "details", note: "x" }).ok).toBe(false);
+  });
+
+  it("have their own labels", () => {
+    expect(isChangeRequest("photo")).toBe(true);
+    expect(isChangeRequest("rude")).toBe(false);
+    expect(reasonLabel("details")).toBe("Change name, maker or type");
   });
 });
