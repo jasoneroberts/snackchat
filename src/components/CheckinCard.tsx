@@ -4,6 +4,7 @@ import type { FeedItem } from "../../shared/types";
 import { rating, timeAgo } from "../lib/format";
 import { useVoice } from "../lib/voice";
 import { Avatar } from "./Avatar";
+import { Likes } from "./Likes";
 import { Link } from "./Link";
 import { PhotoViewer } from "./PhotoViewer";
 import { ReportButton } from "./Report";
@@ -81,13 +82,19 @@ export function CheckinCard({
       {item.review && <p className="checkin-review">{item.review}</p>}
       {item.pairedWith && <p className="small muted checkin-with">{t("card.pairedWith", { ...about, vars: { with: item.pairedWith } })}</p>}
 
-      {/* Sliders, then Delete on your own check-ins or Report on everyone else's. */}
-      <div className="chips">
-        {chips.map((a) => (
-          <span key={a.key} className="chip">
-            {attributeLabel(a.key)} <b>{item.attributes[a.key]}</b>
-          </span>
-        ))}
+      {chips.length > 0 && (
+        <div className="chips">
+          {chips.map((a) => (
+            <span key={a.key} className="chip">
+              {attributeLabel(a.key)} <b>{item.attributes[a.key]}</b>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* The heart, then Edit and Delete on your own check-ins or Report on everyone else's. */}
+      <div className="checkin-actions">
+        <Likes item={item} />
         {mine && (
           <Link href={`/checkin?edit=${encodeURIComponent(item.id)}`} className="link-button small checkin-edit">
             Edit

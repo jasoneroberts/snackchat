@@ -99,7 +99,7 @@ export async function exportAccount(db: D1Database, userId: string, origin: stri
     `SELECT id, username, CASE WHEN email LIKE '%.invalid' THEN NULL ELSE email END AS email, email_verified, country,
             is_private, voice, created_at FROM users WHERE id = ?`,
   );
-  const [checkins, attributes, photos, points, groups, follows, tastes, explore, badges, snacks, reports, blocks] = await Promise.all([
+  const [checkins, attributes, photos, points, groups, follows, tastes, explore, badges, snacks, reports, blocks, likes] = await Promise.all([
     all(
       `SELECT c.id, s.name AS snack, s.brand, c.overall, c.review, c.venue_text AS venue, c.paired_with, c.created_at
          FROM checkins c JOIN snacks s ON s.id = c.snack_id WHERE c.user_id = ? ORDER BY c.created_at`,
@@ -121,6 +121,11 @@ export async function exportAccount(db: D1Database, userId: string, origin: stri
     all("SELECT name, brand, category_id AS snack_type, status, created_at FROM snacks WHERE created_by = ?"),
     all("SELECT target_type, reason, note, resolved, created_at FROM reports WHERE reporter_id = ?"),
     all("SELECT u.username, b.created_at FROM blocks b JOIN users u ON u.id = b.blocked_id WHERE b.blocker_id = ?"),
+    all(
+      `SELECT u.username AS checked_in_by, s.name AS snack, l.created_at FROM likes l
+         JOIN checkins c ON c.id = l.checkin_id JOIN users u ON u.id = c.user_id JOIN snacks s ON s.id = c.snack_id
+        WHERE l.user_id = ? ORDER BY l.created_at`,
+    ),
   ]);
 
   return {
@@ -141,5 +146,6 @@ export async function exportAccount(db: D1Database, userId: string, origin: stri
     snacksAdded: snacks,
     reportsMade: reports,
     blocked: blocks,
+    hearted: likes,
   };
 }

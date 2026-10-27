@@ -14,6 +14,15 @@ export interface FeedItem {
   photoPending: boolean; // only ever true on your own check-ins
   points: number;
   createdAt: number; // Unix seconds
+  likes: number; // hearts from people the viewer can see
+  liked: boolean; // whether the viewer has hearted it
+}
+
+/** Someone who hearted a check-in. */
+export interface Liker {
+  username: string;
+  avatarId: string | null;
+  likedAt: number; // Unix seconds
 }
 
 export interface SnackSummary {
