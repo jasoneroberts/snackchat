@@ -47,7 +47,7 @@ export function Groups() {
       {groups?.length === 0 && <p className="muted">{t("groups.none")}</p>}
       {groups?.map((g) => (
         <Link key={g.id} href={`/groups/${g.id}`} className="list-card">
-          <GroupBadge name={g.name} />
+          <GroupBadge name={g.name} pictureId={g.pictureId} />
           <span className="grow">
             <b className="big-text block">{g.name}</b>
             <span className="small muted">

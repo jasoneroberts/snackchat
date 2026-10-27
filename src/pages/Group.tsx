@@ -63,7 +63,13 @@ export function Group({ id, me }: { id: string; me: Me }) {
   return (
     <div className="page stack">
       <div className="card-plain row gap-lg">
-        <GroupBadge name={group.name} size={60} />
+        {isOwner ? (
+          <Link href={`/groups/${group.id}/edit`} className="plain" aria-label="Change picture">
+            <GroupBadge name={group.name} pictureId={group.pictureId} size={60} />
+          </Link>
+        ) : (
+          <GroupBadge name={group.name} pictureId={group.pictureId} size={60} />
+        )}
         <div className="grow">
           <h1 className="title">{group.name}</h1>
           <div className="small muted">

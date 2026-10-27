@@ -48,7 +48,7 @@ export function Invite({ id }: { id: string }) {
   return (
     <div className="page stack">
       <div className="card-plain centre stack-sm">
-        <GroupBadge name={group.name} size={64} />
+        <GroupBadge name={group.name} pictureId={group.pictureId} size={64} />
         <h1 className="title">{group.name}</h1>
         <p className="muted no-margin">
           {isNew ? t("groups.ready") : `Ranked by ${modeOf(group.scoringMode).label.toLowerCase()}.`}

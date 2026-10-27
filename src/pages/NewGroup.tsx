@@ -3,6 +3,9 @@ import { getCategory } from "../../shared/catalogue";
 import { TYPE_ORDER } from "../../shared/typeFilters";
 import type { GroupPage, ResetPeriod, ScoringMode } from "../../shared/types";
 import { api, errorText } from "../api";
+import { Cropper } from "../components/Cropper";
+import { GroupBadge } from "../components/GroupBadge";
+import { AVATAR_SIDE } from "../lib/image";
 import { MODE_CHOICES, RESET_CHOICES } from "../lib/groups";
 import { navigate } from "../router";
 import { useVoice } from "../lib/voice";
@@ -17,6 +20,29 @@ export function NewGroup({ editId }: { editId?: string }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(!editId);
+  const [pictureId, setPictureId] = useState<string | null>(null);
+  const [picked, setPicked] = useState<File | null>(null);
+  const [pictureBusy, setPictureBusy] = useState(false);
+
+  // The picture saves on its own, straight away, separately from the form.
+  const savePicture = async (square: Blob | null) => {
+    setPicked(null);
+    setPictureBusy(true);
+    setError(null);
+    try {
+      if (square) {
+        const body = new FormData();
+        body.append("photo", square, "squad.jpg");
+        setPictureId((await api<{ pictureId: string }>(`/groups/${encodeURIComponent(editId!)}/picture`, { body })).pictureId);
+      } else {
+        await api(`/groups/${encodeURIComponent(editId!)}/picture`, { method: "DELETE" });
+        setPictureId(null);
+      }
+    } catch (err) {
+      setError(errorText(err));
+    }
+    setPictureBusy(false);
+  };
 
   useEffect(() => {
     if (!editId) return;
@@ -26,6 +52,7 @@ export function NewGroup({ editId }: { editId?: string }) {
         setScoringMode(group.scoringMode);
         setResetPeriod(group.resetPeriod);
         setCategories(group.categories ?? []);
+        setPictureId(group.pictureId);
         setLoaded(true);
       })
       .catch((err) => setError(errorText(err)));
@@ -57,6 +84,38 @@ export function NewGroup({ editId }: { editId?: string }) {
 
   return (
     <form className="page stack-lg" onSubmit={create}>
+      {editId && (
+        <section className="field">
+          <span className="field-label">Picture</span>
+          <div className="row gap-lg">
+            <GroupBadge name={name || "?"} pictureId={pictureId} size={72} />
+            <div className="stack-sm">
+              <label className={`button secondary small ${pictureBusy ? "disabled" : ""}`}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="visually-hidden"
+                  disabled={pictureBusy}
+                  onChange={(e) => {
+                    setPicked(e.target.files?.[0] ?? null);
+                    e.target.value = "";
+                  }}
+                />
+                {pictureId ? "Change picture" : "Add a picture"}
+              </label>
+              {pictureId && (
+                <button type="button" className="link-button small delete" disabled={pictureBusy} onClick={() => void savePicture(null)}>
+                  Remove picture
+                </button>
+              )}
+            </div>
+          </div>
+          <span className="small muted">{pictureBusy ? "Saving…" : "A logo or a photo of the crew. Only people in the group see it."}</span>
+        </section>
+      )}
+      {picked && (
+        <Cropper file={picked} squareOnly maxSide={AVATAR_SIDE} onDone={(blob) => void savePicture(blob)} onCancel={() => setPicked(null)} />
+      )}
       <label className="field">
         <span className="field-label">Group name</span>
         <input value={name} maxLength={40} onChange={(e) => setName(e.target.value)} placeholder="e.g. Friday Pub Crew" />
