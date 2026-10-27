@@ -127,7 +127,8 @@ export interface DemoStatus {
   users: number;
   checkins: number;
   photos: number;
-  missingPhotos: string[]; // demo snacks with no photo yet
+  missingPhotos: string[]; // demo snacks with check-ins still waiting for a photo
+  missingAvatars: number; // demo people who should have a profile picture but don't
 }
 
 // Your taste for one snack type: 1-5 per slider that type is rated on; a missing key means "don't mind".
