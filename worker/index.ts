@@ -8,6 +8,7 @@ import { currentUser } from "./lib/currentUser";
 import { devLoginUsername, getDevUser } from "./lib/devLogin";
 import { quickSignInOn } from "./lib/quickSignIn";
 import { checkErrorSpike, logError, pruneLogs, readClientError } from "./lib/health";
+import { newUserCount } from "./lib/notify";
 import { getSessionUser } from "./lib/session";
 import { turnstileInTestMode } from "./lib/turnstile";
 import { account } from "./routes/account";
@@ -20,6 +21,7 @@ import { explore } from "./routes/explore";
 import { groups } from "./routes/groups";
 import { logos } from "./routes/logos";
 import { photos } from "./routes/photos";
+import { push } from "./routes/push";
 import { blocks, reports } from "./routes/safety";
 import { snacks } from "./routes/snacks";
 import { users } from "./routes/users";
@@ -53,6 +55,7 @@ app.route("/explore", explore);
 app.route("/reports", reports);
 app.route("/blocks", blocks);
 app.route("/account", account);
+app.route("/push", push);
 
 app.get("/me", async (c) => {
   const user = c.get("user");
@@ -77,6 +80,8 @@ app.get("/me", async (c) => {
       pendingSnacks: user.is_admin === 1 ? await pendingSnackCount(c.env.DB) : 0,
       // ...and how many reports are waiting.
       openReports: user.is_admin === 1 ? await openReportCount(c.env.DB) : 0,
+      // ...and how many people have joined since they last looked at Users.
+      newUsers: user.is_admin === 1 ? await newUserCount(c.env.DB, user.id) : 0,
     },
     devLogin: devLoginUsername(c.env) !== null,
     quickSignIn: quickSignInOn(c.env),

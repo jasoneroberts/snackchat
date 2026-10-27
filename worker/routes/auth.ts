@@ -3,6 +3,7 @@ import { createMiddleware } from "hono/factory";
 import type { AppContext, Env } from "../env";
 import { hashPassword, newId, randomToken, sha256, verifyPassword } from "../lib/crypto";
 import { sendEmail } from "../lib/email";
+import { pingAdmins } from "../lib/notify";
 import { createSession, destroySession } from "../lib/session";
 import { placeholderEmail, quickSignInOn, validateQuickSignIn } from "../lib/quickSignIn";
 import { verifyTurnstile } from "../lib/turnstile";
@@ -72,7 +73,15 @@ auth.post("/signup", async (c) => {
 
   await sendVerificationEmail(c.env, new URL(c.req.url).origin, userId, input.email);
   await createSession(c, userId);
+  pingAdmins(c, newPerson(input.username));
   return c.json({ ok: true }, 201);
+});
+
+const newPerson = (username: string) => ({
+  kind: "user" as const,
+  title: "New person",
+  body: `@${username} just joined Crunchd.`,
+  url: "/admin/users",
 });
 
 // Quick sign-in for testing with friends: a name and a PIN.
@@ -148,6 +157,7 @@ auth.post("/quick", async (c) => {
     return c.json({ error: "That name was just taken. Try another." }, 409);
   }
   await createSession(c, userId);
+  pingAdmins(c, newPerson(username));
   return c.json({ ok: true, created: true }, 201);
 });
 

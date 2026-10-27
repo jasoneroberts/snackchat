@@ -486,6 +486,8 @@ admin.delete("/brands/logo", async (c) => {
 
 // Everyone, newest first, with demo people at the end.
 admin.get("/users", async (c) => {
+  // Looking at the list clears the "new people" count on the Me tab.
+  await c.env.DB.prepare("UPDATE users SET users_seen_at = unixepoch() WHERE id = ?").bind(currentUser(c).id).run();
   const { results } = await c.env.DB.prepare(
     `SELECT u.id, u.username, u.avatar_id AS avatarId, u.is_admin AS isAdmin, u.created_at AS joinedAt,
             u.id LIKE 'demo-%' AS isDemo,

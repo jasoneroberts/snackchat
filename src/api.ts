@@ -14,6 +14,7 @@ export interface Me {
   reviewCount: number;
   pendingSnacks: number;
   openReports: number;
+  newUsers: number;
   /** null until they've picked lad mode or grown-up mode. */
   voice: Voice | null;
 }
@@ -46,5 +47,8 @@ export async function api<T>(
   if (!res.ok) throw new ApiError((data as { error?: string }).error ?? "Something went wrong.", res.status);
   return data as T;
 }
+
+/** Everything waiting for an admin: the number on the Me tab and the app icon. */
+export const adminToDo = (me: Me) => (me.isAdmin ? me.reviewCount + me.pendingSnacks + me.openReports + me.newUsers : 0);
 
 export const errorText = (err: unknown) => (err instanceof ApiError ? err.message : "Something went wrong.");

@@ -3,6 +3,7 @@ import { getCategory } from "../../shared/catalogue";
 import type { AppContext } from "../env";
 import { newId } from "../lib/crypto";
 import { currentUser } from "../lib/currentUser";
+import { pingAdmins } from "../lib/notify";
 import { listCheckins } from "../lib/feed";
 import { LATEST_PHOTO } from "../lib/photoSql";
 import { searchPatterns } from "../lib/search";
@@ -77,6 +78,11 @@ snacks.post("/", async (c) => {
   )
     .bind(id, name, brand || null, category, user.id, now())
     .run();
+  pingAdmins(
+    c,
+    { kind: "snack", title: "New snack to check", body: `@${user.username} added ${brand ? `${brand} ` : ""}${name}.`, url: "/admin/snacks" },
+    user.id,
+  );
   return c.json({ snack: { id, name, brand: brand || null, category, status: "pending" } }, 201);
 });
 

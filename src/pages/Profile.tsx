@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { ProfilePage } from "../../shared/types";
-import { api, errorText, type Me } from "../api";
+import { adminToDo, api, errorText, type Me } from "../api";
 import { Avatar } from "../components/Avatar";
 import { CheckinCard } from "../components/CheckinCard";
 import { Link } from "../components/Link";
@@ -66,7 +66,7 @@ export function Profile({
         {isMe && (
           <Link href="/settings" className="button secondary small profile-settings">
             Settings
-            {me.reviewCount > 0 && <span className="count-badge">{me.reviewCount}</span>}
+            {adminToDo(me) > 0 && <span className="count-badge">{adminToDo(me)}</span>}
           </Link>
         )}
       </div>
