@@ -136,7 +136,7 @@ export function Health() {
                 <b>{describeAdminAction(a.method, a.path, a.detail)}</b>
                 {a.status >= 400 && <span className="tag">failed</span>}
                 <span className="small muted block">
-                  @{a.adminName} · {timeAgo(a.createdAt)}
+                  {a.adminName} · {timeAgo(a.createdAt)}
                 </span>
               </div>
             ))}
@@ -186,7 +186,7 @@ function ErrorItem({ e }: { e: ErrorRow }) {
           <b className="break">{e.message}</b>
           <span className="tag">{e.source === "client" ? "phone" : "server"}</span>
           <span className="small muted block">
-            {e.username ? `@${e.username}` : "signed out"} · {e.path ?? "?"} · {timeAgo(e.createdAt)}
+            {e.username ? `${e.username}` : "signed out"} · {e.path ?? "?"} · {timeAgo(e.createdAt)}
           </span>
         </span>
         <span className="chevron" aria-hidden="true">{open ? "▴" : "▾"}</span>

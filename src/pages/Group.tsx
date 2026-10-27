@@ -104,7 +104,7 @@ export function Group({ id, me }: { id: string; me: Me }) {
                 <Link href={`/u/${r.username}`} className="plain row grow">
                   <Avatar username={r.username} avatarId={r.avatarId} size={34} />
                   <span className="grow">
-                    <b>@{r.username}</b>
+                    <b>{r.username}</b>
                     {isMe && <span className="muted"> (you)</span>}
                     {r.role === "owner" && <span className="tag">runs it</span>}
                   </span>

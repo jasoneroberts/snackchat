@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { getCategory } from "../../shared/catalogue";
+import type { SnackSummary } from "../../shared/types";
 import type { AppContext } from "../env";
 import { newId } from "../lib/crypto";
 import { currentUser } from "../lib/currentUser";
@@ -80,13 +81,12 @@ snacks.post("/", async (c) => {
     .run();
   pingAdmins(
     c,
-    { kind: "snack", title: "New snack to check", body: `@${user.username} added ${brand ? `${brand} ` : ""}${name}.`, url: "/admin/snacks" },
+    { kind: "snack", title: "New snack to check", body: `${user.username} added ${brand ? `${brand} ` : ""}${name}.`, url: "/admin/snacks" },
     user.id,
   );
   return c.json({ snack: { id, name, brand: brand || null, category, status: "pending" } }, 201);
 });
 
-// A snack's page: averages, slider averages, rank in its category, recent check-ins.
 // Makers people have used on approved snacks, most-used first, to suggest
 // as you type when adding a snack (so it's "KP", not a new spelling of it).
 snacks.get("/brands", async (c) => {
@@ -97,6 +97,19 @@ snacks.get("/brands", async (c) => {
   return c.json({ brands: results.map((r) => r.brand) });
 });
 
+// Every approved snack, A to Z, for Settings > All snacks (where people can
+// ask for a snack's details or photo to be changed).
+snacks.get("/all", async (c) => {
+  const { results } = await c.env.DB.prepare(
+    `SELECT s.id, s.name, s.brand, s.category_id AS category, s.status, (${LATEST_PHOTO}) AS photoId,
+            (SELECT COUNT(*) FROM checkins c WHERE c.snack_id = s.id) AS checkins
+       FROM snacks s WHERE s.status = 'approved'
+      ORDER BY s.name COLLATE NOCASE, s.brand COLLATE NOCASE`,
+  ).all<SnackSummary & { checkins: number }>();
+  return c.json({ snacks: results });
+});
+
+// A snack's page: averages, slider averages, rank in its category, recent check-ins.
 snacks.get("/:id", async (c) => {
   const user = currentUser(c);
   const id = c.req.param("id");

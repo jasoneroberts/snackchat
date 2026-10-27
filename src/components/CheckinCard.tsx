@@ -38,7 +38,7 @@ export function CheckinCard({
         <div className="grow">
           <div>
             <Link href={`/u/${item.username}`} className="plain">
-              <b>@{item.username}</b>
+              <b>{item.username}</b>
             </Link>{" "}
             <span className="muted">{t("card.checkedIn", about)}</span>
           </div>

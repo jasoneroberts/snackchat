@@ -200,7 +200,7 @@ function PeopleBoard({ rows, me, unit }: { rows: PeopleRow[] | null; me: Me; uni
           return (
             <Link key={p.username} href={`/u/${p.username}`} className="podium-spot plain">
               <Avatar username={p.username} avatarId={p.avatarId} size={52} />
-              <span className="podium-name">@{p.username}</span>
+              <span className="podium-name">{p.username}</span>
               <span className="podium-block" style={{ height: PODIUM_HEIGHTS[place], background: PODIUM_COLOURS[place] }}>
                 <b className="podium-rank">{p.rank}</b>
                 <span className="small">
@@ -219,7 +219,7 @@ function PeopleBoard({ rows, me, unit }: { rows: PeopleRow[] | null; me: Me; uni
               <Link href={`/u/${r.username}`} className="plain row grow">
                 <Avatar username={r.username} avatarId={r.avatarId} size={34} />
                 <span className="grow">
-                  <b>@{r.username}</b>
+                  <b>{r.username}</b>
                   {r.username === me.username && <span className="muted"> {t("boards.you")}</span>}
                   <span className="small muted block">
                     {r.checkins} check-in{r.checkins === 1 ? "" : "s"} · {r.snacks} snack{r.snacks === 1 ? "" : "s"}

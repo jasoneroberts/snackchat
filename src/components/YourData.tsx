@@ -52,7 +52,7 @@ function Blocked() {
       {blocked?.map((b) => (
         <div key={b.username} className="row">
           <Avatar username={b.username} avatarId={b.avatarId} size={32} />
-          <b className="grow">@{b.username}</b>
+          <b className="grow">{b.username}</b>
           <button type="button" className="link-button small" onClick={() => unblock(b.username)}>
             Unblock
           </button>

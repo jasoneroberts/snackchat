@@ -118,7 +118,7 @@ checkins.post("/", async (c) => {
   }
 
   if (photoId) {
-    pingAdmins(c, { kind: "photo", title: "Photo to approve", body: `@${user.username} added a photo of ${snack.name}.`, url: "/review" }, user.id);
+    pingAdmins(c, { kind: "photo", title: "Photo to approve", body: `${user.username} added a photo of ${snack.name}.`, url: "/review" }, user.id);
   }
   return c.json({ id: checkinId, points: lines.reduce((sum, l) => sum + l.points, 0), lines }, 201);
 });
@@ -234,7 +234,7 @@ checkins.patch("/:id", async (c) => {
   // Old files go once the database no longer points at them.
   if (old.length) await c.env.PHOTOS.delete(old.map((p) => p.r2_key));
   if (photoId) {
-    pingAdmins(c, { kind: "photo", title: "Photo to approve", body: `@${user.username} changed the photo on a check-in.`, url: "/review" }, user.id);
+    pingAdmins(c, { kind: "photo", title: "Photo to approve", body: `${user.username} changed the photo on a check-in.`, url: "/review" }, user.id);
   }
   return c.json({ ok: true, photoPending: photoId !== null });
 });

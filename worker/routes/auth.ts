@@ -80,7 +80,7 @@ auth.post("/signup", async (c) => {
 const newPerson = (username: string) => ({
   kind: "user" as const,
   title: "New person",
-  body: `@${username} just joined Crunchd.`,
+  body: `${username} just joined Crunchd.`,
   url: "/admin/users",
 });
 

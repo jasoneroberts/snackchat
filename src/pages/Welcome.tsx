@@ -25,7 +25,7 @@ export function Welcome({ me, onDone }: { me: Me; onDone: () => void }) {
     <div className="page stack welcome">
       <div className="welcome-head">
         <img src={me.voice === "lad" ? "/logo-lad.svg" : "/logo.svg"} alt="" width={72} height={72} />
-        <h1 className="title">Welcome, @{me.username}</h1>
+        <h1 className="title">Welcome, {me.username}</h1>
         <p className="muted no-margin">Rate snacks, see what your mates are eating, and climb the boards.</p>
       </div>
 
