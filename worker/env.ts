@@ -7,6 +7,8 @@ export interface Env {
   PHOTOS: R2Bucket;
   AUTH_LIMITER: RateLimit;
   APP_NAME: string;
+  // The app's real address, e.g. "getcrunchd.com" (see lib/canonicalHost.ts).
+  CANONICAL_HOST?: string;
   EMAIL_MODE: "log" | "resend";
   EMAIL_FROM: string;
   // Internal development only: open the app as this user with no log-in.
