@@ -5,7 +5,20 @@ import type { AppContext } from "../env";
 import { getCategory, POINTS } from "../../shared/catalogue";
 import { deleteAccount } from "../lib/account";
 import { currentUser } from "../lib/currentUser";
-import { buildDemoData, DEMO_GROUPS, DEMO_PHOTO_PREFIX, DEMO_PREFIX, demoUserId, offSearchUrl, wantsPhoto } from "../lib/demo";
+import {
+  buildDemoData,
+  DEMO_GROUPS,
+  DEMO_PHOTO_PREFIX,
+  DEMO_PREFIX,
+  demoAvatarId,
+  demoAvatarUrl,
+  demoPhotoKey,
+  demoUserId,
+  offSearchUrl,
+  pickImages,
+  wantsAvatar,
+  wantsPhoto,
+} from "../lib/demo";
 import { type DietSuggestion, offDietSearchUrl, type OffProduct, pickProduct, suggestDiet } from "../lib/diet";
 import { newInviteCode } from "../lib/groups";
 import { fetchLogo, findLogoCandidates, LOGO_TYPES, type LogoCandidate, MAX_LOGO_BYTES } from "../lib/logoCandidates";
@@ -169,10 +182,10 @@ admin.post("/avatars/:userId", async (c) => {
 
 // Demo data ---------------------------------------------------------------
 
-/** Whether demo data is loaded, and which demo snacks still have no photo. */
+/** Whether demo data is loaded, and what's still missing a photo or picture. */
 admin.get("/demo", async (c) => {
   const db = c.env.DB;
-  const [counts, missing] = await Promise.all([
+  const [counts, checkins, people] = await Promise.all([
     db
       .prepare(
         `SELECT (SELECT COUNT(*) FROM users WHERE id LIKE 'demo-%') AS users,
@@ -182,20 +195,43 @@ admin.get("/demo", async (c) => {
       .first<{ users: number; checkins: number; photos: number }>(),
     db
       .prepare(
-        `SELECT DISTINCT c.snack_id AS id FROM checkins c
-          WHERE c.id LIKE 'demo-%'
-            AND NOT EXISTS (SELECT 1 FROM photos p JOIN checkins pc ON pc.id = p.checkin_id
-                             WHERE pc.snack_id = c.snack_id AND p.id LIKE 'demo-%')
-          ORDER BY c.snack_id`,
+        `SELECT c.id, c.snack_id AS snackId, EXISTS (SELECT 1 FROM photos p WHERE p.checkin_id = c.id) AS hasPhoto
+           FROM checkins c WHERE c.id LIKE 'demo-%'`,
       )
-      .all<{ id: string }>(),
+      .all<{ id: string; snackId: string; hasPhoto: number }>(),
+    db.prepare("SELECT username, avatar_id AS avatarId FROM users WHERE id LIKE 'demo-%'").all<{ username: string; avatarId: string | null }>(),
   ]);
+  const missing = new Set(checkins.results.filter((r) => !r.hasPhoto && wantsPhoto(r.id)).map((r) => r.snackId));
   return c.json({
     users: counts?.users ?? 0,
     checkins: counts?.checkins ?? 0,
     photos: counts?.photos ?? 0,
-    missingPhotos: missing.results.map((r) => r.id),
+    missingPhotos: [...missing].sort(),
+    missingAvatars: people.results.filter((p) => !p.avatarId && wantsAvatar(p.username)).length,
   } satisfies DemoStatus);
+});
+
+// Give the demo people drawn profile pictures (lib/demo.ts says where from).
+admin.post("/demo/avatars", async (c) => {
+  const db = c.env.DB;
+  const { results } = await db
+    .prepare("SELECT id, username FROM users WHERE id LIKE 'demo-%' AND avatar_id IS NULL")
+    .all<{ id: string; username: string }>();
+  let added = 0;
+  for (const person of results.filter((p) => wantsAvatar(p.username))) {
+    try {
+      const res = await fetch(demoAvatarUrl(person.username));
+      const type = res.headers.get("content-type") ?? "";
+      if (!res.ok || !type.startsWith("image/")) continue;
+      const avatarId = demoAvatarId(person.username);
+      await c.env.PHOTOS.put(avatarKey(person.id, avatarId), await res.arrayBuffer(), { httpMetadata: { contentType: type } });
+      await db.prepare("UPDATE users SET avatar_id = ? WHERE id = ?").bind(avatarId, person.id).run();
+      added++;
+    } catch (err) {
+      console.error("demo avatar fetch failed", err);
+    }
+  }
+  return c.json({ added });
 });
 
 // Add the demo people, their check-ins and two groups (with you in both).
@@ -286,24 +322,26 @@ admin.post("/demo/photos/:snackId", async (c) => {
   if (!snack) return c.json({ error: "Snack not found." }, 404);
 
   const headers = { "User-Agent": "Crunchd/0.1 (demo data; github.com/jasoneroberts)" };
-  // A snack with no photo is fine, so any failure here just reports "not found".
-  let picture: { body: ArrayBuffer; type: string };
+  // A few different pack photos (different people photograph the same snack),
+  // so a snack's demo cards don't all show the same picture. A snack with no
+  // photo is fine, so any failure here just reports "not found".
+  const keys: string[] = [];
   try {
     const search = await fetch(offSearchUrl(snack.name, snack.brand), { headers });
     if (!search.ok) return c.json({ found: false, reason: `search ${search.status}` });
     const { products } = (await search.json()) as { products?: { image_front_url?: string }[] };
-    const imageUrl = products?.find((p) => p.image_front_url)?.image_front_url;
-    if (!imageUrl) return c.json({ found: false, reason: "no photo" });
-    const image = await fetch(imageUrl, { headers });
-    const type = image.headers.get("content-type") ?? "";
-    if (!image.ok || !type.startsWith("image/")) return c.json({ found: false, reason: `image ${image.status}` });
-    picture = { body: await image.arrayBuffer(), type };
+    for (const url of pickImages(products)) {
+      const image = await fetch(url, { headers });
+      const type = image.headers.get("content-type") ?? "";
+      if (!image.ok || !type.startsWith("image/")) continue;
+      const key = demoPhotoKey(snackId, keys.length);
+      await c.env.PHOTOS.put(key, await image.arrayBuffer(), { httpMetadata: { contentType: type } });
+      keys.push(key);
+    }
   } catch (err) {
     console.error("demo photo fetch failed", err);
-    return c.json({ found: false, reason: "fetch failed" });
   }
-  const key = `${DEMO_PHOTO_PREFIX}${snackId}`;
-  await c.env.PHOTOS.put(key, picture.body, { httpMetadata: { contentType: picture.type } });
+  if (!keys.length) return c.json({ found: false, reason: "no photo" });
 
   const { results } = await db
     .prepare(
@@ -314,27 +352,33 @@ admin.post("/demo/photos/:snackId", async (c) => {
     .bind(snackId)
     .all<{ id: string; user_id: string; created_at: number }>();
   const chosen = results.filter((r) => wantsPhoto(r.id));
-  // Always give at least one check-in the photo, so every snack gets a picture.
+  // Always give at least one check-in a photo, so every snack gets a picture.
   if (chosen.length === 0 && results.length > 0) chosen.push(results[0]);
-  const statements = chosen.flatMap((r) => [
+  const statements = chosen.flatMap((r, i) => [
     db
       .prepare("INSERT INTO photos (id, checkin_id, r2_key, status, created_at) VALUES (?, ?, ?, 'visible', ?)")
-      .bind(`${DEMO_PREFIX}p-${r.id}`, r.id, key, r.created_at),
+      .bind(`${DEMO_PREFIX}p-${r.id}`, r.id, keys[i % keys.length], r.created_at),
     db
       .prepare("INSERT INTO points_ledger (user_id, checkin_id, reason, points, created_at) VALUES (?, ?, 'photo', ?, ?)")
       .bind(r.user_id, r.id, POINTS.photo, r.created_at),
   ]);
   if (statements.length) await db.batch(statements);
-  return c.json({ found: true, added: chosen.length });
+  return c.json({ found: true, added: chosen.length, pictures: keys.length });
 });
 
-// Remove everything the demo added: photos in R2, groups, then the people
+// Remove everything the demo added: photos and pictures in R2, groups, then the people
 // (their check-ins, points and memberships go with them).
 admin.delete("/demo", async (c) => {
   const db = c.env.DB;
   let cursor: string | undefined;
   do {
     const list = await c.env.PHOTOS.list({ prefix: DEMO_PHOTO_PREFIX, cursor });
+    if (list.objects.length) await c.env.PHOTOS.delete(list.objects.map((o) => o.key));
+    cursor = list.truncated ? list.cursor : undefined;
+  } while (cursor);
+  // Their profile pictures live with everyone else's, under avatars/demo-*.
+  do {
+    const list = await c.env.PHOTOS.list({ prefix: `avatars/${DEMO_PREFIX}`, cursor });
     if (list.objects.length) await c.env.PHOTOS.delete(list.objects.map((o) => o.key));
     cursor = list.truncated ? list.cursor : undefined;
   } while (cursor);

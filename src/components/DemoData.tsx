@@ -31,6 +31,15 @@ export function DemoData({ onChanged }: { onChanged: () => void }) {
     }
   };
 
+  // Profile pictures first (one quick call), then pack photos snack by snack.
+  const fillIn = async (s: DemoStatus) => {
+    if (s.missingAvatars > 0) {
+      setProgress("Adding profile pictures…");
+      await api("/admin/demo/avatars", { method: "POST" });
+    }
+    await fetchPhotos(s.missingPhotos);
+  };
+
   const fetchPhotos = async (snackIds: string[]) => {
     for (const [i, id] of snackIds.entries()) {
       setProgress(`Finding pack photos… ${i + 1} of ${snackIds.length}. Keep this page open.`);
@@ -45,7 +54,7 @@ export function DemoData({ onChanged }: { onChanged: () => void }) {
       await api("/admin/demo", { method: "POST" });
       const fresh = await api<DemoStatus>("/admin/demo");
       setStatus(fresh);
-      await fetchPhotos(fresh.missingPhotos);
+      await fillIn(fresh);
     });
 
   const removeAll = () => {
@@ -66,7 +75,7 @@ export function DemoData({ onChanged }: { onChanged: () => void }) {
       <p className="small muted">
         {loaded
           ? `${status.users} demo people, ${status.checkins} check-ins and ${status.photos} photos are loaded. You're in their two groups.`
-          : "Adds 8 made-up people with three weeks of check-ins, pack photos from Open Food Facts, and two groups you're in. Remove it all in one tap later."}
+          : "Adds 8 made-up people with profile pictures, three weeks of check-ins, pack photos from Open Food Facts, and two groups you're in. Remove it all in one tap later."}
       </p>
       {progress && <p className="small notice">{progress}</p>}
       {error && <p className="error">{error}</p>}
@@ -75,9 +84,9 @@ export function DemoData({ onChanged }: { onChanged: () => void }) {
           Load demo data
         </button>
       )}
-      {loaded && status.missingPhotos.length > 0 && (
-        <button type="button" className="button secondary" disabled={busy} onClick={() => void run(() => fetchPhotos(status.missingPhotos))}>
-          Find missing photos ({status.missingPhotos.length})
+      {loaded && (status.missingPhotos.length > 0 || status.missingAvatars > 0) && (
+        <button type="button" className="button secondary" disabled={busy} onClick={() => void run(() => fillIn(status))}>
+          Add photos and profile pictures
         </button>
       )}
       {loaded && (

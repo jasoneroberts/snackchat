@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildDemoData, DEMO_GROUPS, DEMO_PREFIX, offSearchUrl } from "../worker/lib/demo";
+import { buildDemoData, DEMO_GROUPS, DEMO_PREFIX, demoAvatarUrl, demoPhotoKey, offSearchUrl, pickImages, wantsAvatar, wantsPhoto } from "../worker/lib/demo";
 
 describe("buildDemoData", () => {
   const now = 1_800_000_000;
@@ -60,4 +60,30 @@ it("searches Open Food Facts for UK products by brand and name", () => {
   expect(url.hostname).toBe("world.openfoodfacts.org");
   expect(url.searchParams.get("search_terms")).toBe("Smiths Frazzles");
   expect(url.searchParams.get("tag_0")).toBe("united-kingdom");
+});
+
+describe("demo photos and pictures", () => {
+  it("gives about three in four check-ins a photo", () => {
+    const { checkins } = buildDemoData(Date.UTC(2026, 9, 26) / 1000);
+    const share = checkins.filter((c) => wantsPhoto(c.id)).length / checkins.length;
+    expect(share).toBeGreaterThan(0.6);
+    expect(share).toBeLessThan(0.9);
+  });
+
+  it("picks different pack photos, skipping gaps and repeats", () => {
+    expect(pickImages([{ image_front_url: "a" }, {}, { image_front_url: "a" }, { image_front_url: "b" }, { image_front_url: "c" }, { image_front_url: "d" }])).toEqual(["a", "b", "c"]);
+    expect(pickImages(undefined)).toEqual([]);
+  });
+
+  it("keeps the first photo's key as it was", () => {
+    expect(demoPhotoKey("seed-twix", 0)).toBe("demo/seed-twix");
+    expect(demoPhotoKey("seed-twix", 2)).toBe("demo/seed-twix-2");
+  });
+
+  it("draws the same face for the same name, and leaves a couple without", () => {
+    expect(demoAvatarUrl("crisp_queen")).toBe(demoAvatarUrl("crisp_queen"));
+    expect(demoAvatarUrl("crisp_queen")).toContain("seed=crisp_queen");
+    expect(wantsAvatar("crisp_queen")).toBe(true);
+    expect(wantsAvatar("gym_snacker")).toBe(false);
+  });
 });

@@ -185,8 +185,39 @@ export const DEMO_GROUPS = [
     members: ["choc_o_clock", "nana_biscuit", "sweet_tooth_sal", "crisp_queen"] },
 ] as const;
 
-/** Every other check-in of a snack gets the photo, so not every card looks the same. */
-export const wantsPhoto = (checkinId: string) => checkinId.charCodeAt(checkinId.length - 1) % 2 === 0;
+/** About three in four demo check-ins get a photo, like a keen real crowd. */
+export function wantsPhoto(checkinId: string): boolean {
+  let h = 0;
+  for (const ch of checkinId) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return h % 4 !== 0;
+}
+
+/** Up to this many different pack photos per snack, so cards don't all match. */
+export const PHOTOS_PER_SNACK = 3;
+
+/** Where the nth photo of a demo snack lives in R2. */
+export const demoPhotoKey = (snackId: string, n: number) => `${DEMO_PHOTO_PREFIX}${snackId}${n ? `-${n}` : ""}`;
+
+/** Different image URLs from an Open Food Facts search, best first. */
+export function pickImages(products: { image_front_url?: string }[] | undefined, max = PHOTOS_PER_SNACK): string[] {
+  const urls = (products ?? []).map((p) => p.image_front_url).filter((u): u is string => !!u);
+  return [...new Set(urls)].slice(0, max);
+}
+
+// Demo people with a profile picture. Two keep their initials, as real people do.
+const NO_AVATAR = new Set(["vinegar_vic", "gym_snacker"]);
+export const wantsAvatar = (username: string) => !NO_AVATAR.has(username);
+
+/**
+ * A drawn face for a demo person, the same every time for the same name.
+ * DiceBear's "Lorelei" style is CC0 (free to use, no credit needed), and
+ * being a drawing it doesn't pretend to be a real person's photo.
+ */
+export function demoAvatarUrl(username: string): string {
+  const params = new URLSearchParams({ seed: username, size: "256", backgroundColor: "fbd7a8,f7c9dd,d9e6b8,cfe4f7,e9cfa3" });
+  return `https://api.dicebear.com/9.x/lorelei/png?${params}`;
+}
+export const demoAvatarId = (username: string) => `${DEMO_PREFIX}a-${username}`;
 
 /**
  * The Open Food Facts search for a snack's pack photo. Their pictures are
