@@ -24,6 +24,8 @@ interface Row {
   photo_pending: number;
   points: number;
   created_at: number;
+  likes: number;
+  liked: number;
 }
 
 export interface FeedFilter {
@@ -45,7 +47,10 @@ export async function listCheckins(db: D1Database, f: FeedFilter): Promise<FeedI
               (SELECT json_group_object(attribute, value) FROM checkin_attributes WHERE checkin_id = c.id) AS attrs,
               p.id AS photo_id,
               EXISTS (SELECT 1 FROM photos pp WHERE pp.checkin_id = c.id AND pp.status = 'pending' AND c.user_id = ?1) AS photo_pending,
-              (SELECT COALESCE(SUM(points), 0) FROM points_ledger WHERE checkin_id = c.id) AS points
+              (SELECT COALESCE(SUM(points), 0) FROM points_ledger WHERE checkin_id = c.id) AS points,
+              -- Hearts, leaving out people the viewer can't see, so the count matches the list.
+              (SELECT COUNT(*) FROM likes l WHERE l.checkin_id = c.id AND NOT ${blockedEitherWay("?1", "l.user_id")}) AS likes,
+              EXISTS (SELECT 1 FROM likes l WHERE l.checkin_id = c.id AND l.user_id = ?1) AS liked
          FROM checkins c
          JOIN users u ON u.id = c.user_id
          JOIN snacks s ON s.id = c.snack_id
@@ -87,6 +92,8 @@ export async function listCheckins(db: D1Database, f: FeedFilter): Promise<FeedI
     photoPending: r.photo_pending === 1,
     points: r.points,
     createdAt: r.created_at,
+    likes: r.likes,
+    liked: r.liked === 1,
   }));
 }
 

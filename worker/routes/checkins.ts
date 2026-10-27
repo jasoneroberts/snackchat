@@ -1,7 +1,8 @@
 import { Hono } from "hono";
-import type { CheckinForEdit } from "../../shared/types";
+import type { CheckinForEdit, Liker } from "../../shared/types";
 import type { AppContext } from "../env";
 import { newId } from "../lib/crypto";
+import { blockedEitherWay } from "../lib/blocks";
 import { pointsFor, startOfUtcDay, validateCheckin } from "../lib/checkin";
 import { currentUser } from "../lib/currentUser";
 import { listCheckins, nextCursor, parseCursor } from "../lib/feed";
@@ -256,4 +257,61 @@ checkins.delete("/:id", async (c) => {
   await db.prepare("DELETE FROM checkins WHERE id = ?").bind(id).run();
   if (photos.length) await c.env.PHOTOS.delete(photos.map((p) => p.r2_key));
   return c.json({ ok: true });
+});
+
+// Hearts. You can heart any check-in you can see in the feed: not from a
+// private profile (unless it's yours) and not from someone blocked either way.
+async function canSee(db: D1Database, viewerId: string, checkinId: string): Promise<boolean> {
+  const row = await db
+    .prepare(
+      `SELECT 1 FROM checkins c JOIN users u ON u.id = c.user_id
+        WHERE c.id = ?2 AND (u.is_private = 0 OR u.id = ?1) AND NOT ${blockedEitherWay("?1", "c.user_id")}`,
+    )
+    .bind(viewerId, checkinId)
+    .first();
+  return row !== null;
+}
+
+/** The heart count after a change, counted the same way as the feed. */
+const likeCount = (db: D1Database, viewerId: string, checkinId: string) =>
+  db
+    .prepare(`SELECT COUNT(*) AS n FROM likes l WHERE l.checkin_id = ?2 AND NOT ${blockedEitherWay("?1", "l.user_id")}`)
+    .bind(viewerId, checkinId)
+    .first<number>("n");
+
+// Heart a check-in. Doing it twice is harmless (INSERT OR IGNORE).
+checkins.put("/:id/like", async (c) => {
+  const user = currentUser(c);
+  const id = c.req.param("id");
+  const db = c.env.DB;
+  if (!(await canSee(db, user.id, id))) return c.json({ error: "Check-in not found." }, 404);
+  await db.prepare("INSERT OR IGNORE INTO likes (checkin_id, user_id, created_at) VALUES (?, ?, ?)").bind(id, user.id, now()).run();
+  return c.json({ liked: true, likes: await likeCount(db, user.id, id) });
+});
+
+// Take your heart back.
+checkins.delete("/:id/like", async (c) => {
+  const user = currentUser(c);
+  const id = c.req.param("id");
+  const db = c.env.DB;
+  await db.prepare("DELETE FROM likes WHERE checkin_id = ? AND user_id = ?").bind(id, user.id).run();
+  return c.json({ liked: false, likes: await likeCount(db, user.id, id) });
+});
+
+// Who hearted a check-in, newest first. People you can't see are left out.
+checkins.get("/:id/likes", async (c) => {
+  const user = currentUser(c);
+  const id = c.req.param("id");
+  const db = c.env.DB;
+  if (!(await canSee(db, user.id, id))) return c.json({ error: "Check-in not found." }, 404);
+  const { results } = await db
+    .prepare(
+      `SELECT u.username, u.avatar_id, l.created_at FROM likes l JOIN users u ON u.id = l.user_id
+        WHERE l.checkin_id = ?2 AND NOT ${blockedEitherWay("?1", "l.user_id")}
+        ORDER BY l.created_at DESC LIMIT 200`,
+    )
+    .bind(user.id, id)
+    .all<{ username: string; avatar_id: string | null; created_at: number }>();
+  const people: Liker[] = results.map((r) => ({ username: r.username, avatarId: r.avatar_id, likedAt: r.created_at }));
+  return c.json({ people });
 });
