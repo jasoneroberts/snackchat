@@ -112,7 +112,10 @@ export async function sendPush(target: PushTarget, payload: string, keys: VapidK
       "Content-Encoding": "aes128gcm",
       "Content-Type": "application/octet-stream",
       TTL: String(24 * 3600),
-      Urgency: "normal",
+      // "high" wakes a sleeping phone. With "normal", Android (via Google's
+      // push service) holds the message until the phone or Chrome next wakes,
+      // so it only appeared when the app was opened.
+      Urgency: "high",
     },
     body,
   });
