@@ -1,4 +1,4 @@
-// Push notifications on this phone (admins only for now). The browser makes
+// Push notifications on this phone (check-in reminders, and admin alerts). The browser makes
 // a "subscription" (an address at Apple's, Google's or Mozilla's push
 // service plus keys) and the server keeps it to send messages to.
 import { api } from "../api";

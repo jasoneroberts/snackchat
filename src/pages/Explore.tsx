@@ -138,7 +138,7 @@ export function Explore() {
       {panel === "rejected" && (
         <SnackList
           snacks={data.discarded}
-          empty="Nothing rejected. Snacks you turn down land here, and you can take them back out."
+          empty={`Nothing here. Snacks you tap "${t("explore.discard")}" on land here, and you can take them back out.`}
           onRemove={forget}
           note="Take one off the list and it can be suggested again."
         />
@@ -290,11 +290,11 @@ function SuggestionCard({
       </Link>
       <CompareBars attributes={attributesFor(s.snack.category)} mine={prefs} theirs={s.averages} />
       <div className="suggestion-buttons">
-        <button type="button" className="button secondary small" onClick={() => onChoose("discarded")}>
-          {t("explore.discard")}
-        </button>
         <button type="button" className="button small" onClick={() => onChoose("saved")}>
           {t("explore.save")}
+        </button>
+        <button type="button" className="button secondary small" onClick={() => onChoose("discarded")}>
+          {t("explore.discard")}
         </button>
       </div>
     </article>

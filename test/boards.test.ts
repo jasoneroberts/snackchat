@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { boardStart, weightedRating } from "../worker/lib/boards";
+import { boardScore, boardStart, rankingAverage, weightedRating } from "../worker/lib/boards";
 
 it("boards start on Monday, the 1st, or the beginning of time", () => {
   const thursday = Date.parse("2026-10-22T19:00:00Z") / 1000;
@@ -17,4 +17,12 @@ it("a single 5-star rating doesn't beat a well-loved snack", () => {
 
 it("with many ratings the weighted score approaches the real average", () => {
   expect(weightedRating(4.2, 1000, 3)).toBeCloseTo(4.2, 2);
+});
+
+it("a lone rating gets a stand-in 2.5 until a second real rating arrives", () => {
+  expect(rankingAverage(5, 1)).toEqual({ avg: 3.75, count: 2 });
+  expect(rankingAverage(5, 2)).toEqual({ avg: 5, count: 2 });
+  const mean = 3.8;
+  // One 5-star rating now ranks below two solid 4s.
+  expect(boardScore(4, 2, mean)).toBeGreaterThan(boardScore(5, 1, mean));
 });

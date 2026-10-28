@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildDemoData, DEMO_GROUPS, DEMO_PREFIX, demoAvatarUrl, demoPhotoKey, offSearchUrl, pickImages, wantsAvatar, wantsPhoto } from "../worker/lib/demo";
+import { buildDemoData, DEMO_GROUPS, DEMO_PREFIX, demoAvatarId, demoPhotoKey, needsFace, offSearchUrl, pickImages, wantsPhoto } from "../worker/lib/demo";
 
 describe("buildDemoData", () => {
   const now = 1_800_000_000;
@@ -80,10 +80,9 @@ describe("demo photos and pictures", () => {
     expect(demoPhotoKey("seed-twix", 2)).toBe("demo/seed-twix-2");
   });
 
-  it("draws the same face for the same name, and leaves a couple without", () => {
-    expect(demoAvatarUrl("crisp_queen")).toBe(demoAvatarUrl("crisp_queen"));
-    expect(demoAvatarUrl("crisp_queen")).toContain("seed=crisp_queen");
-    expect(wantsAvatar("crisp_queen")).toBe(true);
-    expect(wantsAvatar("gym_snacker")).toBe(false);
+  it("gives everyone a face, swapping out the old drawn avatars", () => {
+    expect(needsFace("gym_snacker", null)).toBe(true);
+    expect(needsFace("crisp_queen", "demo-a-crisp_queen")).toBe(true);
+    expect(needsFace("crisp_queen", demoAvatarId("crisp_queen"))).toBe(false);
   });
 });

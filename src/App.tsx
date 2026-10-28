@@ -26,6 +26,7 @@ import { Profile } from "./pages/Profile";
 import { QuickSignIn } from "./pages/QuickSignIn";
 import { Settings } from "./pages/Settings";
 import { AllSnacks } from "./pages/AllSnacks";
+import { TriedSnacks } from "./pages/TriedSnacks";
 import { Review } from "./pages/Review";
 import { SignUp } from "./pages/SignUp";
 import { Welcome } from "./pages/Welcome";
@@ -191,6 +192,10 @@ export function App() {
   const groupId = path === "/groups/new" ? null : matchPath("/groups/", path);
   const inviteGroupId = path.match(/^\/groups\/([^/]+)\/invite$/)?.[1] ?? null;
   const editGroupId = path.match(/^\/groups\/([^/]+)\/edit$/)?.[1] ?? null;
+  const triedBy = path === "/me/snacks" ? me.username : (() => {
+    const m = path.match(/^\/u\/([^/]+)\/snacks$/)?.[1];
+    return m ? decodeURIComponent(m) : null;
+  })();
   const joinCode = matchPath("/join/", path);
   const profileName = path === "/me" ? me.username : matchPath("/u/", path);
 
@@ -248,6 +253,11 @@ export function App() {
   } else if (joinCode) {
     title = "Join a group";
     page = <Join code={joinCode} />;
+  } else if (triedBy) {
+    const mine = triedBy.toLowerCase() === me.username.toLowerCase();
+    tab = mine ? "/me" : "";
+    title = mine ? "Your snacks" : `${triedBy}'s snacks`;
+    page = <TriedSnacks username={triedBy} isMe={mine} />;
   } else if (path === "/snacks") {
     title = "All snacks";
     page = <AllSnacks />;

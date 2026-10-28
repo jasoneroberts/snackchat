@@ -81,9 +81,9 @@ export const LINES = {
     lad: "You've cleared the lot. Check back when there's more {snack} about.",
   },
   "explore.save": { grownup: "Save to try", lad: "Bag it" },
-  "explore.discard": { grownup: "Not for me", lad: "Bin it" },
+  "explore.discard": { grownup: "Ignore", lad: "Ignore" },
   "explore.saved": { grownup: "Saved to try", lad: "Bagged for later" },
-  "explore.rejected": { grownup: "Rejected", lad: "Rejected" },
+  "explore.rejected": { grownup: "Ignored", lad: "Ignored" },
   "explore.tried": { grownup: "Check in", lad: "Log it" },
 
   // Boards

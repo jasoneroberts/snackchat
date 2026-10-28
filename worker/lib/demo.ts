@@ -204,20 +204,17 @@ export function pickImages(products: { image_front_url?: string }[] | undefined,
   return [...new Set(urls)].slice(0, max);
 }
 
-// Demo people with a profile picture. Two keep their initials, as real people do.
-const NO_AVATAR = new Set(["vinegar_vic", "gym_snacker"]);
-export const wantsAvatar = (username: string) => !NO_AVATAR.has(username);
-
 /**
- * A drawn face for a demo person, the same every time for the same name.
- * DiceBear's "Lorelei" style is CC0 (free to use, no credit needed), and
- * being a drawing it doesn't pretend to be a real person's photo.
+ * A face for a demo person. thispersondoesnotexist.com makes a new
+ * AI-generated face on every request: nobody real, so no one's photo is used
+ * without their say-so. Each person's face is fetched once and kept in R2.
  */
-export function demoAvatarUrl(username: string): string {
-  const params = new URLSearchParams({ seed: username, size: "256", backgroundColor: "fbd7a8,f7c9dd,d9e6b8,cfe4f7,e9cfa3" });
-  return `https://api.dicebear.com/9.x/lorelei/png?${params}`;
-}
-export const demoAvatarId = (username: string) => `${DEMO_PREFIX}a-${username}`;
+export const DEMO_FACE_URL = "https://thispersondoesnotexist.com/";
+// "f" for a face. Older demo data used drawn avatars ("a"), which the
+// "Add photos and profile pictures" button swaps for faces.
+export const demoAvatarId = (username: string) => `${DEMO_PREFIX}f-${username}`;
+/** Whether a demo person still needs their face (none yet, or an old drawing). */
+export const needsFace = (username: string, avatarId: string | null) => avatarId !== demoAvatarId(username);
 
 /**
  * The Open Food Facts search for a snack's pack photo. Their pictures are

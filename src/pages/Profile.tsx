@@ -100,10 +100,10 @@ export function Profile({
             <b>{data.stats.checkins}</b>
             <span>Check-ins</span>
           </div>
-          <div className="tile">
+          <Link href={isMe ? "/me/snacks" : `/u/${encodeURIComponent(data.profile.username)}/snacks`} className="tile plain tile-link">
             <b>{data.stats.snacks}</b>
-            <span>Snacks</span>
-          </div>
+            <span>Snacks ›</span>
+          </Link>
           <div className="tile">
             <b>{data.stats.points}</b>
             <span>Points</span>
@@ -113,6 +113,12 @@ export function Profile({
             <span>Avg given</span>
           </div>
         </div>
+      )}
+
+      {data.stats && data.stats.snacks > 0 && (
+        <Link href={isMe ? "/me/snacks" : `/u/${encodeURIComponent(data.profile.username)}/snacks`} className="button secondary">
+          {isMe ? "Your snacks" : `${data.profile.username}'s snacks`} ({data.stats.snacks})
+        </Link>
       )}
 
       {data.checkins && (

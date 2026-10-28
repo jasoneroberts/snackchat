@@ -3,7 +3,7 @@ import { dietSql, readDiets } from "../../shared/diet";
 import { filterTypes } from "../../shared/typeFilters";
 import type { BoardPeriod, PeopleMetric, PeopleRow, SnackRow } from "../../shared/types";
 import type { AppContext } from "../env";
-import { BOARD_PERIODS, boardStart, minRatingsFor, weightedRating } from "../lib/boards";
+import { BOARD_PERIODS, boardScore, boardStart } from "../lib/boards";
 import { currentUser } from "../lib/currentUser";
 import { rank } from "../lib/groups";
 import { LATEST_PHOTO } from "../lib/photoSql";
@@ -74,7 +74,8 @@ boards.get("/people", async (c) => {
 });
 
 // Snacks ranked by rating, optionally for one snack type (or lad mode's "rest"). Only approved
-// snacks appear, and the ranking uses a weighted average (lib/boards.ts).
+// snacks appear. Every snack rated in the period counts; the order uses a weighted
+// average, with a stand-in 2.5 for snacks rated only once (lib/boards.ts).
 boards.get("/snacks", async (c) => {
   const user = currentUser(c);
   const scope = await resolveScope(c, c.req.query("scope") ?? "global", user.id);
@@ -91,16 +92,15 @@ boards.get("/snacks", async (c) => {
        JOIN users u ON u.id = c.user_id
       WHERE c.created_at >= ?2 AND s.status = 'approved' AND ${WHO} AND ${TYPES}
         AND (?5 IS NULL OR s.category_id IN (SELECT value FROM json_each(?5)))${dietSql(diets)}
-      GROUP BY s.id
-     HAVING COUNT(*) >= ?6`,
+      GROUP BY s.id`,
   )
-    .bind(user.id, boardStart(period, now()), scope.groupId, scope.categories, types && JSON.stringify(types), minRatingsFor(period))
+    .bind(user.id, boardStart(period, now()), scope.groupId, scope.categories, types && JSON.stringify(types))
     .all<{ id: string; name: string; brand: string | null; category: string; status: string; avg: number; count: number; photoId: string | null }>();
 
   const total = results.reduce((n, r) => n + r.count, 0);
   const mean = total ? results.reduce((sum, r) => sum + r.avg * r.count, 0) / total : 0;
   const scored = results
-    .map((r) => ({ r, score: weightedRating(r.avg, r.count, mean) }))
+    .map((r) => ({ r, score: boardScore(r.avg, r.count, mean) }))
     .sort((a, b) => b.score - a.score || b.r.count - a.r.count || a.r.name.localeCompare(b.r.name))
     .slice(0, TOP);
 

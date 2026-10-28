@@ -15,6 +15,8 @@ export interface Me {
   pendingSnacks: number;
   openReports: number;
   newUsers: number;
+  /** Check-in reminders on (they're on unless turned off). */
+  reminders: boolean;
   /** null until they've picked lad mode or grown-up mode. */
   voice: Voice | null;
 }

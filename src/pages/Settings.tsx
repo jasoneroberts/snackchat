@@ -8,6 +8,7 @@ import { YourData } from "../components/YourData";
 import { Cropper } from "../components/Cropper";
 import { AVATAR_SIDE } from "../lib/image";
 import { pushState, turnOffPush, turnOnPush, type PushState } from "../lib/push";
+import { REMIND_AFTER_DAYS } from "../../shared/reminders";
 
 export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<void> }) {
   const [busy, setBusy] = useState(false);
@@ -109,6 +110,8 @@ export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<v
         <VoiceChoice current={me.voice} onSaved={onChanged} />
       </section>
 
+      <Notifications me={me} onChanged={onChanged} />
+
       <Link href="/welcome" className="card-plain row settings-link">
         <b className="grow">Add to home screen</b>
         <span className="muted small">And how Crunchd works</span>
@@ -124,7 +127,6 @@ export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<v
       {me.isAdmin && (
         <>
           <h2 className="section-title admin-heading">Admin</h2>
-          <AdminAlerts />
           <Link href="/review" className="card-plain row settings-link">
             <b className="grow">Photo approvals</b>
             {me.reviewCount > 0 ? <span className="count-badge">{me.reviewCount}</span> : <span className="muted small">All clear</span>}
@@ -169,10 +171,12 @@ export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<v
 }
 
 /**
- * Push notifications for admins on this phone: new people, photos to
- * approve, reports and new snacks. Each phone is turned on separately.
+ * Push notifications on this phone. Everyone can have check-in reminders;
+ * admins also hear about new people, photos to approve, reports and new
+ * snacks. Each phone is turned on separately; reminders are one switch for
+ * the account.
  */
-function AdminAlerts() {
+function Notifications({ me, onChanged }: { me: Me; onChanged: () => Promise<void> }) {
   const [state, setState] = useState<PushState | null>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
@@ -206,7 +210,10 @@ function AdminAlerts() {
         <b>Notifications on this phone</b>
         {state === "on" && <span className="small accent">On</span>}
       </div>
-      <p className="small muted no-margin">New people, photos to approve, reports and new snacks, as they happen.</p>
+      <p className="small muted no-margin">
+        A nudge if you go {REMIND_AFTER_DAYS} days without a check-in
+        {me.isAdmin ? ", plus new people, photos to approve, reports and new snacks as they happen." : "."}
+      </p>
       {state === "needs-install" && (
         <p className="small no-margin">
           On iPhone, add Crunchd to your home screen first (<Link href="/welcome">how</Link>), open it from there, then turn this on.
@@ -217,7 +224,7 @@ function AdminAlerts() {
         <p className="small no-margin">Notifications are blocked for Crunchd. Allow them in your phone's settings, then come back here.</p>
       )}
       {state === "off" && (
-        <button type="button" className="button" disabled={busy} onClick={() => run(turnOnPush, "Done. You'll get a notification when something needs you.")}>
+        <button type="button" className="button" disabled={busy} onClick={() => run(turnOnPush, "Done. Notifications are on for this phone.")}>
           {busy ? "Turning on…" : "Turn on notifications"}
         </button>
       )}
@@ -230,6 +237,23 @@ function AdminAlerts() {
             Turn off
           </button>
         </div>
+      )}
+      {state === "on" && (
+        <label className="radio-row">
+          <input
+            type="checkbox"
+            checked={me.reminders}
+            disabled={busy}
+            onChange={(e) => {
+              const on = e.target.checked;
+              void run(async () => {
+                await api("/push/reminders", { method: "PUT", body: { on } });
+                await onChanged();
+              }, on ? "Reminders on." : "Reminders off.");
+            }}
+          />
+          Remind me to check in
+        </label>
       )}
       {note && <p className="small muted no-margin">{note}</p>}
     </section>

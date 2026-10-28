@@ -10,13 +10,13 @@ import {
   DEMO_GROUPS,
   DEMO_PHOTO_PREFIX,
   DEMO_PREFIX,
+  DEMO_FACE_URL,
   demoAvatarId,
-  demoAvatarUrl,
   demoPhotoKey,
   demoUserId,
   offSearchUrl,
   pickImages,
-  wantsAvatar,
+  needsFace,
   wantsPhoto,
 } from "../lib/demo";
 import { type DietSuggestion, offDietSearchUrl, type OffProduct, pickProduct, suggestDiet } from "../lib/diet";
@@ -207,28 +207,32 @@ admin.get("/demo", async (c) => {
     checkins: counts?.checkins ?? 0,
     photos: counts?.photos ?? 0,
     missingPhotos: [...missing].sort(),
-    missingAvatars: people.results.filter((p) => !p.avatarId && wantsAvatar(p.username)).length,
+    missingAvatars: people.results.filter((p) => needsFace(p.username, p.avatarId)).length,
   } satisfies DemoStatus);
 });
 
-// Give the demo people drawn profile pictures (lib/demo.ts says where from).
+// Give the demo people faces (lib/demo.ts says where from), replacing the old
+// drawn avatars. One call does them all; anyone that fails keeps what they had.
 admin.post("/demo/avatars", async (c) => {
   const db = c.env.DB;
   const { results } = await db
-    .prepare("SELECT id, username FROM users WHERE id LIKE 'demo-%' AND avatar_id IS NULL")
-    .all<{ id: string; username: string }>();
+    .prepare("SELECT id, username, avatar_id FROM users WHERE id LIKE 'demo-%'")
+    .all<{ id: string; username: string; avatar_id: string | null }>();
   let added = 0;
-  for (const person of results.filter((p) => wantsAvatar(p.username))) {
+  for (const person of results.filter((p) => needsFace(p.username, p.avatar_id))) {
     try {
-      const res = await fetch(demoAvatarUrl(person.username));
+      // The site turns away requests that don't look like a browser.
+      const res = await fetch(DEMO_FACE_URL, { headers: { "User-Agent": "Mozilla/5.0 (compatible; Crunchd demo data)", Accept: "image/*" } });
       const type = res.headers.get("content-type") ?? "";
-      if (!res.ok || !type.startsWith("image/")) continue;
+      const image = await res.arrayBuffer();
+      if (!res.ok || !type.startsWith("image/") || image.byteLength > 2 * 1024 * 1024) continue;
       const avatarId = demoAvatarId(person.username);
-      await c.env.PHOTOS.put(avatarKey(person.id, avatarId), await res.arrayBuffer(), { httpMetadata: { contentType: type } });
+      await c.env.PHOTOS.put(avatarKey(person.id, avatarId), image, { httpMetadata: { contentType: type } });
       await db.prepare("UPDATE users SET avatar_id = ? WHERE id = ?").bind(avatarId, person.id).run();
+      if (person.avatar_id) await c.env.PHOTOS.delete(avatarKey(person.id, person.avatar_id));
       added++;
     } catch (err) {
-      console.error("demo avatar fetch failed", err);
+      console.error("demo face fetch failed", err);
     }
   }
   return c.json({ added });
