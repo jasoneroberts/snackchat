@@ -7,12 +7,30 @@
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat"],
 
-  // The React app is built into static files. Requests under /api go to the
-  // Worker first; everything else is served from the build, falling back to
-  // index.html so the app's own routes (/login, /signup) work on refresh.
+  // The app's real address. Cloudflare creates the DNS record and the https
+  // certificate for each custom domain on deploy, so the domain must already
+  // be in this Cloudflare account. www.getcrunchd.com is caught too, and the
+  // Worker redirects it (and the old workers.dev link) to getcrunchd.com.
+  "routes": [
+    { "pattern": "getcrunchd.com", "custom_domain": true },
+    { "pattern": "www.getcrunchd.com", "custom_domain": true }
+  ],
+  // Keep the old snackchat.jasoneroberts.workers.dev link answering (adding
+  // routes would otherwise switch it off) so it can redirect people, and keep
+  // preview links for pull requests.
+  "workers_dev": true,
+  "preview_urls": true,
+
+  // The React app is built into static files. Page requests go to the Worker
+  // first so it can redirect the old address (worker/lib/canonicalHost.ts);
+  // the Worker then hands them back to the build via env.ASSETS, falling back
+  // to index.html so the app's own routes (/login, /signup) work on refresh.
+  // Vite's hashed files in /assets/ skip the Worker, since they never need
+  // a redirect and this keeps the Worker request count down.
   "assets": {
+    "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": ["/*", "!/assets/*"]
   },
 
   "d1_databases": [
@@ -38,6 +56,8 @@
 
   "vars": {
     "APP_NAME": "Crunchd",
+    // The one address people should use; others redirect here.
+    "CANONICAL_HOST": "getcrunchd.com",
     // "log" prints verification links to the Worker logs (wrangler tail);
     // "resend" sends real email and needs RESEND_API_KEY and EMAIL_FROM.
     "EMAIL_MODE": "log",
