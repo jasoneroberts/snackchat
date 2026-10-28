@@ -1,6 +1,6 @@
-// Telling admins when something needs them: a new person, a photo or
-// profile picture to approve, a report, or a new snack. Each admin phone that
-// turned notifications on (Settings > Admin) gets a push message.
+// Push messages. Admins hear when something needs them: a new person, a
+// photo or profile picture to approve, a report, or a new snack. Everyone
+// with notifications on can get check-in reminders (lib/reminders.ts).
 
 import type { Context } from "hono";
 import type { AppContext, Env } from "../env";
@@ -8,7 +8,14 @@ import { makeVapidKeys, sendPush, type VapidKeys } from "./webpush";
 
 export type AdminEventKind = "user" | "photo" | "report" | "snack";
 
-export interface AdminEvent {
+export interface PushEvent {
+  kind: AdminEventKind | "reminder" | "test";
+  title: string;
+  body: string;
+  url: string; // the page in the app to open when the notification is tapped
+}
+
+export interface AdminEvent extends PushEvent {
   kind: AdminEventKind;
   title: string;
   body: string;
@@ -30,11 +37,40 @@ export async function vapidKeys(db: D1Database): Promise<VapidKeys> {
   return JSON.parse(row!.value) as VapidKeys;
 }
 
+interface PushTarget {
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+}
+
+/**
+ * Send one message to each phone. Phones that have unsubscribed are tidied
+ * away. Returns how many took it.
+ */
+async function pushToTargets(env: Env, origin: string, targets: PushTarget[], event: PushEvent): Promise<number> {
+  if (!targets.length) return 0;
+  const keys = await vapidKeys(env.DB);
+  const payload = JSON.stringify({ ...event, tag: event.kind });
+  let sent = 0;
+  for (const target of targets) {
+    try {
+      const status = await sendPush(target, payload, keys, origin);
+      if (status === 404 || status === 410) {
+        await env.DB.prepare("DELETE FROM push_subscriptions WHERE endpoint = ?").bind(target.endpoint).run();
+      } else if (status >= 400) {
+        console.warn(`[push] ${status} from ${new URL(target.endpoint).host}`);
+      } else sent++;
+    } catch (err) {
+      console.warn("[push] send failed", err);
+    }
+  }
+  return sent;
+}
+
 /**
  * Push one event to every admin's phones, except the person who caused it
- * (an admin doesn't need telling about their own new snack). Phones that
- * have unsubscribed are tidied away. Never throws: a failed notification
- * mustn't break the thing that triggered it.
+ * (an admin doesn't need telling about their own new snack). Never throws:
+ * a failed notification mustn't break the thing that triggered it.
  */
 export async function notifyAdmins(
   env: Env,
@@ -48,27 +84,23 @@ export async function notifyAdmins(
         WHERE u.is_admin = 1 AND u.id != ?1 AND (?2 IS NULL OR u.id = ?2)`,
     )
       .bind(who.except ?? "", who.only ?? null)
-      .all<{ endpoint: string; p256dh: string; auth: string }>();
-    if (!results.length) return 0;
-
-    const keys = await vapidKeys(env.DB);
-    const payload = JSON.stringify({ ...event, tag: event.kind });
-    let sent = 0;
-    for (const target of results) {
-      try {
-        const status = await sendPush(target, payload, keys, origin);
-        if (status === 404 || status === 410) {
-          await env.DB.prepare("DELETE FROM push_subscriptions WHERE endpoint = ?").bind(target.endpoint).run();
-        } else if (status >= 400) {
-          console.warn(`[push] ${status} from ${new URL(target.endpoint).host}`);
-        } else sent++;
-      } catch (err) {
-        console.warn("[push] send failed", err);
-      }
-    }
-    return sent;
+      .all<PushTarget>();
+    return await pushToTargets(env, origin, results, event);
   } catch (err) {
     console.error("[push] notifyAdmins failed", err);
+    return 0;
+  }
+}
+
+/** Push to all of one person's phones (reminders, tests). Never throws. */
+export async function pushToUser(env: Env, origin: string, userId: string, event: PushEvent): Promise<number> {
+  try {
+    const { results } = await env.DB.prepare("SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = ?")
+      .bind(userId)
+      .all<PushTarget>();
+    return await pushToTargets(env, origin, results, event);
+  } catch (err) {
+    console.error("[push] pushToUser failed", err);
     return 0;
   }
 }

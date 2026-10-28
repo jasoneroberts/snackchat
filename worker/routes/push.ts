@@ -1,16 +1,11 @@
 import { Hono } from "hono";
 import type { AppContext } from "../env";
 import { currentUser } from "../lib/currentUser";
-import { notifyAdmins, vapidKeys } from "../lib/notify";
+import { pushToUser, vapidKeys } from "../lib/notify";
 
-// Push notifications on this phone. Only admins can turn them on for now:
-// they're how admins hear about new people, photos, reports and snacks.
+// Push notifications on this phone. Anyone can turn them on for check-in
+// reminders; admins also hear about new people, photos, reports and snacks.
 export const push = new Hono<AppContext>();
-
-push.use("*", async (c, next) => {
-  if (currentUser(c).is_admin !== 1) return c.json({ error: "Admins only." }, 403);
-  await next();
-});
 
 // The public key the browser needs to subscribe.
 push.get("/key", async (c) => c.json({ publicKey: (await vapidKeys(c.env.DB)).publicKey }));
@@ -47,11 +42,19 @@ push.post("/test", async (c) => {
   const user = currentUser(c);
   const { results } = await c.env.DB.prepare("SELECT endpoint FROM push_subscriptions WHERE user_id = ?").bind(user.id).all();
   if (!results.length) return c.json({ error: "Notifications aren't on for any of your phones yet." }, 400);
-  const sent = await notifyAdmins(c.env, new URL(c.req.url).origin, {
-    kind: "user",
+  const sent = await pushToUser(c.env, new URL(c.req.url).origin, user.id, {
+    kind: "test",
     title: "Crunchd notifications are on",
-    body: "You'll hear about new people, photos, reports and snacks here.",
+    body: user.is_admin === 1 ? "You'll hear about new people, photos, reports and snacks here." : "We'll give you a nudge if you go a few days without a check-in.",
     url: "/settings",
-  }, { only: user.id });
+  });
   return c.json({ sent });
+});
+
+// Check-in reminders on or off: { on: boolean }. They're on unless turned off.
+push.put("/reminders", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as { on?: unknown } | null;
+  if (typeof body?.on !== "boolean") return c.json({ error: "Say on or off." }, 400);
+  await c.env.DB.prepare("UPDATE users SET reminders = ? WHERE id = ?").bind(body.on ? 1 : 0, currentUser(c).id).run();
+  return c.json({ ok: true, reminders: body.on });
 });

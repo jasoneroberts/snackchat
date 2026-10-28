@@ -60,6 +60,15 @@ export interface ProfilePage {
   checkins?: FeedItem[];
 }
 
+/** One snack someone has checked in, with their own ratings of it. */
+export interface TriedSnack {
+  snack: SnackSummary;
+  times: number; // how many times they've checked it in
+  latest: number; // their most recent overall rating
+  best: number; // their highest overall rating
+  lastAt: number; // Unix seconds of their latest check-in
+}
+
 export type ScoringMode = "points" | "unique" | "checkins";
 export type ResetPeriod = "weekly" | "monthly" | "never";
 
@@ -155,7 +164,7 @@ export interface ExplorePage {
   tastes: Record<string, Preferences>; // by snack type id; types you haven't set are missing
   suggestions: Suggestion[];
   saved: SnackSummary[];
-  discarded: SnackSummary[]; // "Not for me" / rejected, newest first
+  discarded: SnackSummary[]; // "Ignore"d suggestions, newest first
 }
 
 export interface BrandRow {

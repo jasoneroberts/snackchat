@@ -26,6 +26,10 @@ import { push } from "./routes/push";
 import { blocks, reports } from "./routes/safety";
 import { snacks } from "./routes/snacks";
 import { users } from "./routes/users";
+import { REMINDER_HOUR_UTC, sendReminders } from "./lib/reminders";
+
+// Where the app lives, for push messages sent from the cron (no request to read it from).
+const appOrigin = (env: Env) => (env.CANONICAL_HOST ? `https://${env.CANONICAL_HOST}` : "https://snackchat.jasoneroberts.workers.dev");
 
 const app = new Hono<AppContext>().basePath("/api");
 
@@ -83,6 +87,8 @@ app.get("/me", async (c) => {
       openReports: user.is_admin === 1 ? await openReportCount(c.env.DB) : 0,
       // ...and how many people have joined since they last looked at Users.
       newUsers: user.is_admin === 1 ? await newUserCount(c.env.DB, user.id) : 0,
+      // Check-in reminders on or off (Settings > Notifications).
+      reminders: (await c.env.DB.prepare("SELECT reminders FROM users WHERE id = ?").bind(user.id).first<number>("reminders")) !== 0,
     },
     devLogin: devLoginUsername(c.env) !== null,
     quickSignIn: quickSignInOn(c.env),
@@ -149,6 +155,10 @@ async function scheduled(controller: ScheduledController, env: Env, ctx: Executi
   } else {
     const result = await checkErrorSpike(env);
     if (result.alerted) console.log(`[alert] sent for ${result.errors} errors`);
+    if (new Date(controller.scheduledTime).getUTCHours() === REMINDER_HOUR_UTC) {
+      const reminded = await sendReminders(env, appOrigin(env));
+      console.log(`[reminders] sent to ${reminded}`);
+    }
   }
 }
 

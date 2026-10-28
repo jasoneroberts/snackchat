@@ -1,5 +1,7 @@
 import { Hono } from "hono";
+import type { TriedSnack } from "../../shared/types";
 import type { AppContext } from "../env";
+import { LATEST_PHOTO } from "../lib/photoSql";
 import { currentUser } from "../lib/currentUser";
 import { listCheckins } from "../lib/feed";
 import { blockedEitherWay } from "../lib/blocks";
@@ -56,4 +58,42 @@ users.get("/:username", async (c) => {
     },
     checkins,
   });
+});
+
+// Every snack someone has checked in, once each, with how they rated it.
+// Same rules as the profile: nothing for private profiles (unless it's you) or blocks.
+users.get("/:username/snacks", async (c) => {
+  const viewer = currentUser(c);
+  const db = c.env.DB;
+  const user = await db
+    .prepare(
+      `SELECT u.id FROM users u WHERE u.username = ?2 AND (u.is_private = 0 OR u.id = ?1)
+          AND NOT ${blockedEitherWay("?1", "u.id")}`,
+    )
+    .bind(viewer.id, c.req.param("username"))
+    .first<{ id: string }>();
+  if (!user) return c.json({ error: "No snacks to show." }, 404);
+
+  const { results } = await db
+    .prepare(
+      `SELECT s.id, s.name, s.brand, s.category_id AS category, s.status, (${LATEST_PHOTO}) AS photoId,
+              COUNT(*) AS times, MAX(c.overall) AS best, MAX(c.created_at) AS lastAt,
+              (SELECT c2.overall FROM checkins c2 WHERE c2.user_id = ?1 AND c2.snack_id = s.id
+                ORDER BY c2.created_at DESC LIMIT 1) AS latest
+         FROM checkins c JOIN snacks s ON s.id = c.snack_id
+        WHERE c.user_id = ?1
+        GROUP BY s.id
+        ORDER BY lastAt DESC`,
+    )
+    .bind(user.id)
+    .all<{ id: string; name: string; brand: string | null; category: string; status: string; photoId: string | null; times: number; best: number; lastAt: number; latest: number }>();
+
+  const snacks: TriedSnack[] = results.map((r) => ({
+    snack: { id: r.id, name: r.name, brand: r.brand, category: r.category, status: r.status, photoId: r.photoId },
+    times: r.times,
+    latest: r.latest,
+    best: r.best,
+    lastAt: r.lastAt,
+  }));
+  return c.json({ snacks });
 });

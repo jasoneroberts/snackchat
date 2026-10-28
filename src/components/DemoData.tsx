@@ -34,7 +34,7 @@ export function DemoData({ onChanged }: { onChanged: () => void }) {
   // Profile pictures first (one quick call), then pack photos snack by snack.
   const fillIn = async (s: DemoStatus) => {
     if (s.missingAvatars > 0) {
-      setProgress("Adding profile pictures…");
+      setProgress("Adding faces…");
       await api("/admin/demo/avatars", { method: "POST" });
     }
     await fetchPhotos(s.missingPhotos);
@@ -75,7 +75,7 @@ export function DemoData({ onChanged }: { onChanged: () => void }) {
       <p className="small muted">
         {loaded
           ? `${status.users} demo people, ${status.checkins} check-ins and ${status.photos} photos are loaded. You're in their two groups.`
-          : "Adds 8 made-up people with profile pictures, three weeks of check-ins, pack photos from Open Food Facts, and two groups you're in. Remove it all in one tap later."}
+          : "Adds 8 made-up people with AI-generated faces, three weeks of check-ins, pack photos from Open Food Facts, and two groups you're in. Remove it all in one tap later."}
       </p>
       {progress && <p className="small notice">{progress}</p>}
       {error && <p className="error">{error}</p>}
@@ -86,7 +86,7 @@ export function DemoData({ onChanged }: { onChanged: () => void }) {
       )}
       {loaded && (status.missingPhotos.length > 0 || status.missingAvatars > 0) && (
         <button type="button" className="button secondary" disabled={busy} onClick={() => void run(() => fillIn(status))}>
-          Add photos and profile pictures
+          Add photos and faces
         </button>
       )}
       {loaded && (

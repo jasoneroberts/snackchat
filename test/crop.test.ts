@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { centredView, clampView, cropRect, MAX_ZOOM, zoomAt } from "../src/lib/crop";
-import { minRatingsFor } from "../worker/lib/boards";
 
 const img = { w: 4000, h: 3000 }; // a landscape phone photo
 const square = { w: 300, h: 300 };
@@ -30,13 +29,5 @@ describe("photo cropper maths", () => {
   it("keeps the whole photo when the frame is its own shape and nothing is moved", () => {
     const original = { w: 320, h: 240 };
     expect(cropRect(centredView(img, original), img, original)).toEqual({ x: 0, y: 0, width: 4000, height: 3000 });
-  });
-});
-
-describe("snack board minimum ratings", () => {
-  it("is 3 for this month and all time, none for this week", () => {
-    expect(minRatingsFor("week")).toBe(1);
-    expect(minRatingsFor("month")).toBe(3);
-    expect(minRatingsFor("all")).toBe(3);
   });
 });

@@ -48,9 +48,6 @@ const DEFAULT_VIEW: View = {
   fellBack: false,
 };
 
-// This month and All time only rank snacks with this many ratings (worker/lib/boards.ts).
-const MIN_RATINGS = 3;
-
 export function Boards({ me }: { me: Me }) {
   const [view, setView] = useViewState<View>("boards", DEFAULT_VIEW);
   const [groups, setGroups] = useState<GroupCard[]>([]);
@@ -160,7 +157,7 @@ export function Boards({ me }: { me: Me }) {
       <p className="small muted no-margin">
         {view.kind === "people"
           ? `${scopeName}, ${periodName}, ranked by ${metric.label.toLowerCase()}.`
-          : `Top-rated ${filterShort(category) ?? "snacks"}, ${scopeName.toLowerCase() === "everyone" ? "everyone's" : `${scopeName}'s`} ratings ${periodName}.${view.period === "week" ? "" : ` Only snacks with ${MIN_RATINGS} or more ratings.`} Snacks with more ratings rank higher on a tie.`}
+          : `Top-rated ${filterShort(category) ?? "snacks"}, ${scopeName.toLowerCase() === "everyone" ? "everyone's" : `${scopeName}'s`} ratings ${periodName}. A snack with one rating is ranked as if someone also gave it 2.5, until a second person rates it.`}
       </p>
 
       {error && <p className="error">{error}</p>}
