@@ -29,7 +29,7 @@ import { users } from "./routes/users";
 import { REMINDER_HOUR_UTC, sendReminders } from "./lib/reminders";
 
 // Where the app lives, for push messages sent from the cron (no request to read it from).
-const APP_ORIGIN = "https://snackchat.jasoneroberts.workers.dev";
+const appOrigin = (env: Env) => (env.CANONICAL_HOST ? `https://${env.CANONICAL_HOST}` : "https://snackchat.jasoneroberts.workers.dev");
 
 const app = new Hono<AppContext>().basePath("/api");
 
@@ -156,7 +156,7 @@ async function scheduled(controller: ScheduledController, env: Env, ctx: Executi
     const result = await checkErrorSpike(env);
     if (result.alerted) console.log(`[alert] sent for ${result.errors} errors`);
     if (new Date(controller.scheduledTime).getUTCHours() === REMINDER_HOUR_UTC) {
-      const reminded = await sendReminders(env, APP_ORIGIN);
+      const reminded = await sendReminders(env, appOrigin(env));
       console.log(`[reminders] sent to ${reminded}`);
     }
   }
