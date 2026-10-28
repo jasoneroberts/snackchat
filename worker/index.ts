@@ -4,6 +4,7 @@ import { csrf } from "hono/csrf";
 import { isVoice } from "../shared/voice";
 import type { AppContext, Env } from "./env";
 import { runBackup } from "./lib/backup";
+import { canonicalRedirect } from "./lib/canonicalHost";
 import { currentUser } from "./lib/currentUser";
 import { devLoginUsername, getDevUser } from "./lib/devLogin";
 import { quickSignInOn } from "./lib/quickSignIn";
@@ -151,4 +152,15 @@ async function scheduled(controller: ScheduledController, env: Env, ctx: Executi
   }
 }
 
-export default { fetch: app.fetch, scheduled } satisfies ExportedHandler<Env>;
+// Every page request comes here first (wrangler.jsonc "run_worker_first").
+// Old and www addresses are redirected to the real one; /api goes to the Hono
+// app above; anything else is a file from the React build.
+async function fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  const url = new URL(request.url);
+  const target = canonicalRedirect(url, request.method, env.CANONICAL_HOST);
+  if (target) return Response.redirect(target, 301);
+  if (url.pathname === "/api" || url.pathname.startsWith("/api/")) return app.fetch(request, env, ctx);
+  return env.ASSETS.fetch(request);
+}
+
+export default { fetch, scheduled } satisfies ExportedHandler<Env>;
