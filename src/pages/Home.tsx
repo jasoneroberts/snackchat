@@ -14,7 +14,7 @@ export function Home({ quick = false }: { quick?: boolean }) {
       {!quick && (
         <div className="actions">
           <Link href="/signup" className="button">
-            Join with an invite code
+            Join
           </Link>
           <Link href="/login">I already have an account</Link>
         </div>

@@ -4,6 +4,7 @@ import type { SnackSummary } from "../../shared/types";
 import type { AppContext } from "../env";
 import { newId } from "../lib/crypto";
 import { currentUser } from "../lib/currentUser";
+import { overDailyLimit } from "../lib/limits";
 import { pingAdmins } from "../lib/notify";
 import { listCheckins } from "../lib/feed";
 import { LATEST_PHOTO } from "../lib/photoSql";
@@ -57,6 +58,8 @@ snacks.get("/", async (c) => {
 // admin approves it (or, later, three people confirm it).
 snacks.post("/", async (c) => {
   const user = currentUser(c);
+  const tooMany = await overDailyLimit(c, "snacks");
+  if (tooMany) return c.json({ error: tooMany }, 429);
   const parsed = validateSnackFields(await c.req.json().catch(() => null), (id) => !!getCategory(id));
   if (!parsed.ok) return c.json({ error: parsed.error }, 400);
   const { name, category } = parsed.value;

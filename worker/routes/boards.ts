@@ -3,7 +3,7 @@ import { dietSql, readDiets } from "../../shared/diet";
 import { filterTypes } from "../../shared/typeFilters";
 import type { BoardPeriod, PeopleMetric, PeopleRow, SnackRow } from "../../shared/types";
 import type { AppContext } from "../env";
-import { BOARD_PERIODS, boardScore, boardStart } from "../lib/boards";
+import { BOARD_PERIODS, boardStart, rankingAverage } from "../lib/boards";
 import { currentUser } from "../lib/currentUser";
 import { rank } from "../lib/groups";
 import { LATEST_PHOTO } from "../lib/photoSql";
@@ -74,8 +74,8 @@ boards.get("/people", async (c) => {
 });
 
 // Snacks ranked by rating, optionally for one snack type (or lad mode's "rest"). Only approved
-// snacks appear. Every snack rated in the period counts; the order uses a weighted
-// average, with a stand-in 2.5 for snacks rated only once (lib/boards.ts).
+// snacks appear. Every snack rated in the period counts, ranked by average, with
+// a stand-in 2.5 for snacks rated only once (lib/boards.ts).
 boards.get("/snacks", async (c) => {
   const user = currentUser(c);
   const scope = await resolveScope(c, c.req.query("scope") ?? "global", user.id);
@@ -97,16 +97,15 @@ boards.get("/snacks", async (c) => {
     .bind(user.id, boardStart(period, now()), scope.groupId, scope.categories, types && JSON.stringify(types))
     .all<{ id: string; name: string; brand: string | null; category: string; status: string; avg: number; count: number; photoId: string | null }>();
 
-  const total = results.reduce((n, r) => n + r.count, 0);
-  const mean = total ? results.reduce((sum, r) => sum + r.avg * r.count, 0) / total : 0;
+  // Highest board average first; on a tie, the snack more people rated.
   const scored = results
-    .map((r) => ({ r, score: boardScore(r.avg, r.count, mean) }))
+    .map((r) => ({ r, score: rankingAverage(r.avg, r.count).avg }))
     .sort((a, b) => b.score - a.score || b.r.count - a.r.count || a.r.name.localeCompare(b.r.name))
     .slice(0, TOP);
 
-  const rows: SnackRow[] = scored.map(({ r }, i) => ({
+  const rows: SnackRow[] = scored.map(({ r, score }, i) => ({
     snack: { id: r.id, name: r.name, brand: r.brand, category: r.category, status: r.status, photoId: r.photoId },
-    avg: r.avg,
+    avg: score,
     count: r.count,
     rank: i + 1,
   }));

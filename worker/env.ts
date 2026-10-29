@@ -6,6 +6,7 @@ export interface Env {
   CACHE: KVNamespace;
   PHOTOS: R2Bucket;
   AUTH_LIMITER: RateLimit;
+  WRITE_LIMITER: RateLimit;
   APP_NAME: string;
   // The app's real address, e.g. "getcrunchd.com" (see lib/canonicalHost.ts).
   CANONICAL_HOST?: string;

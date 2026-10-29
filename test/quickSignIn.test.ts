@@ -2,14 +2,14 @@ import { describe, expect, it } from "vitest";
 import { newPin, PIN_RE, placeholderEmail, quickSignInOn, validateQuickSignIn } from "../worker/lib/quickSignIn";
 
 describe("validateQuickSignIn", () => {
-  it("accepts a name and a 4 to 8 digit PIN, invite code optional", () => {
+  it("accepts a name and a 4 to 8 digit PIN, bot-check token optional", () => {
     expect(validateQuickSignIn({ username: " sam_k ", pin: "1234" })).toEqual({
       ok: true,
-      value: { username: "sam_k", pin: "1234", inviteCode: "" },
+      value: { username: "sam_k", pin: "1234", turnstileToken: "" },
     });
-    expect(validateQuickSignIn({ username: "sam_k", pin: "12345678", inviteCode: " JASE " })).toMatchObject({
+    expect(validateQuickSignIn({ username: "sam_k", pin: "12345678", turnstileToken: "tok" })).toMatchObject({
       ok: true,
-      value: { inviteCode: "JASE" },
+      value: { turnstileToken: "tok" },
     });
   });
 

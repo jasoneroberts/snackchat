@@ -11,6 +11,7 @@ import { quickSignInOn } from "./lib/quickSignIn";
 import { checkErrorSpike, logError, pruneLogs, readClientError } from "./lib/health";
 import { newUserCount } from "./lib/notify";
 import { getSessionUser } from "./lib/session";
+import { isWrite } from "./lib/limits";
 import { turnstileInTestMode } from "./lib/turnstile";
 import { account } from "./routes/account";
 import { admin, openReportCount, pendingSnackCount, reviewCount } from "./routes/admin";
@@ -43,6 +44,17 @@ app.use("*", async (c, next) => {
   const devName = devLoginUsername(c.env);
   if (!user && devName) user = await getDevUser(c, devName);
   c.set("user", user);
+  await next();
+});
+
+// The burst limit on changes, per signed-in person (lib/limits.ts). Sign-in
+// has its own per-address limit, and error reports theirs.
+app.use("*", async (c, next) => {
+  const user = c.get("user");
+  if (user && user.is_admin !== 1 && isWrite(c.req.method) && !c.req.path.startsWith("/api/auth/") && c.req.path !== "/api/errors") {
+    const { success } = await c.env.WRITE_LIMITER.limit({ key: `write:${user.id}` });
+    if (!success) return c.json({ error: "Slow down a bit. Wait a minute and try again." }, 429);
+  }
   await next();
 });
 

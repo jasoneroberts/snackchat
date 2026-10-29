@@ -44,7 +44,7 @@ export function LogIn({ onSignedIn }: { onSignedIn: () => void }) {
         {busy ? "Logging in…" : "Log in"}
       </button>
       <p className="muted">
-        New here? <Link href="/signup">Join with an invite code</Link>
+        New here? <Link href="/signup">Join</Link>
       </p>
     </form>
   );

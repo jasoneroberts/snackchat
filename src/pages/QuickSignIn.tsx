@@ -1,15 +1,19 @@
-import { useState, type FormEvent } from "react";
+import { useCallback, useState, type FormEvent } from "react";
 import { Link } from "../components/Link";
+import { Turnstile } from "../components/Turnstile";
 import { api, ApiError } from "../api";
 
 /**
- * Sign in with a name and a PIN, for testing with friends. New names make an
- * account, which needs the invite code; after that, name and PIN are enough.
+ * Sign in with a name and a PIN. A new name makes an account (once the bot
+ * check has passed); after that, the same name and PIN get you back in.
  */
 export function QuickSignIn({ onSignedIn }: { onSignedIn: () => void }) {
   const [username, setUsername] = useState("");
   const [pin, setPin] = useState("");
-  const [inviteCode, setInviteCode] = useState("");
+  const [token, setToken] = useState<string | null>(null);
+  // Remounting the bot check gets a fresh token after a failed try (each token works once).
+  const [attempt, setAttempt] = useState(0);
+  const onToken = useCallback((t: string | null) => setToken(t), []);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -18,10 +22,12 @@ export function QuickSignIn({ onSignedIn }: { onSignedIn: () => void }) {
     setError(null);
     setBusy(true);
     try {
-      await api("/auth/quick", { body: { username, pin, inviteCode } });
+      await api("/auth/quick", { body: { username, pin, turnstileToken: token ?? "" } });
       onSignedIn();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong.");
+      setToken(null);
+      setAttempt((n) => n + 1);
     } finally {
       setBusy(false);
     }
@@ -30,7 +36,7 @@ export function QuickSignIn({ onSignedIn }: { onSignedIn: () => void }) {
   return (
     <form className="card" onSubmit={submit}>
       <h1>Jump in</h1>
-      <p className="muted">Pick a name and a PIN. Use the same ones to get back in on another phone.</p>
+      <p className="muted">New here? Pick a name and a PIN. Been before? Use the same ones to get back in, on any phone.</p>
       <label>
         Name
         <input
@@ -54,10 +60,7 @@ export function QuickSignIn({ onSignedIn }: { onSignedIn: () => void }) {
           autoComplete="current-password"
         />
       </label>
-      <label>
-        Invite code <span className="muted small">(first time only)</span>
-        <input value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} autoCapitalize="characters" />
-      </label>
+      <Turnstile key={attempt} onToken={onToken} />
       {error && <p className="error">{error}</p>}
       <button className="button" disabled={busy}>
         {busy ? "Signing in…" : "Let's go"}
