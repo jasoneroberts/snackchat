@@ -157,7 +157,7 @@ export function Boards({ me }: { me: Me }) {
       <p className="small muted no-margin">
         {view.kind === "people"
           ? `${scopeName}, ${periodName}, ranked by ${metric.label.toLowerCase()}.`
-          : `Top-rated ${filterShort(category) ?? "snacks"}, ${scopeName.toLowerCase() === "everyone" ? "everyone's" : `${scopeName}'s`} ratings ${periodName}. A snack with one rating is ranked as if someone also gave it 2.5, until a second person rates it.`}
+          : `Top-rated ${filterShort(category) ?? "snacks"}, ${scopeName.toLowerCase() === "everyone" ? "everyone's" : `${scopeName}'s`} ratings ${periodName}. A snack with one rating counts as if someone also gave it 2.5 (so a lone 5 shows 3.75), until a second person rates it.`}
       </p>
 
       {error && <p className="error">{error}</p>}

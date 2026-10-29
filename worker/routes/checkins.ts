@@ -6,6 +6,7 @@ import { blockedEitherWay } from "../lib/blocks";
 import { pointsFor, startOfUtcDay, validateCheckin } from "../lib/checkin";
 import { currentUser } from "../lib/currentUser";
 import { listCheckins, nextCursor, parseCursor } from "../lib/feed";
+import { overDailyLimit } from "../lib/limits";
 import { pingAdmins } from "../lib/notify";
 
 export const checkins = new Hono<AppContext>();
@@ -29,6 +30,8 @@ checkins.get("/", async (c) => {
 checkins.post("/", async (c) => {
   const user = currentUser(c);
   const db = c.env.DB;
+  const tooMany = await overDailyLimit(c, "checkins");
+  if (tooMany) return c.json({ error: tooMany }, 429);
 
   const form = await c.req.parseBody().catch(() => null);
   if (!form || typeof form.data !== "string") return c.json({ error: "Missing check-in." }, 400);

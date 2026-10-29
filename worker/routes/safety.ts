@@ -3,6 +3,7 @@ import { isChangeRequest, readReport, reasonLabel } from "../../shared/reports";
 import type { AppContext } from "../env";
 import { newId } from "../lib/crypto";
 import { currentUser } from "../lib/currentUser";
+import { overDailyLimit } from "../lib/limits";
 import { pingAdmins } from "../lib/notify";
 
 const now = () => Math.floor(Date.now() / 1000);
@@ -24,6 +25,8 @@ const TARGET_SQL = {
 reports.post("/", async (c) => {
   const user = currentUser(c);
   const db = c.env.DB;
+  const tooMany = await overDailyLimit(c, "reports");
+  if (tooMany) return c.json({ error: tooMany }, 429);
   const parsed = readReport(await c.req.json().catch(() => null));
   if (!parsed.ok) return c.json({ error: parsed.error }, 400);
   const { targetType, targetId, reason, note } = parsed.value;

@@ -1,5 +1,6 @@
-// Rules for quick sign-in: a username and a short PIN, no email. It is for
-// testing with a few friends; turn it off (QUICK_SIGNIN) for a real launch.
+// Rules for quick sign-in: a username and a short PIN, no email. Anyone can
+// make an account (after the Turnstile bot check); after that the name and
+// PIN get them back in. Wrong PINs are limited per name (lib/pinLock.ts).
 
 import { USERNAME_RE } from "./validation";
 
@@ -8,7 +9,7 @@ export const PIN_RE = /^\d{4,8}$/;
 export interface QuickSignInInput {
   username: string;
   pin: string;
-  inviteCode: string; // only needed to create an account
+  turnstileToken: string; // only checked when making a new account
 }
 
 export function quickSignInOn(env: { QUICK_SIGNIN?: string }): boolean {
@@ -19,10 +20,10 @@ export function validateQuickSignIn(body: unknown): { ok: true; value: QuickSign
   const b = (body ?? {}) as Record<string, unknown>;
   const username = typeof b.username === "string" ? b.username.trim() : "";
   const pin = typeof b.pin === "string" ? b.pin.trim() : "";
-  const inviteCode = typeof b.inviteCode === "string" ? b.inviteCode.trim() : "";
+  const turnstileToken = typeof b.turnstileToken === "string" ? b.turnstileToken : "";
   if (!USERNAME_RE.test(username)) return { ok: false, error: "Names are 3 to 20 letters, numbers or underscores." };
   if (!PIN_RE.test(pin)) return { ok: false, error: "PINs are 4 to 8 digits." };
-  return { ok: true, value: { username, pin, inviteCode } };
+  return { ok: true, value: { username, pin, turnstileToken } };
 }
 
 /** Quick accounts have no real email address; this placeholder keeps the column unique. */

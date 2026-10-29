@@ -6,6 +6,7 @@ import { sendEmail } from "../lib/email";
 import { pingAdmins } from "../lib/notify";
 import { createSession, destroySession } from "../lib/session";
 import { placeholderEmail, quickSignInOn, validateQuickSignIn } from "../lib/quickSignIn";
+import { clearWrongPins, LOCK_MINUTES, pinLocked, recordWrongPin } from "../lib/pinLock";
 import { verifyTurnstile } from "../lib/turnstile";
 import { validateSignUp } from "../lib/validation";
 import { badWordError } from "../../shared/badWords";
@@ -84,17 +85,14 @@ const newPerson = (username: string) => ({
   url: "/admin/users",
 });
 
-// Quick sign-in for testing with friends: a name and a PIN.
-// - A new name makes an account, using up one invite code.
-// - An existing name signs in with its PIN.
-// - An existing account with no password or PIN yet (the old dev-login
-//   account) is claimed by the first person to set a PIN for it, which also
-//   needs a valid invite code.
+// Quick sign-in: a name and a PIN.
+// - A new name makes an account, once the Turnstile bot check passes.
+// - An existing name signs in with its PIN. Wrong PINs are limited per name.
 auth.post("/quick", async (c) => {
   if (!quickSignInOn(c.env)) return c.json({ error: "Not found" }, 404);
   const parsed = validateQuickSignIn(await c.req.json().catch(() => null));
   if (!parsed.ok) return c.json({ error: parsed.error }, 400);
-  const { username, pin, inviteCode } = parsed.value;
+  const { username, pin, turnstileToken } = parsed.value;
   const db = c.env.DB;
 
   const user = await db
@@ -102,45 +100,26 @@ auth.post("/quick", async (c) => {
     .bind(username)
     .first<{ id: string; password_hash: string | null }>();
 
-  if (user?.password_hash) {
-    if (!(await verifyPassword(pin, user.password_hash))) return c.json({ error: "Wrong name or PIN." }, 401);
-    await createSession(c, user.id);
-    return c.json({ ok: true, created: false });
-  }
-
-  if (!inviteCode) {
-    return c.json({ error: user ? "Enter the invite code to set your PIN." : "New here? Enter your invite code." }, 400);
-  }
-
   if (user) {
-    const valid = await db
-      .prepare("SELECT 1 FROM invite_codes WHERE code = ? AND (expires_at IS NULL OR expires_at > ?)")
-      .bind(inviteCode, now())
-      .first();
-    if (!valid) return c.json({ error: "That invite code isn't valid." }, 400);
-    // "password_hash IS NULL" stops two people claiming the same account at once.
-    const claimed = await db
-      .prepare("UPDATE users SET password_hash = ? WHERE id = ? AND password_hash IS NULL")
-      .bind(await hashPassword(pin), user.id)
-      .run();
-    if (claimed.meta.changes !== 1) return c.json({ error: "Wrong name or PIN." }, 401);
+    if (await pinLocked(c.env.CACHE, user.id)) {
+      return c.json({ error: `Too many wrong PINs for this name. Try again in ${LOCK_MINUTES} minutes.` }, 429);
+    }
+    // No PIN (demo people, or an account an admin has locked) can't be signed into.
+    if (!user.password_hash || !(await verifyPassword(pin, user.password_hash))) {
+      await recordWrongPin(c.env.CACHE, user.id);
+      return c.json({ error: "Wrong name or PIN." }, 401);
+    }
+    await clearWrongPins(c.env.CACHE, user.id);
     await createSession(c, user.id);
     return c.json({ ok: true, created: false });
   }
 
-  // A new account. (Existing names are left alone above, so nobody gets locked out.)
+  // A new account. Bots are stopped here, before any work.
+  if (!(await verifyTurnstile(c.env.TURNSTILE_SECRET_KEY, turnstileToken, c.req.header("cf-connecting-ip") ?? null))) {
+    return c.json({ error: "The bot check didn't pass. Wait a moment and try again." }, 400);
+  }
   const rude = badWordError({ name: username });
   if (rude) return c.json({ error: rude }, 400);
-
-  // Use up one invite, the same way as the full sign-up.
-  const used = await db
-    .prepare(
-      `UPDATE invite_codes SET uses = uses + 1
-        WHERE code = ? AND uses < max_uses AND (expires_at IS NULL OR expires_at > ?)`,
-    )
-    .bind(inviteCode, now())
-    .run();
-  if (used.meta.changes !== 1) return c.json({ error: "That invite code isn't valid or has been used up." }, 400);
 
   const userId = newId();
   try {
@@ -152,7 +131,6 @@ auth.post("/quick", async (c) => {
       .bind(userId, username, placeholderEmail(username), await hashPassword(pin), now())
       .run();
   } catch (err) {
-    await db.prepare("UPDATE invite_codes SET uses = uses - 1 WHERE code = ?").bind(inviteCode).run();
     console.error("quick sign-in insert failed", err);
     return c.json({ error: "That name was just taken. Try another." }, 409);
   }
