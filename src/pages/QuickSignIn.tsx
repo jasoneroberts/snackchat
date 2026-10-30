@@ -2,6 +2,7 @@ import { useCallback, useState, type FormEvent } from "react";
 import { Link } from "../components/Link";
 import { Turnstile } from "../components/Turnstile";
 import { api, ApiError } from "../api";
+import { signupRef } from "../lib/ref";
 
 /**
  * Sign in with a name and a PIN. A new name makes an account (once the bot
@@ -22,7 +23,7 @@ export function QuickSignIn({ onSignedIn }: { onSignedIn: () => void }) {
     setError(null);
     setBusy(true);
     try {
-      await api("/auth/quick", { body: { username, pin, turnstileToken: token ?? "" } });
+      await api("/auth/quick", { body: { username, pin, turnstileToken: token ?? "", ref: signupRef() } });
       onSignedIn();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong.");

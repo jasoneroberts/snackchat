@@ -37,3 +37,9 @@ export function useLogo(brand: string | null | undefined): string | null {
   }, []);
   return brand ? logos[brandKey(brand)] ?? null : null;
 }
+
+/** The logo id for a brand, waiting for the list if it hasn't loaded yet (for the share picture). */
+export async function logoFor(brand: string | null | undefined): Promise<string | null> {
+  await (loading ?? fetchLogos());
+  return brand ? logos[brandKey(brand)] ?? null : null;
+}

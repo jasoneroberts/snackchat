@@ -3,17 +3,21 @@ import { CATEGORIES, POINTS, REVIEW_BONUS_CHARS, attributesFor, getCategory } fr
 import type { CheckinForEdit, SnackPage, SnackSummary } from "../../shared/types";
 import { api, errorText } from "../api";
 import { Cropper } from "../components/Cropper";
+import { ShareCheckin } from "../components/ShareCheckin";
 import { SnackTile } from "../components/SnackTile";
 import { StarPicker } from "../components/Stars";
 import { useVoice } from "../lib/voice";
 
 export function CheckIn({
   editId,
+  username,
   onDone,
   onSaved,
 }: {
   /** Set to change one of your check-ins instead of making a new one. */
   editId?: string;
+  username: string; // for the share picture
+
   onDone: (snackName: string, points: number, withPhoto: boolean) => void;
   onSaved?: (photoPending: boolean) => void;
 }) {
@@ -33,6 +37,8 @@ export function CheckIn({
   const [loading, setLoading] = useState(!!editId);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Posted: the share screen shows until they tap Done.
+  const [posted, setPosted] = useState<{ points: number } | null>(null);
   const { t } = useVoice();
 
   // Editing: fill the form in from the check-in as it is.
@@ -112,7 +118,7 @@ export function CheckIn({
     }
     try {
       const res = await api<{ points: number }>("/checkins", { body: form });
-      onDone(snack.name, res.points, photo !== null);
+      setPosted({ points: res.points });
     } catch (err) {
       setError(errorText(err));
       setBusy(false);
@@ -125,6 +131,19 @@ export function CheckIn({
   const about = { category: snack?.category };
 
   if (loading) return <p className="muted page">Loading…</p>;
+  if (posted && snack && overall !== null) {
+    return (
+      <ShareCheckin
+        points={posted.points}
+        snack={snack}
+        rating={overall}
+        username={username}
+        review={review.trim() || null}
+        photo={photo?.blob ?? null}
+        onDone={() => onDone(snack.name, posted.points, photo !== null)}
+      />
+    );
+  }
   // The photo already on the check-in, while it's still being kept.
   const kept = editId && existing && !removeExisting && !photo ? existing : null;
 

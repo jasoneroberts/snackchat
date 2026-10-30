@@ -70,6 +70,7 @@ export const LINES = {
   "checkin.photo": { grownup: "Add a photo (+{pts} pts)", lad: "Snap it (+{pts} pts)" },
   "toast.checkedIn": { grownup: "Checked in", lad: "Logged" },
   "toast.onBoard": { grownup: "{name} is on the board.", lad: "{name} is on the Table." },
+  "share.prompt": { grownup: "Share it and see what your friends would give it.", lad: "Show the lads. Start the {snack} debate." },
 
   // Explore
   "explore.setTaste": { grownup: "What do you like?", lad: "What's your poison?" },

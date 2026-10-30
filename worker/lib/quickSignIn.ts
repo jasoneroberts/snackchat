@@ -2,6 +2,7 @@
 // make an account (after the Turnstile bot check); after that the name and
 // PIN get them back in. Wrong PINs are limited per name (lib/pinLock.ts).
 
+import { cleanRef } from "../../shared/ref";
 import { USERNAME_RE } from "./validation";
 
 export const PIN_RE = /^\d{4,8}$/;
@@ -10,6 +11,7 @@ export interface QuickSignInInput {
   username: string;
   pin: string;
   turnstileToken: string; // only checked when making a new account
+  ref: string | null; // where a new person came from (shared/ref.ts)
 }
 
 export function quickSignInOn(env: { QUICK_SIGNIN?: string }): boolean {
@@ -23,7 +25,7 @@ export function validateQuickSignIn(body: unknown): { ok: true; value: QuickSign
   const turnstileToken = typeof b.turnstileToken === "string" ? b.turnstileToken : "";
   if (!USERNAME_RE.test(username)) return { ok: false, error: "Names are 3 to 20 letters, numbers or underscores." };
   if (!PIN_RE.test(pin)) return { ok: false, error: "PINs are 4 to 8 digits." };
-  return { ok: true, value: { username, pin, turnstileToken } };
+  return { ok: true, value: { username, pin, turnstileToken, ref: cleanRef(b.ref) } };
 }
 
 /** Quick accounts have no real email address; this placeholder keeps the column unique. */

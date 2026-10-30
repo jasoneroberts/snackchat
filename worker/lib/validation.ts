@@ -1,6 +1,7 @@
 // Input rules shared by sign-up and log-in.
 
 import { badWordError } from "../../shared/badWords";
+import { cleanRef } from "../../shared/ref";
 
 export const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -11,6 +12,7 @@ export interface SignUpInput {
   password: string;
   inviteCode: string;
   turnstileToken: string;
+  ref: string | null; // where they came from (shared/ref.ts)
 }
 
 export function validateSignUp(body: unknown): { ok: true; value: SignUpInput } | { ok: false; error: string } {
@@ -28,7 +30,7 @@ export function validateSignUp(body: unknown): { ok: true; value: SignUpInput } 
   if (!inviteCode) return { ok: false, error: "Crunchd is invite-only for now. Enter your invite code." };
   const rude = badWordError({ username });
   if (rude) return { ok: false, error: rude };
-  return { ok: true, value: { username, email, password, inviteCode, turnstileToken } };
+  return { ok: true, value: { username, email, password, inviteCode, turnstileToken, ref: cleanRef(b.ref) } };
 }
 
 export interface SnackFields {
