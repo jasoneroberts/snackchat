@@ -132,6 +132,8 @@ export interface PeopleRow {
 export interface SnackRow {
   snack: SnackSummary;
   avg: number;
+  /** True when a lone rating is averaged with the stand-in 2.5 (month and all time). */
+  provisional: boolean;
   count: number;
   rank: number;
 }
