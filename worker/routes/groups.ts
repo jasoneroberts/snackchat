@@ -14,6 +14,7 @@ import {
   validateGroup,
 } from "../lib/groups";
 import { listCheckins, nextCursor, parseCursor } from "../lib/feed";
+import { BOARD_AVG_SQL } from "../lib/boards";
 import { LATEST_PHOTO } from "../lib/photoSql";
 
 export const groups = new Hono<AppContext>();
@@ -256,7 +257,7 @@ groups.get("/:id", async (c) => {
     // Best average rating among snacks the members have checked in.
     c.env.DB.prepare(
       `SELECT s.id, s.name, s.brand, s.category_id AS category, s.status,
-              AVG(c.overall) AS avg, COUNT(*) AS checkins, (${LATEST_PHOTO}) AS photoId
+              ${BOARD_AVG_SQL} AS avg, COUNT(*) AS checkins, (${LATEST_PHOTO}) AS photoId
          FROM checkins c JOIN snacks s ON s.id = c.snack_id
         WHERE c.user_id IN (SELECT user_id FROM group_members WHERE group_id = ?1)
           AND (s.category_id IN (SELECT value FROM json_each(?2)) OR ?2 IS NULL)

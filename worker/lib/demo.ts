@@ -126,12 +126,47 @@ export interface DemoData {
 
 export const demoUserId = (username: string) => `${DEMO_PREFIX}${username}`;
 
+/** One made-up check-in by `person` of `snackId`, using the snack's "real" quality and taste. */
+function makeCheckin(
+  random: () => number,
+  person: DemoPerson,
+  snackId: string,
+  id: string,
+  createdAt: number,
+  repeat: boolean,
+): DemoCheckin {
+  const pick = <T>(list: T[]) => list[Math.floor(random() * list.length)];
+  // A slider score: the snack's real value give or take one, kept on the 1-5 scale.
+  const nudge = (n: number) => Math.min(5, Math.max(1, n + Math.floor(random() * 3) - 1));
+  const overall = quarter(QUALITY[snackId] + person.generous + (random() - 0.5));
+  const review = pick(REVIEWS);
+  const points = [repeat ? { reason: "repeat", points: POINTS.repeat } : { reason: "new_snack", points: POINTS.newSnack }];
+  if (review && review.length >= REVIEW_BONUS_CHARS) points.push({ reason: "review", points: POINTS.review });
+  return {
+    id,
+    userId: demoUserId(person.username),
+    snackId,
+    overall,
+    review,
+    venue: pick(VENUES),
+    attributes: {
+      flavour: nudge(TASTE[snackId][0]),
+      salt: nudge(TASTE[snackId][1]),
+      sweet: nudge(TASTE[snackId][2]),
+      ...(SPICE[snackId] ? { spice: nudge(SPICE[snackId]) } : {}),
+      ...(CRUNCH[snackId] ? { crunch: nudge(CRUNCH[snackId]) } : {}),
+      value: 1 + Math.floor(random() * 5),
+      more: 2 + Math.floor(random() * 4),
+    },
+    createdAt,
+    points,
+  };
+}
+
 /** Build the demo people and three weeks of their check-ins, ending at `now`. */
 export function buildDemoData(now: number, seed = 7): DemoData {
   const random = rng(seed);
   const pick = <T>(list: T[]) => list[Math.floor(random() * list.length)];
-  // A slider score: the snack's real value give or take one, kept on the 1-5 scale.
-  const nudge = (n: number) => Math.min(5, Math.max(1, n + Math.floor(random() * 3) - 1));
   const allSnacks = Object.keys(QUALITY);
   const checkins: DemoCheckin[] = [];
 
@@ -141,34 +176,10 @@ export function buildDemoData(now: number, seed = 7): DemoData {
     for (let i = 0; i < count; i++) {
       // Mostly their favourites, sometimes something else.
       const snackId = random() < 0.75 ? pick(person.favourites) : pick(allSnacks);
-      const overall = quarter(QUALITY[snackId] + person.generous + (random() - 0.5));
-      const review = pick(REVIEWS);
       // Squaring bunches check-ins towards the last few days, so the feed looks lively.
       const createdAt = now - Math.floor(random() ** 2 * 21 * 24 * 3600) - 600;
-      const points = [
-        seen.has(snackId) ? { reason: "repeat", points: POINTS.repeat } : { reason: "new_snack", points: POINTS.newSnack },
-      ];
-      if (review && review.length >= REVIEW_BONUS_CHARS) points.push({ reason: "review", points: POINTS.review });
+      checkins.push(makeCheckin(random, person, snackId, `${DEMO_PREFIX}c${p}-${i}`, createdAt, seen.has(snackId)));
       seen.add(snackId);
-      checkins.push({
-        id: `${DEMO_PREFIX}c${p}-${i}`,
-        userId: demoUserId(person.username),
-        snackId,
-        overall,
-        review,
-        venue: pick(VENUES),
-        attributes: {
-          flavour: nudge(TASTE[snackId][0]),
-          salt: nudge(TASTE[snackId][1]),
-          sweet: nudge(TASTE[snackId][2]),
-          ...(SPICE[snackId] ? { spice: nudge(SPICE[snackId]) } : {}),
-          ...(CRUNCH[snackId] ? { crunch: nudge(CRUNCH[snackId]) } : {}),
-          value: 1 + Math.floor(random() * 5),
-          more: 2 + Math.floor(random() * 4),
-        },
-        createdAt,
-        points,
-      });
     }
   });
 
@@ -176,6 +187,28 @@ export function buildDemoData(now: number, seed = 7): DemoData {
     users: PEOPLE.map((p) => ({ id: demoUserId(p.username), username: p.username })),
     checkins,
   };
+}
+
+/**
+ * A few fresh check-ins from random demo people, spread over the last few
+ * hours, for the admin's "Add more check-ins" button. `had` holds
+ * "userId|snackId" pairs already checked in, so points come out right.
+ * Ids start "demo-m<now>-", so they never clash and go with the rest.
+ */
+export function buildMoreCheckins(now: number, count: number, had: Set<string>, seed = now): DemoCheckin[] {
+  const random = rng(seed);
+  const pick = <T>(list: T[]) => list[Math.floor(random() * list.length)];
+  const allSnacks = Object.keys(QUALITY);
+  const out: DemoCheckin[] = [];
+  for (let i = 0; i < count; i++) {
+    const person = pick(PEOPLE);
+    const snackId = random() < 0.6 ? pick(person.favourites) : pick(allSnacks);
+    const createdAt = now - Math.floor(random() * 4 * 3600) - 60;
+    const pair = `${demoUserId(person.username)}|${snackId}`;
+    out.push(makeCheckin(random, person, snackId, `${DEMO_PREFIX}m${now}-${i}`, createdAt, had.has(pair)));
+    had.add(pair);
+  }
+  return out.sort((a, b) => a.createdAt - b.createdAt);
 }
 
 export const DEMO_GROUPS = [
@@ -208,8 +241,12 @@ export function pickImages(products: { image_front_url?: string }[] | undefined,
  * A face for a demo person. thispersondoesnotexist.com makes a new
  * AI-generated face on every request: nobody real, so no one's photo is used
  * without their say-so. Each person's face is fetched once and kept in R2.
+ * If that site turns the Worker away, a random photo from Lorem Picsum
+ * (free Unsplash pictures of anything: dogs, hills, coffee) is used instead,
+ * so nobody is left with just initials.
  */
 export const DEMO_FACE_URL = "https://thispersondoesnotexist.com/";
+export const demoPictureUrl = (username: string) => `https://picsum.photos/seed/crunchd-${encodeURIComponent(username)}/256`;
 // "f" for a face. Older demo data used drawn avatars ("a"), which the
 // "Add photos and profile pictures" button swaps for faces.
 export const demoAvatarId = (username: string) => `${DEMO_PREFIX}f-${username}`;

@@ -260,8 +260,7 @@ function SnackBoard({ rows }: { rows: SnackRow[] | null }) {
           <span className="grow">
             <b className="block">{r.snack.name}</b>
             <span className="small muted">
-              {[r.snack.brand, getCategory(r.snack.category)?.short].filter(Boolean).join(" · ")} · {r.count} rating
-              {r.count === 1 ? "" : "s"}
+              {[r.snack.brand, getCategory(r.snack.category)?.short].filter(Boolean).join(" · ")} · {r.count === 1 ? "1 rating, provisional" : `${r.count} ratings`}
             </span>
           </span>
           <span className="rank-box">
