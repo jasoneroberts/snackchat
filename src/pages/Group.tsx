@@ -128,7 +128,7 @@ export function Group({ id, me }: { id: string; me: Me }) {
             <span className="small accent block">{t("groups.favourite", { category: favourite.category })}</span>
             <b>{favourite.name}</b>
             <span className="small muted block">
-              {favourite.brand} · {favourite.checkins} check-in{favourite.checkins === 1 ? "" : "s"}
+              {favourite.brand} · {favourite.checkins === 1 ? "1 check-in, provisional" : `${favourite.checkins} check-ins`}
             </span>
           </span>
           <b className="big-text">{rating(Number(favourite.avg.toFixed(2)))}</b>

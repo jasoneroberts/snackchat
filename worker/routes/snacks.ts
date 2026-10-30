@@ -5,6 +5,7 @@ import type { AppContext } from "../env";
 import { newId } from "../lib/crypto";
 import { currentUser } from "../lib/currentUser";
 import { overDailyLimit } from "../lib/limits";
+import { BOARD_AVG_SQL, rankingAverage } from "../lib/boards";
 import { pingAdmins } from "../lib/notify";
 import { listCheckins } from "../lib/feed";
 import { LATEST_PHOTO } from "../lib/photoSql";
@@ -156,7 +157,7 @@ snacks.get("/:id", async (c) => {
     db
       .prepare(
         `SELECT rank, total FROM (
-           SELECT c.snack_id, RANK() OVER (ORDER BY AVG(c.overall) DESC) AS rank, COUNT(*) OVER () AS total
+           SELECT c.snack_id, RANK() OVER (ORDER BY ${BOARD_AVG_SQL} DESC) AS rank, COUNT(*) OVER () AS total
              FROM checkins c JOIN snacks s ON s.id = c.snack_id
             WHERE s.category_id = ?
             GROUP BY c.snack_id)
@@ -180,7 +181,8 @@ snacks.get("/:id", async (c) => {
       glutenFree: snack.gluten_free === null ? null : snack.gluten_free === 1,
     },
     count: stats?.count ?? 0,
-    avg: stats?.avg ?? null,
+    // A lone rating is averaged with the stand-in 2.5, as on the Table (lib/boards.ts).
+    avg: stats?.avg == null ? null : rankingAverage(stats.avg, stats.count).avg,
     attributes: Object.fromEntries(attrs.results.map((a) => [a.attribute, a.avg])),
     rank: rank ? { position: rank.rank, of: rank.total } : null,
     checkins,

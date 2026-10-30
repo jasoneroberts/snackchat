@@ -12,6 +12,7 @@ export function DemoData({ onChanged }: { onChanged: () => void }) {
   const [status, setStatus] = useState<DemoStatus | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [faceNote, setFaceNote] = useState<string | null>(null);
 
   const load = () => api<DemoStatus>("/admin/demo").then(setStatus);
   useEffect(() => {
@@ -35,7 +36,12 @@ export function DemoData({ onChanged }: { onChanged: () => void }) {
   const fillIn = async (s: DemoStatus) => {
     if (s.missingAvatars > 0) {
       setProgress("Adding faces…");
-      await api("/admin/demo/avatars", { method: "POST" });
+      const r = await api<{ added: number; faces: number; pictures: number }>("/admin/demo/avatars", { method: "POST" });
+      setFaceNote(
+        r.added === 0
+          ? "Couldn't fetch any faces or pictures just now. Try again in a minute."
+          : `${r.faces} new faces${r.pictures ? ` and ${r.pictures} pictures (the face site didn't answer)` : ""}.`,
+      );
     }
     await fetchPhotos(s.missingPhotos);
   };
@@ -52,6 +58,15 @@ export function DemoData({ onChanged }: { onChanged: () => void }) {
     run(async () => {
       setProgress("Adding demo people and check-ins…");
       await api("/admin/demo", { method: "POST" });
+      const fresh = await api<DemoStatus>("/admin/demo");
+      setStatus(fresh);
+      await fillIn(fresh);
+    });
+
+  const addMore = () =>
+    run(async () => {
+      setProgress("Adding check-ins…");
+      await api("/admin/demo/more", { method: "POST" });
       const fresh = await api<DemoStatus>("/admin/demo");
       setStatus(fresh);
       await fillIn(fresh);
@@ -78,10 +93,16 @@ export function DemoData({ onChanged }: { onChanged: () => void }) {
           : "Adds 8 made-up people with AI-generated faces, three weeks of check-ins, pack photos from Open Food Facts, and two groups you're in. Remove it all in one tap later."}
       </p>
       {progress && <p className="small notice">{progress}</p>}
+      {faceNote && <p className="small muted">{faceNote}</p>}
       {error && <p className="error">{error}</p>}
       {!loaded && (
         <button type="button" className="button" disabled={busy} onClick={() => void addAll()}>
           Load demo data
+        </button>
+      )}
+      {loaded && (
+        <button type="button" className="button" disabled={busy} onClick={() => void addMore()}>
+          Add a few more check-ins
         </button>
       )}
       {loaded && (status.missingPhotos.length > 0 || status.missingAvatars > 0) && (

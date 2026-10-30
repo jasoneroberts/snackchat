@@ -43,7 +43,7 @@ export function Snack({ id, me }: { id: string; me: Me }) {
       <div className="tiles three">
         <div className="tile">
           <b>{data.avg !== null ? rating(Number(data.avg.toFixed(2))) : "–"}</b>
-          <span>Avg rating</span>
+          <span>{data.count === 1 ? "Avg (provisional)" : "Avg rating"}</span>
         </div>
         <div className="tile">
           <b>{data.count.toLocaleString("en-GB")}</b>
@@ -54,6 +54,13 @@ export function Snack({ id, me }: { id: string; me: Me }) {
           <span>in {category?.short ?? "its type"}</span>
         </div>
       </div>
+
+      {data.count === 1 && (
+        <p className="small muted no-margin">
+          Only one rating so far, so it's averaged with a stand-in 2.5 until a second person rates it. That stops one
+          rating putting a snack top of the Table.
+        </p>
+      )}
 
       {Object.keys(data.attributes).length > 0 && (
         <section className="card-plain">

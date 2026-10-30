@@ -282,8 +282,7 @@ function SuggestionCard({
         <span className="grow">
           <b>{s.snack.name}</b>
           <span className="small muted">
-            {s.snack.brand ? `${s.snack.brand} · ` : ""}★ {rating(Number(s.avg.toFixed(2)))} from {s.count}{" "}
-            {s.count === 1 ? "check-in" : "check-ins"}
+            {s.snack.brand ? `${s.snack.brand} · ` : ""}★ {rating(Number(s.avg.toFixed(2)))} from {s.count === 1 ? "1 check-in (provisional)" : `${s.count} check-ins`}
           </span>
         </span>
         <span className="match-badge">{Math.round(s.match * 100)}%</span>

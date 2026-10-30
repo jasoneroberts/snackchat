@@ -4,7 +4,7 @@ import { filterTypes } from "../../shared/typeFilters";
 import { dietSql, readDiets } from "../../shared/diet";
 import type { ExplorePage, Preferences, SnackSummary, Suggestion } from "../../shared/types";
 import type { AppContext } from "../env";
-import { weightedRating } from "../lib/boards";
+import { rankingAverage, weightedRating } from "../lib/boards";
 import { currentUser } from "../lib/currentUser";
 import { rankMatches, readPreferences } from "../lib/explore";
 import { LATEST_PHOTO } from "../lib/photoSql";
@@ -100,7 +100,8 @@ explore.get("/", async (c) => {
     suggestions = ranked.slice(0, SUGGESTIONS).map((s) => ({
       snack: { id: s.id, name: s.name, brand: s.brand, category: s.category, status: s.status, photoId: s.photoId },
       match: s.match,
-      avg: s.avg,
+      // Shown with the stand-in 2.5 for a lone rating, as on the Table.
+      avg: rankingAverage(s.avg, s.count).avg,
       count: s.count,
       averages: s.averages,
     }));
