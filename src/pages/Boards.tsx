@@ -157,7 +157,7 @@ export function Boards({ me }: { me: Me }) {
       <p className="small muted no-margin">
         {view.kind === "people"
           ? `${scopeName}, ${periodName}, ranked by ${metric.label.toLowerCase()}.`
-          : `Top-rated ${filterShort(category) ?? "snacks"}, ${scopeName.toLowerCase() === "everyone" ? "everyone's" : `${scopeName}'s`} ratings ${periodName}. A snack with one rating counts as if someone also gave it 2.5 (so a lone 5 shows 3.75), until a second person rates it.`}
+          : `Top-rated ${filterShort(category) ?? "snacks"}, ${scopeName.toLowerCase() === "everyone" ? "everyone's" : `${scopeName}'s`} ratings ${periodName}.${view.period === "week" ? "" : " A snack with one rating counts as if someone also gave it 2.5 (so a lone 5 shows 3.75), until a second person rates it."}`}
       </p>
 
       {error && <p className="error">{error}</p>}
@@ -260,7 +260,7 @@ function SnackBoard({ rows }: { rows: SnackRow[] | null }) {
           <span className="grow">
             <b className="block">{r.snack.name}</b>
             <span className="small muted">
-              {[r.snack.brand, getCategory(r.snack.category)?.short].filter(Boolean).join(" · ")} · {r.count === 1 ? "1 rating, provisional" : `${r.count} ratings`}
+              {[r.snack.brand, getCategory(r.snack.category)?.short].filter(Boolean).join(" · ")} · {r.provisional ? "1 rating, provisional" : r.count === 1 ? "1 rating" : `${r.count} ratings`}
             </span>
           </span>
           <span className="rank-box">

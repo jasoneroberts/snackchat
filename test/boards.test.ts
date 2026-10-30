@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { boardStart, rankingAverage, weightedRating } from "../worker/lib/boards";
+import { boardAverage, boardStart, rankingAverage, weightedRating } from "../worker/lib/boards";
 
 it("boards start on Monday, the 1st, or the beginning of time", () => {
   const thursday = Date.parse("2026-10-22T19:00:00Z") / 1000;
@@ -24,4 +24,11 @@ it("a lone rating gets a stand-in 2.5 until a second real rating arrives", () =>
   expect(rankingAverage(5, 2)).toEqual({ avg: 5, count: 2 });
   // A lone 5 shows and ranks as 3.75, below two people's 4s.
   expect(rankingAverage(4, 2).avg).toBeGreaterThan(rankingAverage(5, 1).avg);
+});
+
+it("this week shows a lone rating as it is; month and all time use the stand-in", () => {
+  expect(boardAverage("week", 5, 1)).toEqual({ avg: 5, provisional: false });
+  expect(boardAverage("month", 5, 1)).toEqual({ avg: 3.75, provisional: true });
+  expect(boardAverage("all", 5, 1)).toEqual({ avg: 3.75, provisional: true });
+  expect(boardAverage("month", 4, 3)).toEqual({ avg: 4, provisional: false });
 });

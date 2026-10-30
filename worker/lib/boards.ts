@@ -14,12 +14,18 @@ export function boardStart(period: BoardPeriod, nowSeconds: number): number {
 // pretend one is dropped. Every average shown anywhere (the Table, a snack's
 // page, the Hunt, a squad's favourite) uses this rule and ranks by exactly
 // the number it shows, so the order always reads top to bottom. The app
-// marks these averages "provisional" (one rating so far).
+// marks these averages "provisional" (one rating so far). The one exception
+// is the Table's "This week": a week is short, so a 5 there is a 5.
 export const STAND_IN_RATING = 2.5;
 
 /** A snack's board average: its real average, or with the stand-in for a lone rating. */
 export function rankingAverage(avg: number, count: number): { avg: number; count: number } {
   return count === 1 ? { avg: (avg + STAND_IN_RATING) / 2, count: 2 } : { avg, count };
+}
+
+/** The Table's average for a period: real on "This week", with the stand-in for month and all time. */
+export function boardAverage(period: BoardPeriod, avg: number, count: number): { avg: number; provisional: boolean } {
+  return period === "week" || count !== 1 ? { avg, provisional: false } : { avg: rankingAverage(avg, count).avg, provisional: true };
 }
 
 /**
