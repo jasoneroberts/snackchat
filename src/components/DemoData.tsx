@@ -2,119 +2,50 @@ import { useEffect, useState } from "react";
 import type { DemoStatus } from "../../shared/types";
 import { api, errorText } from "../api";
 
-// Open Food Facts allows about 10 searches a minute, so photos are fetched
-// one snack at a time with a pause in between.
-const PHOTO_GAP_MS = 6500;
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-/** Admin card: load demo people, check-ins and photos, or remove them all. */
+/**
+ * Admin card for removing leftover demo people and their check-ins. Crunchd
+ * is public now, so demo data can't be added any more (UK law bans fake
+ * reviews); once it's all gone the card disappears.
+ */
 export function DemoData({ onChanged }: { onChanged: () => void }) {
   const [status, setStatus] = useState<DemoStatus | null>(null);
-  const [progress, setProgress] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [faceNote, setFaceNote] = useState<string | null>(null);
 
   const load = () => api<DemoStatus>("/admin/demo").then(setStatus);
   useEffect(() => {
     load().catch((err) => setError(errorText(err)));
   }, []);
 
-  const run = async (work: () => Promise<void>) => {
+  const removeAll = async () => {
+    if (!confirm("Remove all demo people, their check-ins, photos and the demo groups?")) return;
+    setBusy(true);
     setError(null);
     try {
-      await work();
+      await api("/admin/demo", { method: "DELETE" });
     } catch (err) {
       setError(errorText(err));
     } finally {
-      setProgress(null);
+      setBusy(false);
       await load().catch(() => {});
       onChanged();
     }
   };
 
-  // Profile pictures first (one quick call), then pack photos snack by snack.
-  const fillIn = async (s: DemoStatus) => {
-    if (s.missingAvatars > 0) {
-      setProgress("Adding faces…");
-      const r = await api<{ added: number; faces: number; pictures: number }>("/admin/demo/avatars", { method: "POST" });
-      setFaceNote(
-        r.added === 0
-          ? "Couldn't fetch any faces or pictures just now. Try again in a minute."
-          : `${r.faces} new faces${r.pictures ? ` and ${r.pictures} pictures (the face site didn't answer)` : ""}.`,
-      );
-    }
-    await fetchPhotos(s.missingPhotos);
-  };
-
-  const fetchPhotos = async (snackIds: string[]) => {
-    for (const [i, id] of snackIds.entries()) {
-      setProgress(`Finding pack photos… ${i + 1} of ${snackIds.length}. Keep this page open.`);
-      await api(`/admin/demo/photos/${id}`, { method: "POST" });
-      if (i < snackIds.length - 1) await wait(PHOTO_GAP_MS);
-    }
-  };
-
-  const addAll = () =>
-    run(async () => {
-      setProgress("Adding demo people and check-ins…");
-      await api("/admin/demo", { method: "POST" });
-      const fresh = await api<DemoStatus>("/admin/demo");
-      setStatus(fresh);
-      await fillIn(fresh);
-    });
-
-  const addMore = () =>
-    run(async () => {
-      setProgress("Adding check-ins…");
-      await api("/admin/demo/more", { method: "POST" });
-      const fresh = await api<DemoStatus>("/admin/demo");
-      setStatus(fresh);
-      await fillIn(fresh);
-    });
-
-  const removeAll = () => {
-    if (!confirm("Remove all demo people, their check-ins, photos and the demo groups?")) return;
-    void run(async () => {
-      setProgress("Removing demo data…");
-      await api("/admin/demo", { method: "DELETE" });
-    });
-  };
-
-  if (!status) return null;
-  const loaded = status.users > 0;
-  const busy = progress !== null;
+  if (error && !status) return <p className="error">{error}</p>;
+  if (!status || status.users === 0) return null;
 
   return (
     <section className="card-plain stack-sm">
       <h2 className="section-title">Demo data</h2>
       <p className="small muted">
-        {loaded
-          ? `${status.users} demo people, ${status.checkins} check-ins and ${status.photos} photos are loaded. You're in their two groups.`
-          : "Adds 8 made-up people with AI-generated faces, three weeks of check-ins, pack photos from Open Food Facts, and two groups you're in. Remove it all in one tap later."}
+        {status.users} demo people, {status.checkins} check-ins and {status.photos} photos are still loaded. Remove them now
+        Crunchd is public: fake reviews aren't allowed under UK law.
       </p>
-      {progress && <p className="small notice">{progress}</p>}
-      {faceNote && <p className="small muted">{faceNote}</p>}
       {error && <p className="error">{error}</p>}
-      {!loaded && (
-        <button type="button" className="button" disabled={busy} onClick={() => void addAll()}>
-          Load demo data
-        </button>
-      )}
-      {loaded && (
-        <button type="button" className="button" disabled={busy} onClick={() => void addMore()}>
-          Add a few more check-ins
-        </button>
-      )}
-      {loaded && (status.missingPhotos.length > 0 || status.missingAvatars > 0) && (
-        <button type="button" className="button secondary" disabled={busy} onClick={() => void run(() => fillIn(status))}>
-          Add photos and faces
-        </button>
-      )}
-      {loaded && (
-        <button type="button" className="button secondary" disabled={busy} onClick={removeAll}>
-          Remove demo data
-        </button>
-      )}
+      <button type="button" className="button" disabled={busy} onClick={() => void removeAll()}>
+        {busy ? "Removing…" : "Remove demo data"}
+      </button>
     </section>
   );
 }

@@ -5,24 +5,8 @@ import type { AppContext } from "../env";
 import { getCategory, POINTS } from "../../shared/catalogue";
 import { deleteAccount } from "../lib/account";
 import { currentUser } from "../lib/currentUser";
-import {
-  buildDemoData,
-  DEMO_GROUPS,
-  DEMO_PHOTO_PREFIX,
-  DEMO_PREFIX,
-  DEMO_FACE_URL,
-  buildMoreCheckins,
-  demoAvatarId,
-  demoPictureUrl,
-  demoPhotoKey,
-  demoUserId,
-  offSearchUrl,
-  pickImages,
-  needsFace,
-  wantsPhoto,
-} from "../lib/demo";
+import { DEMO_PHOTO_PREFIX, DEMO_PREFIX } from "../lib/demo";
 import { type DietSuggestion, offDietSearchUrl, type OffProduct, pickProduct, suggestDiet } from "../lib/diet";
-import { newInviteCode } from "../lib/groups";
 import { fetchLogo, findLogoCandidates, LOGO_TYPES, type LogoCandidate, MAX_LOGO_BYTES } from "../lib/logoCandidates";
 import { brandKey } from "../../shared/brands";
 import { hashPassword, newId } from "../lib/crypto";
@@ -50,8 +34,7 @@ admin.use("*", async (c, next) => {
   await next();
   const method = c.req.method;
   const path = c.req.path.replace(/^\/api\/admin/, "") || "/";
-  // Demo photos are added one request per snack; one "Loaded demo data" line is enough.
-  if (method === "GET" || method === "HEAD" || path.startsWith("/demo/photos/")) return;
+  if (method === "GET" || method === "HEAD") return;
   let detail: string | null = null;
   if (c.req.header("Content-Type")?.includes("application/json")) {
     // Hono keeps the body the route already read, so this reads it again for free.
@@ -185,239 +168,18 @@ admin.post("/avatars/:userId", async (c) => {
 
 // Demo data ---------------------------------------------------------------
 
-/** Whether demo data is loaded, and what's still missing a photo or picture. */
+// Crunchd went public on 2026-10-30, so made-up people and check-ins can no
+// longer be added (UK law, the DMCC Act 2024, bans fake reviews). The ways to
+// load them are gone; what's left is checking for leftovers and removing them.
+
+/** How much demo data is still loaded, so Settings can offer to remove it. */
 admin.get("/demo", async (c) => {
-  const db = c.env.DB;
-  const [counts, checkins, people] = await Promise.all([
-    db
-      .prepare(
-        `SELECT (SELECT COUNT(*) FROM users WHERE id LIKE 'demo-%') AS users,
-                (SELECT COUNT(*) FROM checkins WHERE id LIKE 'demo-%') AS checkins,
-                (SELECT COUNT(*) FROM photos WHERE id LIKE 'demo-%') AS photos`,
-      )
-      .first<{ users: number; checkins: number; photos: number }>(),
-    db
-      .prepare(
-        `SELECT c.id, c.snack_id AS snackId, EXISTS (SELECT 1 FROM photos p WHERE p.checkin_id = c.id) AS hasPhoto
-           FROM checkins c WHERE c.id LIKE 'demo-%'`,
-      )
-      .all<{ id: string; snackId: string; hasPhoto: number }>(),
-    db.prepare("SELECT username, avatar_id AS avatarId FROM users WHERE id LIKE 'demo-%'").all<{ username: string; avatarId: string | null }>(),
-  ]);
-  const missing = new Set(checkins.results.filter((r) => !r.hasPhoto && wantsPhoto(r.id)).map((r) => r.snackId));
-  return c.json({
-    users: counts?.users ?? 0,
-    checkins: counts?.checkins ?? 0,
-    photos: counts?.photos ?? 0,
-    missingPhotos: [...missing].sort(),
-    missingAvatars: people.results.filter((p) => needsFace(p.username, p.avatarId)).length,
-  } satisfies DemoStatus);
-});
-
-// Give the demo people faces (lib/demo.ts says where from), replacing the old
-// drawn avatars: an AI-made face if that site answers, else a random picture.
-// One call does them all; anyone where both fail keeps what they had.
-admin.post("/demo/avatars", async (c) => {
-  const db = c.env.DB;
-  const { results } = await db
-    .prepare("SELECT id, username, avatar_id FROM users WHERE id LIKE 'demo-%'")
-    .all<{ id: string; username: string; avatar_id: string | null }>();
-  const fetchImage = async (url: string) => {
-    // The face site turns away requests that don't look like a browser.
-    const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (compatible; Crunchd demo data)", Accept: "image/*" } });
-    const type = res.headers.get("content-type") ?? "";
-    const image = await res.arrayBuffer();
-    if (!res.ok || !type.startsWith("image/") || image.byteLength > 2 * 1024 * 1024) throw new Error(`${res.status} ${type}`);
-    return { image, type };
-  };
-  let faces = 0;
-  let pictures = 0;
-  for (const person of results.filter((p) => needsFace(p.username, p.avatar_id))) {
-    let got: { image: ArrayBuffer; type: string } | null = null;
-    try {
-      got = await fetchImage(DEMO_FACE_URL);
-      faces++;
-    } catch (err) {
-      console.warn("demo face fetch failed, trying a picture", err);
-      try {
-        got = await fetchImage(demoPictureUrl(person.username));
-        pictures++;
-      } catch (err2) {
-        console.error("demo picture fetch failed", err2);
-      }
-    }
-    if (!got) continue;
-    const avatarId = demoAvatarId(person.username);
-    await c.env.PHOTOS.put(avatarKey(person.id, avatarId), got.image, { httpMetadata: { contentType: got.type } });
-    await db.prepare("UPDATE users SET avatar_id = ? WHERE id = ?").bind(avatarId, person.id).run();
-    if (person.avatar_id) await c.env.PHOTOS.delete(avatarKey(person.id, person.avatar_id));
-  }
-  return c.json({ added: faces + pictures, faces, pictures });
-});
-
-// A few more check-ins from the demo people, as if made in the last few
-// hours. Their photos come afterwards, like the first load (DemoData.tsx).
-const MORE_CHECKINS = 6;
-admin.post("/demo/more", async (c) => {
-  const db = c.env.DB;
-  const loaded = await db.prepare("SELECT 1 FROM users WHERE id LIKE 'demo-%' LIMIT 1").first();
-  if (!loaded) return c.json({ error: "Load the demo data first." }, 400);
-  const { results: pairs } = await db
-    .prepare("SELECT user_id || '|' || snack_id AS pair FROM checkins WHERE user_id LIKE 'demo-%'")
-    .all<{ pair: string }>();
-  const fresh = buildMoreCheckins(Math.floor(Date.now() / 1000), MORE_CHECKINS, new Set(pairs.map((p) => p.pair)));
-  const statements: D1PreparedStatement[] = [];
-  for (const ch of fresh) {
-    statements.push(
-      db
-        .prepare("INSERT INTO checkins (id, user_id, snack_id, overall, review, venue_text, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
-        .bind(ch.id, ch.userId, ch.snackId, ch.overall, ch.review, ch.venue, ch.createdAt),
-    );
-    for (const [attribute, value] of Object.entries(ch.attributes)) {
-      statements.push(db.prepare("INSERT INTO checkin_attributes (checkin_id, attribute, value) VALUES (?, ?, ?)").bind(ch.id, attribute, value));
-    }
-    for (const line of ch.points) {
-      statements.push(
-        db
-          .prepare("INSERT INTO points_ledger (user_id, checkin_id, reason, points, created_at) VALUES (?, ?, ?, ?, ?)")
-          .bind(ch.userId, ch.id, line.reason, line.points, ch.createdAt),
-      );
-    }
-  }
-  await db.batch(statements);
-  return c.json({ added: fresh.length }, 201);
-});
-
-// Add the demo people, their check-ins and two groups (with you in both).
-// Photos come afterwards, one snack per call (see below).
-admin.post("/demo", async (c) => {
-  const me = currentUser(c);
-  const db = c.env.DB;
-  const loaded = await db.prepare("SELECT 1 FROM users WHERE id LIKE 'demo-%' LIMIT 1").first();
-  if (loaded) return c.json({ error: "Demo data is already loaded. Remove it first." }, 409);
-
-  const time = Math.floor(Date.now() / 1000);
-  const data = buildDemoData(time);
-  const { results: taken } = await db
-    .prepare(`SELECT username FROM users WHERE username IN (${data.users.map(() => "?").join(", ")})`)
-    .bind(...data.users.map((u) => u.username))
-    .all<{ username: string }>();
-  if (taken.length) {
-    return c.json({ error: `Someone already uses ${taken.map((t) => t.username).join(", ")}.` }, 409);
-  }
-  const statements: D1PreparedStatement[] = [];
-  for (const u of data.users) {
-    // "!" is not a valid password hash, so nobody can sign in as a demo person
-    // (and quick sign-in can't claim them, because it only claims NULL).
-    statements.push(
-      db
-        .prepare(
-          `INSERT INTO users (id, username, email, password_hash, email_verified, created_at)
-           VALUES (?, ?, ?, '!', 1, ?)`,
-        )
-        .bind(u.id, u.username, `${u.username}@demo.snackchat.invalid`, time - 30 * 24 * 3600),
-    );
-  }
-  for (const ch of data.checkins) {
-    statements.push(
-      db
-        .prepare("INSERT INTO checkins (id, user_id, snack_id, overall, review, venue_text, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
-        .bind(ch.id, ch.userId, ch.snackId, ch.overall, ch.review, ch.venue, ch.createdAt),
-    );
-    for (const [attribute, value] of Object.entries(ch.attributes)) {
-      statements.push(
-        db.prepare("INSERT INTO checkin_attributes (checkin_id, attribute, value) VALUES (?, ?, ?)").bind(ch.id, attribute, value),
-      );
-    }
-    for (const line of ch.points) {
-      statements.push(
-        db
-          .prepare("INSERT INTO points_ledger (user_id, checkin_id, reason, points, created_at) VALUES (?, ?, ?, ?, ?)")
-          .bind(ch.userId, ch.id, line.reason, line.points, ch.createdAt),
-      );
-    }
-  }
-  for (const g of DEMO_GROUPS) {
-    statements.push(
-      db
-        .prepare(
-          `INSERT INTO groups (id, name, invite_code, scoring_mode, reset_period, created_by, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        )
-        .bind(g.id, g.name, newInviteCode(), g.scoring, g.reset, demoUserId(g.owner), time - 20 * 24 * 3600),
-    );
-    const members: [string, string][] = [
-      [demoUserId(g.owner), "owner"],
-      ...g.members.map((m): [string, string] => [demoUserId(m), "member"]),
-      [me.id, "member"],
-    ];
-    for (const [userId, role] of members) {
-      statements.push(
-        db
-          .prepare("INSERT INTO group_members (group_id, user_id, role, joined_at) VALUES (?, ?, ?, ?)")
-          .bind(g.id, userId, role, time - 20 * 24 * 3600),
-      );
-    }
-  }
-  await db.batch(statements);
-  return c.json({ users: data.users.length, checkins: data.checkins.length }, 201);
-});
-
-// Find one snack's pack photo on Open Food Facts and add it to some of that
-// snack's demo check-ins. The page calls this once per snack, a few seconds
-// apart, because Open Food Facts allows about 10 searches a minute.
-admin.post("/demo/photos/:snackId", async (c) => {
-  const db = c.env.DB;
-  const snackId = c.req.param("snackId");
-  const snack = await db
-    .prepare("SELECT name, brand FROM snacks WHERE id = ?")
-    .bind(snackId)
-    .first<{ name: string; brand: string | null }>();
-  if (!snack) return c.json({ error: "Snack not found." }, 404);
-
-  const headers = { "User-Agent": "Crunchd/0.1 (demo data; github.com/jasoneroberts)" };
-  // A few different pack photos (different people photograph the same snack),
-  // so a snack's demo cards don't all show the same picture. A snack with no
-  // photo is fine, so any failure here just reports "not found".
-  const keys: string[] = [];
-  try {
-    const search = await fetch(offSearchUrl(snack.name, snack.brand), { headers });
-    if (!search.ok) return c.json({ found: false, reason: `search ${search.status}` });
-    const { products } = (await search.json()) as { products?: { image_front_url?: string }[] };
-    for (const url of pickImages(products)) {
-      const image = await fetch(url, { headers });
-      const type = image.headers.get("content-type") ?? "";
-      if (!image.ok || !type.startsWith("image/")) continue;
-      const key = demoPhotoKey(snackId, keys.length);
-      await c.env.PHOTOS.put(key, await image.arrayBuffer(), { httpMetadata: { contentType: type } });
-      keys.push(key);
-    }
-  } catch (err) {
-    console.error("demo photo fetch failed", err);
-  }
-  if (!keys.length) return c.json({ found: false, reason: "no photo" });
-
-  const { results } = await db
-    .prepare(
-      `SELECT c.id, c.user_id, c.created_at FROM checkins c
-        WHERE c.snack_id = ? AND c.id LIKE 'demo-%'
-          AND NOT EXISTS (SELECT 1 FROM photos p WHERE p.checkin_id = c.id)`,
-    )
-    .bind(snackId)
-    .all<{ id: string; user_id: string; created_at: number }>();
-  const chosen = results.filter((r) => wantsPhoto(r.id));
-  // Always give at least one check-in a photo, so every snack gets a picture.
-  if (chosen.length === 0 && results.length > 0) chosen.push(results[0]);
-  const statements = chosen.flatMap((r, i) => [
-    db
-      .prepare("INSERT INTO photos (id, checkin_id, r2_key, status, created_at) VALUES (?, ?, ?, 'visible', ?)")
-      .bind(`${DEMO_PREFIX}p-${r.id}`, r.id, keys[i % keys.length], r.created_at),
-    db
-      .prepare("INSERT INTO points_ledger (user_id, checkin_id, reason, points, created_at) VALUES (?, ?, 'photo', ?, ?)")
-      .bind(r.user_id, r.id, POINTS.photo, r.created_at),
-  ]);
-  if (statements.length) await db.batch(statements);
-  return c.json({ found: true, added: chosen.length, pictures: keys.length });
+  const counts = await c.env.DB.prepare(
+    `SELECT (SELECT COUNT(*) FROM users WHERE id LIKE 'demo-%') AS users,
+            (SELECT COUNT(*) FROM checkins WHERE id LIKE 'demo-%') AS checkins,
+            (SELECT COUNT(*) FROM photos WHERE id LIKE 'demo-%') AS photos`,
+  ).first<DemoStatus>();
+  return c.json({ users: counts?.users ?? 0, checkins: counts?.checkins ?? 0, photos: counts?.photos ?? 0 } satisfies DemoStatus);
 });
 
 // Remove everything the demo added: photos and pictures in R2, groups, then the people

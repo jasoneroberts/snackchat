@@ -1,6 +1,10 @@
 // Demo data so the live app has something to look at before friends join.
 // Every row it makes has an id starting "demo-", and every photo lives in R2
 // under "demo/", so it can all be removed again in one go (routes/admin.ts).
+//
+// Since the public launch (2026-10-30) the app only removes demo data; nothing
+// calls the builders below any more. They're kept, with their tests, for a
+// local or staging copy of the app.
 
 import { POINTS, REVIEW_BONUS_CHARS } from "../../shared/catalogue";
 
