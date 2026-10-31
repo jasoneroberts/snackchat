@@ -351,6 +351,7 @@ admin.get("/users", async (c) => {
   const { results } = await c.env.DB.prepare(
     `SELECT u.id, u.username, u.avatar_id AS avatarId, u.is_admin AS isAdmin, u.created_at AS joinedAt,
             u.signup_ref AS signupRef, u.id LIKE 'demo-%' AS isDemo,
+            (SELECT iu.username FROM referrals r JOIN users iu ON iu.id = r.inviter_id WHERE r.friend_id = u.id) AS invitedBy,
             (SELECT COUNT(*) FROM checkins c WHERE c.user_id = u.id) AS checkins,
             (SELECT IFNULL(SUM(p.points), 0) FROM points_ledger p WHERE p.user_id = u.id) AS points,
             (SELECT COUNT(*) FROM group_members g WHERE g.user_id = u.id) AS groups,

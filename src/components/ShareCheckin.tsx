@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { logoFor } from "../lib/logos";
+import { withInviter } from "../lib/ref";
 import { makeShareCard, type ShareCardInput } from "../lib/shareCard";
 import { useVoice } from "../lib/voice";
 
@@ -30,8 +31,9 @@ export function ShareCheckin({
   const [card, setCard] = useState<{ file: File; url: string } | null>(null);
   const [failed, setFailed] = useState(false);
   const [note, setNote] = useState<string | null>(null);
-  // ?ref=share counts sign-ups from shared pictures in Settings > Users.
-  const link = `${window.location.origin}/?ref=share`;
+  // ?ref=share counts sign-ups from shared pictures in Settings > Users, and
+  // ?by= gives you invite points if someone joins from it.
+  const link = withInviter(`${window.location.origin}/?ref=share`, username);
   const site = window.location.host;
   const text = `I rated ${snack.name} ${Math.round(rating * 100) / 100}/5 on Crunchd. What would you give it? ${link}`;
 

@@ -87,6 +87,7 @@ export function AdminUsers({ meId }: { meId: string }) {
                 {u.isAdmin && <span className="tag">admin</span>}
                 {u.isDemo && <span className="tag">demo</span>}
                 {u.signupRef && <span className="tag">via {u.signupRef}</span>}
+                {u.invitedBy && <span className="tag">invited by {u.invitedBy}</span>}
                 <span className="small muted block">
                   Joined {timeAgo(u.joinedAt)} · {u.lastActive ? `last seen ${timeAgo(u.lastActive)}` : "not seen yet"}
                 </span>

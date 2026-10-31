@@ -1,4 +1,5 @@
 import type { ResetPeriod, ScoringMode } from "../../shared/types";
+import { withInviter } from "./ref";
 
 export const MODE_CHOICES: { id: ScoringMode; label: string; desc: string; unit: string }[] = [
   { id: "points", label: "Points", desc: "New snacks, photos and reviews all score. Rewards effort.", unit: "pts" },
@@ -24,8 +25,11 @@ export function resetsIn(endSeconds: number | null, now = Date.now()): string | 
   return days === 1 ? "Resets tomorrow" : `Resets in ${days} days`;
 }
 
-/** The page people land on from an invite link. In a chat it shows the squad's own preview card (worker/lib/linkPreview.ts). */
-export const inviteLink = (code: string) => `${window.location.origin}/join/${code}`;
+/**
+ * The page people land on from an invite link. In a chat it shows the squad's own preview card (worker/lib/linkPreview.ts).
+ * It carries ?by=<you>, so you also get invite points for anyone new who joins Crunchd from it.
+ */
+export const inviteLink = (code: string) => withInviter(`${window.location.origin}/join/${code}`);
 
 /** What goes in the chat with an invite link. The link goes last so WhatsApp shows its preview card. */
 export const inviteMessage = (groupName: string, code: string) =>

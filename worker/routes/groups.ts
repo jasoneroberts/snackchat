@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { BoardRow, GroupCard, GroupPage, GroupPreview, ResetPeriod, ScoringMode } from "../../shared/types";
+import { invitePointsSql } from "../lib/referrals";
 import type { AppContext } from "../env";
 import { newId } from "../lib/crypto";
 import { currentUser } from "../lib/currentUser";
@@ -44,9 +45,9 @@ const COUNTS = `s.category_id IN (SELECT value FROM json_each(?3)) OR ?3 IS NULL
 
 // What each scoring mode adds up for one member (m.user_id) since ?2.
 const SCORE_SQL: Record<ScoringMode, string> = {
-  points: `SELECT COALESCE(SUM(pl.points), 0) FROM points_ledger pl
+  points: `(SELECT COALESCE(SUM(pl.points), 0) FROM points_ledger pl
              JOIN checkins c ON c.id = pl.checkin_id JOIN snacks s ON s.id = c.snack_id
-            WHERE pl.user_id = m.user_id AND pl.created_at >= ?2 AND (${COUNTS})`,
+            WHERE pl.user_id = m.user_id AND pl.created_at >= ?2 AND (${COUNTS}))${invitePointsSql("m.user_id", "?2")}`,
   checkins: `SELECT COUNT(*) FROM checkins c JOIN snacks s ON s.id = c.snack_id
               WHERE c.user_id = m.user_id AND c.created_at >= ?2 AND (${COUNTS})`,
   unique: `SELECT COUNT(DISTINCT c.snack_id) FROM checkins c JOIN snacks s ON s.id = c.snack_id

@@ -3,6 +3,7 @@ import type { ProfilePage } from "../../shared/types";
 import { adminToDo, api, errorText, type Me } from "../api";
 import { Avatar } from "../components/Avatar";
 import { CheckinCard } from "../components/CheckinCard";
+import { InviteFriends } from "../components/InviteFriends";
 import { Link } from "../components/Link";
 import { ReportButton } from "../components/Report";
 import { rating } from "../lib/format";
@@ -120,6 +121,8 @@ export function Profile({
           {isMe ? "Your snacks" : `${data.profile.username}'s snacks`} ({data.stats.snacks})
         </Link>
       )}
+
+      {isMe && <InviteFriends username={me.username} />}
 
       {data.checkins && (
         <>

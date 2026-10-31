@@ -473,3 +473,8 @@ select:focus { outline: 2px solid var(--orange); border-color: transparent; }
 
 /* "Turn on notifications?" sheet */
 .push-bell { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; background: var(--orange); color: var(--cream); }
+
+/* Invite friends (profile) */
+.invite-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.invite-list li { display: flex; align-items: center; gap: 8px; }
+.invited-by { background: var(--cream-deep); border-radius: 10px; padding: 8px 12px; font-weight: 700; }

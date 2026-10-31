@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { dietSql, readDiets } from "../../shared/diet";
 import { filterTypes } from "../../shared/typeFilters";
 import type { BoardPeriod, PeopleMetric, PeopleRow, SnackRow } from "../../shared/types";
+import { invitePointsSql } from "../lib/referrals";
 import type { AppContext } from "../env";
 import { BOARD_PERIODS, boardAverage, boardStart } from "../lib/boards";
 import { currentUser } from "../lib/currentUser";
@@ -53,7 +54,7 @@ boards.get("/people", async (c) => {
     `SELECT u.username, u.avatar_id AS avatarId,
             (SELECT COALESCE(SUM(pl.points), 0) FROM points_ledger pl
                JOIN checkins c ON c.id = pl.checkin_id JOIN snacks s ON s.id = c.snack_id
-              WHERE pl.user_id = u.id AND pl.created_at >= ?2 AND ${TYPES}) AS points,
+              WHERE pl.user_id = u.id AND pl.created_at >= ?2 AND ${TYPES})${invitePointsSql("u.id", "?2")} AS points,
             (SELECT COUNT(*) FROM checkins c JOIN snacks s ON s.id = c.snack_id
               WHERE c.user_id = u.id AND c.created_at >= ?2 AND ${TYPES}) AS checkins,
             (SELECT COUNT(DISTINCT c.snack_id) FROM checkins c JOIN snacks s ON s.id = c.snack_id

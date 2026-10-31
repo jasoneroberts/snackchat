@@ -12,3 +12,25 @@ export function cleanRef(value: unknown): string | null {
 
 /** How a ref reads in the admin list: "pub", "tiktok", or "no link" for people who came straight in. */
 export const refLabel = (ref: string | null) => ref ?? "no link";
+
+// Personal invite links: getcrunchd.com/?ref=friend&by=jase. "ref" is the
+// kind of link (as above); "by" is the person who sent it, who earns points
+// when the friend joins and again after their first check-in
+// (worker/lib/referrals.ts).
+
+/** A username from a ?by= link, or null if it can't be one. */
+export function cleanInviter(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const name = value.trim();
+  return /^[a-zA-Z0-9_]{3,20}$/.test(name) ? name : null;
+}
+
+export const INVITE_POINTS = {
+  join: 5, // a friend makes an account from your link
+  firstCheckin: 15, // ...and then checks in for the first time
+  friendsPerDay: 5, // each bonus is paid for at most this many friends a day
+  // Whether invite points count on the people and squad points tables (not
+  // just your total). On while Crunchd is small; set to false if fake
+  // accounts ever show up to farm them.
+  onBoards: true,
+} as const;

@@ -99,7 +99,7 @@ export async function exportAccount(db: D1Database, userId: string, origin: stri
     `SELECT id, username, CASE WHEN email LIKE '%.invalid' THEN NULL ELSE email END AS email, email_verified, country,
             is_private, voice, created_at FROM users WHERE id = ?`,
   );
-  const [checkins, attributes, photos, points, groups, follows, tastes, explore, badges, snacks, reports, blocks, likes] = await Promise.all([
+  const [checkins, attributes, photos, points, groups, follows, tastes, explore, badges, snacks, reports, blocks, likes, invites] = await Promise.all([
     all(
       `SELECT c.id, s.name AS snack, s.brand, c.overall, c.review, c.venue_text AS venue, c.paired_with, c.created_at
          FROM checkins c JOIN snacks s ON s.id = c.snack_id WHERE c.user_id = ? ORDER BY c.created_at`,
@@ -126,6 +126,12 @@ export async function exportAccount(db: D1Database, userId: string, origin: stri
          JOIN checkins c ON c.id = l.checkin_id JOIN users u ON u.id = c.user_id JOIN snacks s ON s.id = c.snack_id
         WHERE l.user_id = ? ORDER BY l.created_at`,
     ),
+    // Invites both ways: who brought you, and who you brought.
+    all(
+      `SELECT fu.username AS friend, iu.username AS invited_by, r.joined_at, r.checked_in_at
+         FROM referrals r JOIN users fu ON fu.id = r.friend_id JOIN users iu ON iu.id = r.inviter_id
+        WHERE r.friend_id = ?1 OR r.inviter_id = ?1`,
+    ),
   ]);
 
   return {
@@ -147,5 +153,6 @@ export async function exportAccount(db: D1Database, userId: string, origin: stri
     reportsMade: reports,
     blocked: blocks,
     hearted: likes,
+    invites,
   };
 }
