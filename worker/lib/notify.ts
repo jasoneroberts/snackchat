@@ -2,7 +2,8 @@
 // photo or profile picture to approve, a report, or a new snack. Everyone
 // with notifications on can get check-in reminders (lib/reminders.ts) and
 // hear when someone likes their check-in (lib/likeAlerts.ts) or a squad mate
-// checks in (lib/squadAlerts.ts).
+// checks in (lib/squadAlerts.ts), or get those two as one Sunday round-up
+// instead (lib/weeklyDigest.ts).
 
 import type { Context } from "hono";
 import type { AppContext, Env } from "../env";
@@ -11,7 +12,7 @@ import { makeVapidKeys, sendPush, type VapidKeys } from "./webpush";
 export type AdminEventKind = "user" | "photo" | "report" | "snack";
 
 export interface PushEvent {
-  kind: AdminEventKind | "reminder" | "like" | "squad" | "test" | "invite" | "streak";
+  kind: AdminEventKind | "reminder" | "like" | "squad" | "test" | "invite" | "streak" | "digest";
   title: string;
   body: string;
   url: string; // the page in the app to open when the notification is tapped
