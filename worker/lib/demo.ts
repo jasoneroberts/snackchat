@@ -57,7 +57,7 @@ const TASTE: Record<string, [number, number, number]> = {
   "seed-salted-pistachios": [3, 4, 1], "seed-popchips-sea-salt": [2, 3, 1],
 };
 
-// How hot the snacks whose type has a Spice slider are (crisps, nuts, pub and
+// How hot the snacks whose type has a Spice slider are (crisps, nuts and
 // world snacks), so Explore can match chilli fans.
 const SPICE: Record<string, number> = {
   "seed-walkers-cheese-onion": 1, "seed-mccoys-flame-grilled-steak": 2, "seed-kettle-sea-salt-balsamic": 1,
@@ -69,8 +69,8 @@ const SPICE: Record<string, number> = {
   "seed-discos-salt-vinegar": 1, "seed-pringles-salt-vinegar": 1, "seed-salted-pistachios": 1, "seed-popchips-sea-salt": 1,
 };
 
-// How crunchy the snacks whose type has a Crunch slider are (crisps, nuts,
-// biscuits and pub snacks).
+// How crunchy the snacks whose type has a Crunch slider are (crisps, nuts
+// and biscuits).
 const CRUNCH: Record<string, number> = {
   "seed-walkers-cheese-onion": 3, "seed-mccoys-flame-grilled-steak": 5, "seed-kettle-sea-salt-balsamic": 5,
   "seed-tyrrells-sea-salted": 5, "seed-pipers-anglesey-sea-salt": 5, "seed-seabrook-original": 4,

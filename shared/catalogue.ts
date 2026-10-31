@@ -69,13 +69,6 @@ export const CATEGORIES: Category[] = [
     extra: [crunch, { key: "dunk", label: "Dunkability", low: "Collapses", high: "Survives" }],
   },
   {
-    id: "pub",
-    name: "Pub snacks",
-    short: "pub snacks",
-    tint: "#E9CFA3",
-    extra: [crunch, spice, { key: "pint", label: "Pint pairing", low: "Clashes", high: "Perfect" }],
-  },
-  {
     id: "kids",
     name: "Kids snacks",
     short: "kids snacks",
