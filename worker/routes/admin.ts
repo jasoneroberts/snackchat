@@ -1,13 +1,13 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import type { AdminReport, AdminSnackPhoto, AdminSnackRow, AdminUserRow, BrandRow, DemoStatus, DietRow, ReviewQueue } from "../../shared/types";
+import type { AdminReport, AdminSnackPhoto, AdminSnackRow, AdminUserRow, BrandRow, DemoStatus, DietRow, LogoSuggestion, ReviewQueue } from "../../shared/types";
 import type { AppContext } from "../env";
 import { getCategory, POINTS } from "../../shared/catalogue";
 import { deleteAccount } from "../lib/account";
 import { currentUser } from "../lib/currentUser";
 import { DEMO_PHOTO_PREFIX, DEMO_PREFIX } from "../lib/demo";
 import { type DietSuggestion, offDietSearchUrl, type OffProduct, pickProduct, suggestDiet } from "../lib/diet";
-import { fetchLogo, findLogoCandidates, LOGO_TYPES, type LogoCandidate, MAX_LOGO_BYTES } from "../lib/logoCandidates";
+import { fetchLogo, findLogoCandidates, LOGO_TYPES, type LogoCandidate, MAX_LOGO_BYTES, relatedBrands } from "../lib/logoCandidates";
 import { brandKey } from "../../shared/brands";
 import { hashPassword, newId } from "../lib/crypto";
 import { LATEST_PHOTO } from "../lib/photoSql";
@@ -249,86 +249,172 @@ async function saveLogo(env: AppContext["Bindings"], brand: string, body: Readab
 
 // Suggested logos (lib/logoCandidates.ts) ------------------------------------
 
-// Wikidata lookups are cached for a week, so paging through suggestions is quick.
+// Lookups are cached for a week, so paging through suggestions is quick.
 const CANDIDATE_TTL = 7 * 24 * 3600;
+const candidateKey = (brand: string) => `logo-candidates:v3:${brand}`;
 
-// How many candidates one request will try before giving up for now.
-const MAX_TRIES = 4;
+// How many suggestions to show at once, and how many to try downloading per request.
+const SHOW = 3;
+const MAX_TRIES = 8;
+
+/** What a maker mostly makes ("crisps", "chocolate"), to steer the search. */
+async function brandContext(env: AppContext["Bindings"], brand: string): Promise<string | null> {
+  const row = await env.DB.prepare(
+    `SELECT category_id FROM snacks WHERE LOWER(TRIM(brand)) = ? AND status != 'rejected'
+      GROUP BY category_id ORDER BY COUNT(*) DESC LIMIT 1`,
+  )
+    .bind(brand)
+    .first<{ category_id: string }>();
+  return row ? (getCategory(row.category_id)?.short ?? null) : null;
+}
 
 /**
- * The next suggestion for a brand that hasn't been rejected and actually
- * downloads as a usable image, and how many are left after it. Candidates
- * that don't download are rejected automatically, so the admin never sees a
- * suggestion that can't be approved.
+ * Logos the app already has for a related maker ("KP Snacks" when looking at
+ * "KP"). These come first: same company, already approved once.
  */
-async function nextSuggestion(env: AppContext["Bindings"], brand: string) {
-  const cacheKey = `logo-candidates:v2:${brand}`;
-  let candidates = await env.CACHE.get<LogoCandidate[]>(cacheKey, "json");
-  if (!candidates) {
-    candidates = await findLogoCandidates(brand);
-    await env.CACHE.put(cacheKey, JSON.stringify(candidates), { expirationTtl: CANDIDATE_TTL });
+async function aliasCandidates(env: AppContext["Bindings"], brand: string): Promise<LogoCandidate[]> {
+  const { results } = await env.DB.prepare(
+    `SELECT l.brand_key, l.logo_id, (SELECT MIN(TRIM(s.brand)) FROM snacks s WHERE LOWER(TRIM(s.brand)) = l.brand_key) AS name
+       FROM brand_logos l WHERE l.brand_key != ?`,
+  )
+    .bind(brand)
+    .all<{ brand_key: string; logo_id: string; name: string | null }>();
+  return results
+    .filter((r) => relatedBrands(brand, r.brand_key))
+    .map((r) => ({ url: `/api/logos/${r.logo_id}`, source: "alias" as const, label: `The logo you already use for ${r.name ?? r.brand_key}` }));
+}
+
+/** Every suggestion for a brand, best first: logos already in the app, then the lookups. */
+async function allCandidates(env: AppContext["Bindings"], brand: string): Promise<LogoCandidate[]> {
+  let found = await env.CACHE.get<LogoCandidate[]>(candidateKey(brand), "json");
+  if (!found) {
+    found = await findLogoCandidates(brand, await brandContext(env, brand));
+    await env.CACHE.put(candidateKey(brand), JSON.stringify(found), { expirationTtl: CANDIDATE_TTL });
   }
+  return [...(await aliasCandidates(env, brand)), ...found];
+}
+
+/**
+ * The next few suggestions for a brand that haven't been rejected and
+ * actually download as a usable image, and how many are left after them.
+ * Candidates that don't download (or are blurry little favicons) are
+ * rejected automatically, so the admin never sees one that can't be used.
+ */
+async function nextSuggestions(env: AppContext["Bindings"], brand: string): Promise<LogoSuggestion> {
+  const candidates = await allCandidates(env, brand);
   const { results } = await env.DB.prepare("SELECT url FROM brand_logo_rejects WHERE brand_key = ?").bind(brand).all<{ url: string }>();
   const rejected = new Set(results.map((r) => r.url));
   const open = candidates.filter((c) => !rejected.has(c.url));
-  for (let i = 0; i < open.length && i < MAX_TRIES; i++) {
-    const check = await fetchLogo(open[i].url);
-    if (check.ok) return { suggestion: open[i], more: open.length - i - 1 };
-    console.log("logo suggestion skipped", brand, open[i].url, check.reason);
-    await rejectSuggestion(env, brand, open[i].url);
+  const suggestions: LogoSuggestion["suggestions"] = [];
+  let i = 0;
+  let tries = 0;
+  for (; i < open.length && suggestions.length < SHOW && tries < MAX_TRIES; i++) {
+    const c = open[i];
+    const { score: _score, ...shown } = c;
+    if (c.source === "alias") {
+      suggestions.push(shown);
+      continue;
+    }
+    tries++;
+    const check = await fetchLogo(c.url);
+    if (check.ok) {
+      suggestions.push(shown);
+    } else {
+      console.log("logo suggestion skipped", brand, c.url, check.reason);
+      await rejectSuggestions(env, brand, [c.url]);
+    }
   }
-  // Tried a few that didn't work; any left get tried next time.
-  const left = Math.max(0, open.length - MAX_TRIES);
-  return { suggestion: null, more: left };
+  return { suggestions, more: open.length - i };
 }
 
-const rejectSuggestion = (env: AppContext["Bindings"], brand: string, url: string) =>
-  env.DB.prepare("INSERT OR IGNORE INTO brand_logo_rejects (brand_key, url, created_at) VALUES (?, ?, ?)")
-    .bind(brand, url, Math.floor(Date.now() / 1000))
-    .run();
+const rejectSuggestions = async (env: AppContext["Bindings"], brand: string, urls: string[]) => {
+  if (!urls.length) return;
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.batch(
+    urls.map((url) =>
+      env.DB.prepare("INSERT OR IGNORE INTO brand_logo_rejects (brand_key, url, created_at) VALUES (?, ?, ?)").bind(brand, url, now),
+    ),
+  );
+};
 
-// The best logo suggestion for a brand: ?brand=Walkers
+const lookupFailed = { error: "Couldn't look up logos just now. Try again in a minute." };
+
+// The best few logo suggestions for a brand: ?brand=Walkers
 admin.get("/brands/suggestion", async (c) => {
   const brand = brandKey(c.req.query("brand") ?? "");
   if (!brand) return c.json({ error: "Which brand?" }, 400);
   try {
-    return c.json(await nextSuggestion(c.env, brand));
+    return c.json(await nextSuggestions(c.env, brand));
   } catch {
-    return c.json({ error: "Couldn't look up logos just now. Try again in a minute." }, 502);
+    return c.json(lookupFailed, 502);
   }
 });
 
-// Use a suggested logo: { brand, url }. The server downloads it and stores its own copy.
-// If it won't download after all, it's rejected and the next suggestion comes back instead.
+// Use a suggested logo: { brand, url }. The server downloads it (or copies the
+// related maker's logo) and stores its own copy. If it won't download after
+// all, it's rejected and the next suggestions come back instead.
 admin.post("/brands/suggestion/approve", async (c) => {
   const body = await c.req.json<{ brand?: string; url?: string }>().catch(() => ({}) as { brand?: string; url?: string });
   const brand = brandKey(body.brand ?? "");
   const url = body.url ?? "";
-  if (!brand || !url) return c.json({ error: "That isn't one of the suggestions." }, 400);
+  const notOne = { error: "That isn't one of the suggestions." };
+  if (!brand || !url) return c.json(notOne, 400);
+
+  let candidates: LogoCandidate[];
+  try {
+    candidates = await allCandidates(c.env, brand);
+  } catch {
+    return c.json(lookupFailed, 502);
+  }
+  // Only addresses we suggested ourselves get downloaded.
+  const chosen = candidates.find((x) => x.url === url);
+  if (!chosen) return c.json(notOne, 400);
+
+  if (chosen.source === "alias") {
+    const object = await c.env.PHOTOS.get(logoKey(url.slice("/api/logos/".length)));
+    if (!object) return c.json(notOne, 400);
+    const type = object.httpMetadata?.contentType ?? "image/png";
+    return c.json({ logoId: await saveLogo(c.env, brand, await object.arrayBuffer(), type) }, 201);
+  }
 
   const logo = await fetchLogo(url);
   if (!logo.ok) {
-    if (logo.reason === "not an allowed host") return c.json({ error: "That isn't one of the suggestions." }, 400);
-    await rejectSuggestion(c.env, brand, url);
+    await rejectSuggestions(c.env, brand, [url]);
     try {
-      return c.json({ failed: true, ...(await nextSuggestion(c.env, brand)) });
+      return c.json({ failed: true, ...(await nextSuggestions(c.env, brand)) });
     } catch {
-      return c.json({ error: "Couldn't look up logos just now. Try again in a minute." }, 502);
+      return c.json(lookupFailed, 502);
     }
   }
   return c.json({ logoId: await saveLogo(c.env, brand, logo.body, logo.type) }, 201);
 });
 
-// Say no to a suggestion: { brand, url }. Returns the next one.
+// Say no to suggestions: { brand, urls: [...] } (or one "url"). Returns the next few.
 admin.post("/brands/suggestion/reject", async (c) => {
-  const body = await c.req.json<{ brand?: string; url?: string }>().catch(() => ({}) as { brand?: string; url?: string });
+  const body = await c.req
+    .json<{ brand?: string; url?: string; urls?: unknown }>()
+    .catch(() => ({}) as { brand?: string; url?: string; urls?: unknown });
   const brand = brandKey(body.brand ?? "");
-  if (!brand || !body.url) return c.json({ error: "Which suggestion?" }, 400);
-  await rejectSuggestion(c.env, brand, body.url);
+  const urls = (Array.isArray(body.urls) ? body.urls : [body.url]).filter((u): u is string => typeof u === "string" && u.length > 0).slice(0, 20);
+  if (!brand || !urls.length) return c.json({ error: "Which suggestion?" }, 400);
+  await rejectSuggestions(c.env, brand, urls);
   try {
-    return c.json(await nextSuggestion(c.env, brand));
+    return c.json(await nextSuggestions(c.env, brand));
   } catch {
-    return c.json({ error: "Couldn't look up logos just now. Try again in a minute." }, 502);
+    return c.json(lookupFailed, 502);
+  }
+});
+
+// Start a brand's suggestions again: forget its rejects and look it up afresh.
+admin.delete("/brands/suggestion/rejects", async (c) => {
+  const brand = brandKey(c.req.query("brand") ?? "");
+  if (!brand) return c.json({ error: "Which brand?" }, 400);
+  await c.env.DB.prepare("DELETE FROM brand_logo_rejects WHERE brand_key = ?").bind(brand).run();
+  await c.env.CACHE.delete(candidateKey(brand));
+  try {
+    return c.json(await nextSuggestions(c.env, brand));
+  } catch {
+    return c.json(lookupFailed, 502);
   }
 });
 

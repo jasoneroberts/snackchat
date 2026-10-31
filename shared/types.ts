@@ -174,8 +174,9 @@ export interface BrandRow {
 }
 
 export interface LogoSuggestion {
-  suggestion: { url: string; source: "wikidata" | "website"; label: string } | null;
-  more: number; // how many other suggestions are left after this one
+  // Up to three, best first. "alias" is a logo the app already has for a related maker.
+  suggestions: { url: string; source: "alias" | "wikidata" | "wikipedia" | "website" | "guess"; label: string }[];
+  more: number; // how many other suggestions are left after these
 }
 
 // Admin: Users page.

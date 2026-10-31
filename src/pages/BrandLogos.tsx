@@ -13,6 +13,7 @@ export function BrandLogos() {
   const [brands, setBrands] = useState<BrandRow[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [missingOnly, setMissingOnly] = useState(true);
 
   const load = () =>
     api<{ brands: BrandRow[] }>("/admin/brands")
@@ -52,23 +53,34 @@ export function BrandLogos() {
   if (!brands) return <p className="muted page">Loading…</p>;
 
   const withLogo = brands.filter((b) => b.logoId).length;
+  const shown = missingOnly ? brands.filter((b) => !b.logoId) : brands;
 
   return (
     <div className="page stack">
       <div>
         <h1 className="title">Brand logos</h1>
         <p className="small muted">
-          A snack with no photo shows its maker's logo. Each maker without one gets a suggestion from Wikipedia's data or
-          the maker's website: tick to use it, cross to see the next. {withLogo} of {brands.length} makers have a logo.
+          A snack with no photo shows its maker's logo. Each maker without one gets up to three suggestions, from logos
+          you already use for a related maker, Wikipedia, Wikidata and the maker's website. Pick one and tap "Use this",
+          or "None of these" to see more. {withLogo} of {brands.length} makers have a logo.
         </p>
         <p className="small muted">
-          Logos are trademarks. Showing one small to say who makes a snack is fine for the beta; check it before a public
-          launch.
+          Logos are trademarks. Showing one small to say who makes a snack is normally fine, but take it down if a maker
+          asks.
         </p>
       </div>
       {error && <p className="error">{error}</p>}
+      <div className="chip-scroll">
+        <button type="button" className={missingOnly ? "pill on" : "pill"} onClick={() => setMissingOnly(true)}>
+          Missing ({brands.length - withLogo})
+        </button>
+        <button type="button" className={!missingOnly ? "pill on" : "pill"} onClick={() => setMissingOnly(false)}>
+          All ({brands.length})
+        </button>
+      </div>
       <section className="card-plain">
-        {brands.map((b) => (
+        {!shown.length && <p className="small muted">Every maker has a logo.</p>}
+        {shown.map((b) => (
           <div key={b.brand} className="brand-item">
             <div className="brand-row">
               <span className="brand-logo-slot">
@@ -111,42 +123,36 @@ export function BrandLogos() {
   );
 }
 
-/** The next suggested logo for one maker, with Use this / Not this one. */
+const SOURCE_TAG: Record<LogoSuggestion["suggestions"][number]["source"], string> = {
+  alias: "Already have",
+  wikidata: "Wikidata",
+  wikipedia: "Wikipedia",
+  website: "Their website",
+  guess: "Guess",
+};
+
+/**
+ * The next few suggested logos for one maker, side by side. Tap one to pick
+ * it, then "Use this"; "None of these" rejects them all and shows the next.
+ */
 function Suggestion({ brand, onApproved }: { brand: string; onApproved: () => void }) {
   const [state, setState] = useState<LogoSuggestion | null>(null);
+  const [picked, setPicked] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
 
-  const look = () => {
-    setError(null);
-    setState(null);
-    api<LogoSuggestion>(`/admin/brands/suggestion?brand=${encodeURIComponent(brand)}`)
-      .then(setState)
-      .catch((err) => setError(errorText(err)));
+  const show = (next: LogoSuggestion) => {
+    setState(next);
+    setPicked(0);
   };
 
-  useEffect(look, [brand]);
-
-  const act = async (action: "approve" | "reject") => {
-    if (!state?.suggestion) return;
+  const run = async (work: () => Promise<void>) => {
     setBusy(true);
     setError(null);
     setNote(null);
     try {
-      const body = { brand, url: state.suggestion.url };
-      if (action === "approve") {
-        // A logo that won't download after all comes back as { failed, next suggestion }.
-        const result = await api<LogoSuggestion & { failed?: boolean }>("/admin/brands/suggestion/approve", { body });
-        if (result.failed) {
-          setNote("That one wouldn't download, so here's the next.");
-          setState(result);
-        } else {
-          onApproved();
-        }
-      } else {
-        setState(await api<LogoSuggestion>("/admin/brands/suggestion/reject", { body }));
-      }
+      await work();
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -154,38 +160,108 @@ function Suggestion({ brand, onApproved }: { brand: string; onApproved: () => vo
     }
   };
 
-  if (error) return <p className="small error brand-suggestion">{error}</p>;
-  if (!state) return <p className="small muted brand-suggestion">Looking for a logo…</p>;
-  if (!state.suggestion) {
-    return state.more > 0 ? (
-      <p className="small muted brand-suggestion">
-        The last few suggestions wouldn't load.{" "}
-        <button type="button" className="link-button" onClick={look}>
-          Try {state.more} more
-        </button>
+  const look = () => {
+    setError(null);
+    setState(null);
+    api<LogoSuggestion>(`/admin/brands/suggestion?brand=${encodeURIComponent(brand)}`)
+      .then(show)
+      .catch((err) => setError(errorText(err)));
+  };
+
+  useEffect(look, [brand]);
+
+  const approve = (url: string) =>
+    run(async () => {
+      // A logo that won't download after all comes back as { failed, next suggestions }.
+      const result = await api<LogoSuggestion & { failed?: boolean }>("/admin/brands/suggestion/approve", { body: { brand, url } });
+      if (result.failed) {
+        setNote("That one wouldn't download, so here are the next.");
+        show(result);
+      } else {
+        onApproved();
+      }
+    });
+
+  const reject = (urls: string[]) =>
+    run(async () => show(await api<LogoSuggestion>("/admin/brands/suggestion/reject", { body: { brand, urls } })));
+
+  const startOver = () =>
+    run(async () => {
+      setState(null);
+      show(await api<LogoSuggestion>(`/admin/brands/suggestion/rejects?brand=${encodeURIComponent(brand)}`, { method: "DELETE" }));
+    });
+
+  // A picture that won't show in the browser either is quietly dropped.
+  const broken = (url: string) => {
+    if (!state || busy) return;
+    const left = state.suggestions.filter((s) => s.url !== url);
+    setState({ ...state, suggestions: left });
+    setPicked(0);
+    void api<LogoSuggestion>("/admin/brands/suggestion/reject", { body: { brand, urls: [url] } })
+      .then((next) => {
+        if (!left.length) show(next);
+      })
+      .catch(() => {});
+  };
+
+  if (error) return <p className="small error brand-suggestion-note">{error}</p>;
+  if (!state) return <p className="small muted brand-suggestion-note">Looking for logos…</p>;
+  if (!state.suggestions.length) {
+    return (
+      <p className="small muted brand-suggestion-note">
+        {state.more > 0 ? (
+          <>
+            The last few suggestions wouldn't load.{" "}
+            <button type="button" className="link-button" onClick={look}>
+              Try {state.more} more
+            </button>
+          </>
+        ) : (
+          <>
+            No more suggestions. Upload one, or{" "}
+            <button type="button" className="link-button" disabled={busy} onClick={startOver}>
+              start over
+            </button>{" "}
+            to see ones you said no to again.
+          </>
+        )}
       </p>
-    ) : (
-      <p className="small muted brand-suggestion">No more suggestions. Upload one if you like.</p>
     );
   }
 
-  const { suggestion } = state;
+  const { suggestions } = state;
+  const choice = suggestions[Math.min(picked, suggestions.length - 1)];
   return (
-    <div className="brand-suggestion">
-      {/* If the picture won't show here either, skip it rather than offer a broken one. */}
-      <img className="snack-tile logo" src={suggestion.url} alt="" width={72} height={72} onError={() => !busy && act("reject")} />
-      <span className="grow small">
-        {note && <span className="block notice-inline">{note}</span>}
-        <span className="muted">Suggested: </span>
-        {suggestion.label}
-        {state.more > 0 && <span className="muted"> · {state.more} more</span>}
-      </span>
-      <button type="button" className="icon-button suggestion-no" aria-label="Not this one" disabled={busy} onClick={() => act("reject")}>
-        ✕
-      </button>
-      <button type="button" className="icon-button suggestion-yes" aria-label="Use this logo" disabled={busy} onClick={() => act("approve")}>
-        ✓
-      </button>
+    <div className="brand-suggestions">
+      {note && <p className="small notice-inline">{note}</p>}
+      <div className="logo-picks" role="radiogroup" aria-label={`Suggested logos for ${brand}`}>
+        {suggestions.map((s, i) => (
+          <button
+            key={s.url}
+            type="button"
+            role="radio"
+            aria-checked={s === choice}
+            className={`logo-pick${s === choice ? " picked" : ""}`}
+            disabled={busy}
+            onClick={() => setPicked(i)}
+          >
+            <img src={s.url} alt="" width={60} height={60} onError={() => broken(s.url)} />
+            <span className="logo-pick-tag">{SOURCE_TAG[s.source]}</span>
+          </button>
+        ))}
+      </div>
+      <p className="small">
+        {choice.label}
+        {state.more > 0 && <span className="muted"> · {state.more} more after these</span>}
+      </p>
+      <div className="brand-suggestion-actions">
+        <button type="button" className="button small" disabled={busy} onClick={() => approve(choice.url)}>
+          {busy ? "Saving…" : "Use this"}
+        </button>
+        <button type="button" className="link-button" disabled={busy} onClick={() => reject(suggestions.map((s) => s.url))}>
+          {suggestions.length === 1 ? "Not this one" : "None of these"}
+        </button>
+      </div>
     </div>
   );
 }
