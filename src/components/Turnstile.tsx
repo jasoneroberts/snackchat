@@ -1,7 +1,12 @@
 import { useEffect, useRef } from "react";
 
-// Cloudflare's always-pass test key is the fallback for local development.
-const SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY ?? "1x00000000000000000000AA";
+// The live site uses Crunchd's own widget (Cloudflare dashboard > Turnstile,
+// hostname getcrunchd.com). Site keys are public; the matching secret is the
+// Worker secret TURNSTILE_SECRET_KEY. Local development (npm run dev) uses
+// Cloudflare's always-pass test key, since the real one only works on getcrunchd.com.
+const LIVE_SITE_KEY = "0x4AAAAAAFufrkrQaIRTquD4";
+const TEST_SITE_KEY = "1x00000000000000000000AA";
+const SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY ?? (import.meta.env.PROD ? LIVE_SITE_KEY : TEST_SITE_KEY);
 const SCRIPT_URL = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
 
 declare global {
