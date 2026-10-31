@@ -8,9 +8,11 @@ import { GroupBadge } from "../components/GroupBadge";
 import { Link } from "../components/Link";
 import { SnackTile } from "../components/SnackTile";
 import { rating } from "../lib/format";
-import { modeOf, resetOf, resetsIn } from "../lib/groups";
+import { modeOf, resetOf, resetsIn, whatsAppInvite } from "../lib/groups";
 import { navigate } from "../router";
 import { useVoice } from "../lib/voice";
+
+const SMALL_SQUAD = 4;
 
 export function Group({ id, me }: { id: string; me: Me }) {
   const { t } = useVoice();
@@ -116,10 +118,20 @@ export function Group({ id, me }: { id: string; me: Me }) {
             );
           })}
         </ol>
-        {board.length === 1 && (
-          <p className="small muted board-note">It's just you so far. Invite some people to make it a competition.</p>
-        )}
       </section>
+
+      {/* Small squads are where people drift off, so nudge until there's a proper table. */}
+      {board.length < SMALL_SQUAD && (
+        <div className="notice stack-sm">
+          <p className="no-margin">
+            <b>{board.length === 1 ? "It's just you so far." : `Only ${board.length} of you so far.`}</b>{" "}
+            {t("title.group")}s are best with {SMALL_SQUAD} or more. Drop the link in your group chat.
+          </p>
+          <a className="button whatsapp" href={whatsAppInvite(group.name, group.inviteCode)} target="_blank" rel="noreferrer">
+            Invite on WhatsApp
+          </a>
+        </div>
+      )}
 
       {favourite && (
         <Link href={`/snack/${favourite.id}`} className="list-card">

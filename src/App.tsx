@@ -212,6 +212,7 @@ export function App() {
       <CheckIn
         key={window.location.search}
         editId={new URLSearchParams(window.location.search).get("edit") ?? undefined}
+        username={me.username}
         onSaved={(photoPending) => {
           setToast({ title: "Saved", body: photoPending ? "Your new photo shows once it's approved." : "Your check-in is updated." });
           refresh();

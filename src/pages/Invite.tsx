@@ -3,7 +3,7 @@ import type { GroupPage } from "../../shared/types";
 import { api, errorText } from "../api";
 import { GroupBadge } from "../components/GroupBadge";
 import { Link } from "../components/Link";
-import { inviteLink, modeOf } from "../lib/groups";
+import { inviteLink, inviteMessage, modeOf, whatsAppInvite } from "../lib/groups";
 import { useVoice } from "../lib/voice";
 
 export function Invite({ id }: { id: string }) {
@@ -24,7 +24,7 @@ export function Invite({ id }: { id: string }) {
 
   const { group } = data;
   const link = inviteLink(group.inviteCode);
-  const message = `Join my Crunchd group "${group.name}" and let's see who's the snack champ: ${link}`;
+  const message = inviteMessage(group.name, group.inviteCode);
 
   const copy = async () => {
     try {
@@ -55,6 +55,17 @@ export function Invite({ id }: { id: string }) {
         </p>
       </div>
 
+      {/* WhatsApp first: one message in a group chat can bring the whole chat in. */}
+      <a className="button big whatsapp" href={whatsAppInvite(group.name, group.inviteCode)} target="_blank" rel="noreferrer">
+        Send to a WhatsApp group
+      </a>
+      <p className="small muted no-margin centre">
+        The link shows a preview with the {t("title.group").toLowerCase()}'s name, so people know what they're joining.
+      </p>
+      <button type="button" className="button secondary" onClick={shareOther}>
+        Other apps
+      </button>
+
       <div className="field">
         <span className="field-label">Invite link</span>
         <div className="link-box">
@@ -66,15 +77,6 @@ export function Invite({ id }: { id: string }) {
         <span className="small muted">
           Or share the code <b className="code">{group.inviteCode}</b>. Anyone with it can join.
         </span>
-      </div>
-
-      <div className="two-up">
-        <a className="button" href={`https://wa.me/?text=${encodeURIComponent(message)}`} target="_blank" rel="noreferrer">
-          WhatsApp
-        </a>
-        <button type="button" className="button secondary" onClick={shareOther}>
-          Other apps
-        </button>
       </div>
 
       <Link href={`/groups/${group.id}`} className="button big dark">

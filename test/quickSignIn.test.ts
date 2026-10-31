@@ -5,7 +5,7 @@ describe("validateQuickSignIn", () => {
   it("accepts a name and a 4 to 8 digit PIN, bot-check token optional", () => {
     expect(validateQuickSignIn({ username: " sam_k ", pin: "1234" })).toEqual({
       ok: true,
-      value: { username: "sam_k", pin: "1234", turnstileToken: "" },
+      value: { username: "sam_k", pin: "1234", turnstileToken: "", ref: null },
     });
     expect(validateQuickSignIn({ username: "sam_k", pin: "12345678", turnstileToken: "tok" })).toMatchObject({
       ok: true,

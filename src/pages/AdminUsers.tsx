@@ -4,6 +4,7 @@ import { api, errorText } from "../api";
 import { Avatar } from "../components/Avatar";
 import { Link } from "../components/Link";
 import { timeAgo } from "../lib/format";
+import { refLabel } from "../../shared/ref";
 
 /**
  * Admin page: everyone who has signed up, newest first, with a Reset PIN
@@ -62,6 +63,8 @@ export function AdminUsers({ meId }: { meId: string }) {
       </div>
       {demo > 0 && <p className="small muted no-margin">Plus {demo} demo people, listed at the bottom.</p>}
 
+      <Sources people={people} />
+
       {newPin && (
         <div className="notice good">
           <p>
@@ -83,6 +86,7 @@ export function AdminUsers({ meId }: { meId: string }) {
                 <b>{u.username}</b>
                 {u.isAdmin && <span className="tag">admin</span>}
                 {u.isDemo && <span className="tag">demo</span>}
+                {u.signupRef && <span className="tag">via {u.signupRef}</span>}
                 <span className="small muted block">
                   Joined {timeAgo(u.joinedAt)} · {u.lastActive ? `last seen ${timeAgo(u.lastActive)}` : "not seen yet"}
                 </span>
@@ -101,5 +105,52 @@ export function AdminUsers({ meId }: { meId: string }) {
         ))}
       </section>
     </div>
+  );
+}
+
+/**
+ * Where people came from: the ?ref= on the first link they opened (a pub
+ * sticker, an ad, a shared check-in, a squad invite), all time and in the
+ * last 7 days, biggest first.
+ */
+function Sources({ people }: { people: AdminUserRow[] }) {
+  const weekAgo = Date.now() / 1000 - 7 * 86400;
+  const counts = new Map<string, { all: number; week: number }>();
+  for (const u of people) {
+    const key = refLabel(u.signupRef);
+    const row = counts.get(key) ?? { all: 0, week: 0 };
+    row.all += 1;
+    if (u.joinedAt > weekAgo) row.week += 1;
+    counts.set(key, row);
+  }
+  const rows = [...counts].sort((a, b) => b[1].all - a[1].all);
+  if (rows.length === 0) return null;
+  return (
+    <section className="card-plain stack-sm">
+      <div>
+        <b>Where people came from</b>
+        <span className="small muted block">
+          From the ref on the link they first opened, like getcrunchd.com/?ref=tiktok. People from before this was added show as no link.
+        </span>
+      </div>
+      <table className="sources">
+        <thead>
+          <tr>
+            <th>Link</th>
+            <th>All time</th>
+            <th>Last 7 days</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(([ref, n]) => (
+            <tr key={ref}>
+              <td>{ref}</td>
+              <td>{n.all}</td>
+              <td>{n.week}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
   );
 }

@@ -457,3 +457,16 @@ select:focus { outline: 2px solid var(--orange); border-color: transparent; }
 .tab-badge { position: absolute; top: -4px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--orange); color: #fff; font-size: 0.65rem; font-weight: 900; display: flex; align-items: center; justify-content: center; }
 [data-voice="lad"] .tab-badge { background: var(--mat-red); }
 .pre-line { white-space: pre-line; }
+
+/* After a check-in: the picture to share. */
+.share-preview { display: flex; justify-content: center; align-items: center; min-height: 200px; }
+.share-preview img { height: min(44vh, 420px); width: auto; aspect-ratio: 9 / 16; border-radius: 16px; box-shadow: 0 8px 24px rgb(43 29 14 / 0.18); }
+
+/* Settings > Users: where people came from. */
+.sources { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.sources th { text-align: left; font-weight: 800; color: var(--muted); font-size: 0.8rem; padding: 4px 0; }
+.sources td { padding: 6px 0; border-top: 1px solid var(--line-soft); }
+.sources th:not(:first-child), .sources td:not(:first-child) { text-align: right; }
+
+/* WhatsApp's own green, so the invite button is spotted straight away. */
+.button.whatsapp { background: #25d366; color: #0b3d1f; border-color: #25d366; }

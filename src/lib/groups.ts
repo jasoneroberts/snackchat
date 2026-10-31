@@ -24,8 +24,16 @@ export function resetsIn(endSeconds: number | null, now = Date.now()): string | 
   return days === 1 ? "Resets tomorrow" : `Resets in ${days} days`;
 }
 
-/** The page people land on from an invite link. */
+/** The page people land on from an invite link. In a chat it shows the squad's own preview card (worker/lib/linkPreview.ts). */
 export const inviteLink = (code: string) => `${window.location.origin}/join/${code}`;
+
+/** What goes in the chat with an invite link. The link goes last so WhatsApp shows its preview card. */
+export const inviteMessage = (groupName: string, code: string) =>
+  `Join my snack squad "${groupName}" on Crunchd. Rate what you're eating and let's see who tops the table: ${inviteLink(code)}`;
+
+/** Opens WhatsApp (the app on phones, the website on computers) with the invite ready to send to a group chat. */
+export const whatsAppInvite = (groupName: string, code: string) =>
+  `https://wa.me/?text=${encodeURIComponent(inviteMessage(groupName, code))}`;
 
 export const ordinal = (n: number) => {
   const tens = n % 100;

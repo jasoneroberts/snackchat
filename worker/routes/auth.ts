@@ -62,8 +62,8 @@ auth.post("/signup", async (c) => {
   const userId = newId();
   try {
     await db
-      .prepare("INSERT INTO users (id, username, email, password_hash, created_at) VALUES (?, ?, ?, ?, ?)")
-      .bind(userId, input.username, input.email, await hashPassword(input.password), now())
+      .prepare("INSERT INTO users (id, username, email, password_hash, created_at, signup_ref) VALUES (?, ?, ?, ?, ?, ?)")
+      .bind(userId, input.username, input.email, await hashPassword(input.password), now(), input.ref)
       .run();
   } catch (err) {
     // Most likely someone took the same name a moment ago: give the invite back.
@@ -74,14 +74,14 @@ auth.post("/signup", async (c) => {
 
   await sendVerificationEmail(c.env, new URL(c.req.url).origin, userId, input.email);
   await createSession(c, userId);
-  pingAdmins(c, newPerson(input.username));
+  pingAdmins(c, newPerson(input.username, input.ref));
   return c.json({ ok: true }, 201);
 });
 
-const newPerson = (username: string) => ({
+const newPerson = (username: string, ref: string | null) => ({
   kind: "user" as const,
   title: "New person",
-  body: `${username} just joined Crunchd.`,
+  body: `${username} just joined Crunchd${ref ? ` (via ${ref})` : ""}.`,
   url: "/admin/users",
 });
 
@@ -92,7 +92,7 @@ auth.post("/quick", async (c) => {
   if (!quickSignInOn(c.env)) return c.json({ error: "Not found" }, 404);
   const parsed = validateQuickSignIn(await c.req.json().catch(() => null));
   if (!parsed.ok) return c.json({ error: parsed.error }, 400);
-  const { username, pin, turnstileToken } = parsed.value;
+  const { username, pin, turnstileToken, ref } = parsed.value;
   const db = c.env.DB;
 
   const user = await db
@@ -125,17 +125,17 @@ auth.post("/quick", async (c) => {
   try {
     await db
       .prepare(
-        `INSERT INTO users (id, username, email, password_hash, email_verified, created_at)
-         VALUES (?, ?, ?, ?, 1, ?)`,
+        `INSERT INTO users (id, username, email, password_hash, email_verified, created_at, signup_ref)
+         VALUES (?, ?, ?, ?, 1, ?, ?)`,
       )
-      .bind(userId, username, placeholderEmail(username), await hashPassword(pin), now())
+      .bind(userId, username, placeholderEmail(username), await hashPassword(pin), now(), ref)
       .run();
   } catch (err) {
     console.error("quick sign-in insert failed", err);
     return c.json({ error: "That name was just taken. Try another." }, 409);
   }
   await createSession(c, userId);
-  pingAdmins(c, newPerson(username));
+  pingAdmins(c, newPerson(username, ref));
   return c.json({ ok: true, created: true }, 201);
 });
 

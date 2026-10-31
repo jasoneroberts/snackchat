@@ -186,6 +186,7 @@ export interface AdminUserRow {
   isAdmin: boolean;
   isDemo: boolean;
   joinedAt: number;
+  signupRef: string | null; // the ?ref= they arrived with (shared/ref.ts)
   lastActive: number | null; // newest sign-in or check-in
   checkins: number;
   points: number;
