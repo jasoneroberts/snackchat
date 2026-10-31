@@ -470,3 +470,6 @@ select:focus { outline: 2px solid var(--orange); border-color: transparent; }
 
 /* WhatsApp's own green, so the invite button is spotted straight away. */
 .button.whatsapp { background: #25d366; color: #0b3d1f; border-color: #25d366; }
+
+/* "Turn on notifications?" sheet */
+.push-bell { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; background: var(--orange); color: var(--cream); }
