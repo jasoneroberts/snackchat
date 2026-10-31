@@ -9,6 +9,7 @@ import { listCheckins, nextCursor, parseCursor } from "../lib/feed";
 import { overDailyLimit } from "../lib/limits";
 import { inBackground, pingAdmins } from "../lib/notify";
 import { notifyLike } from "../lib/likeAlerts";
+import { notifySquads } from "../lib/squadAlerts";
 import { firstCheckinBonus, tellInviterAboutCheckin } from "../lib/referrals";
 
 export const checkins = new Hono<AppContext>();
@@ -133,6 +134,18 @@ checkins.post("/", async (c) => {
   }
 
   inBackground(c, tellInviterAboutCheckin(c.env, new URL(c.req.url).origin, { checkinId, friendName: user.username }));
+  // Squad mates hear about it too (lib/squadAlerts.ts), once per snacking session.
+  inBackground(
+    c,
+    notifySquads(c.env, new URL(c.req.url).origin, {
+      checkinId,
+      posterId: user.id,
+      posterName: user.username,
+      snack: snack.name,
+      overall: input.overall,
+      time,
+    }),
+  );
   if (photoId && photoStatus === "pending") {
     pingAdmins(c, { kind: "photo", title: "Photo to approve", body: `${user.username} added a photo of ${snack.name}.`, url: "/review" }, user.id);
   }

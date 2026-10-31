@@ -45,7 +45,7 @@ push.post("/test", async (c) => {
   const sent = await pushToUser(c.env, new URL(c.req.url).origin, user.id, {
     kind: "test",
     title: "Crunchd notifications are on",
-    body: user.is_admin === 1 ? "You'll hear about new people, photos, reports and snacks here." : "You'll hear when someone likes your check-in, and get a nudge if you go a few days without one.",
+    body: user.is_admin === 1 ? "You'll hear about new people, photos, reports and snacks here." : "You'll hear when someone likes your check-in or a squad mate checks in, and get a nudge if you go a few days without one.",
     url: "/settings",
   });
   return c.json({ sent });
@@ -65,4 +65,12 @@ push.put("/likes", async (c) => {
   if (typeof body?.on !== "boolean") return c.json({ error: "Say on or off." }, 400);
   await c.env.DB.prepare("UPDATE users SET like_alerts = ? WHERE id = ?").bind(body.on ? 1 : 0, currentUser(c).id).run();
   return c.json({ ok: true, likeAlerts: body.on });
+});
+
+// "Someone in your squad just checked in" messages on or off: { on: boolean }. On unless turned off.
+push.put("/squads", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as { on?: unknown } | null;
+  if (typeof body?.on !== "boolean") return c.json({ error: "Say on or off." }, 400);
+  await c.env.DB.prepare("UPDATE users SET squad_alerts = ? WHERE id = ?").bind(body.on ? 1 : 0, currentUser(c).id).run();
+  return c.json({ ok: true, squadAlerts: body.on });
 });

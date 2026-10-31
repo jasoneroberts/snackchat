@@ -273,6 +273,23 @@ function Notifications({ me, onChanged }: { me: Me; onChanged: () => Promise<voi
           Tell me when someone likes my check-in
         </label>
       )}
+      {state === "on" && (
+        <label className="radio-row">
+          <input
+            type="checkbox"
+            checked={me.squadAlerts}
+            disabled={busy}
+            onChange={(e) => {
+              const on = e.target.checked;
+              void run(async () => {
+                await api("/push/squads", { method: "PUT", body: { on } });
+                await onChanged();
+              }, on ? "Squad messages on." : "Squad messages off.");
+            }}
+          />
+          Tell me when someone in my squads checks in
+        </label>
+      )}
       {note && <p className="small muted no-margin">{note}</p>}
     </section>
   );
