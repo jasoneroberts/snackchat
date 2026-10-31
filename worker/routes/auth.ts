@@ -3,7 +3,7 @@ import { createMiddleware } from "hono/factory";
 import type { AppContext, Env } from "../env";
 import { hashPassword, newId, randomToken, sha256, verifyPassword } from "../lib/crypto";
 import { sendEmail } from "../lib/email";
-import { pingAdmins } from "../lib/notify";
+import { inBackground, pingAdmins } from "../lib/notify";
 import { recordReferral, tellInviterAboutJoin } from "../lib/referrals";
 import { createSession, destroySession } from "../lib/session";
 import { placeholderEmail, quickSignInOn, validateQuickSignIn } from "../lib/quickSignIn";
@@ -84,12 +84,7 @@ auth.post("/signup", async (c) => {
 async function creditInviter(c: Context<AppContext>, friendId: string, friendName: string, inviter: string | null) {
   const paid = await recordReferral(c.env.DB, { friendId, inviter, time: now() });
   if (!paid) return;
-  const job = tellInviterAboutJoin(c.env, new URL(c.req.url).origin, { ...paid, friendName });
-  try {
-    c.executionCtx.waitUntil(job);
-  } catch {
-    // No execution context (unit tests): the job still runs on its own.
-  }
+  inBackground(c, tellInviterAboutJoin(c.env, new URL(c.req.url).origin, { ...paid, friendName }));
 }
 
 const newPerson = (username: string, ref: string | null) => ({

@@ -1,6 +1,7 @@
 // Push messages. Admins hear when something needs them: a new person, a
 // photo or profile picture to approve, a report, or a new snack. Everyone
-// with notifications on can get check-in reminders (lib/reminders.ts).
+// with notifications on can get check-in reminders (lib/reminders.ts) and
+// hear when someone likes their check-in (lib/likeAlerts.ts).
 
 import type { Context } from "hono";
 import type { AppContext, Env } from "../env";
@@ -9,10 +10,12 @@ import { makeVapidKeys, sendPush, type VapidKeys } from "./webpush";
 export type AdminEventKind = "user" | "photo" | "report" | "snack";
 
 export interface PushEvent {
-  kind: AdminEventKind | "reminder" | "test" | "invite";
+  kind: AdminEventKind | "reminder" | "like" | "test" | "invite";
   title: string;
   body: string;
   url: string; // the page in the app to open when the notification is tapped
+  /** Notifications with the same tag replace each other on the phone. Defaults to kind. */
+  tag?: string;
 }
 
 export interface AdminEvent extends PushEvent {
@@ -50,7 +53,7 @@ interface PushTarget {
 async function pushToTargets(env: Env, origin: string, targets: PushTarget[], event: PushEvent): Promise<number> {
   if (!targets.length) return 0;
   const keys = await vapidKeys(env.DB);
-  const payload = JSON.stringify({ ...event, tag: event.kind });
+  const payload = JSON.stringify({ ...event, tag: event.tag ?? event.kind });
   let sent = 0;
   for (const target of targets) {
     try {
@@ -107,7 +110,14 @@ export async function pushToUser(env: Env, origin: string, userId: string, event
 
 /** Fire-and-forget from a route: the response doesn't wait for the pushes. */
 export function pingAdmins(c: Context<AppContext>, event: AdminEvent, actorId?: string): void {
-  const job = notifyAdmins(c.env, new URL(c.req.url).origin, event, { except: actorId });
+  inBackground(c, notifyAdmins(c.env, new URL(c.req.url).origin, event, { except: actorId }));
+}
+
+/**
+ * Let a job carry on after the response has gone. Workers stop running once
+ * the response is sent unless the job is handed to waitUntil.
+ */
+export function inBackground(c: Context<AppContext>, job: Promise<unknown>): void {
   try {
     c.executionCtx.waitUntil(job);
   } catch {

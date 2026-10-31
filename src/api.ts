@@ -17,6 +17,8 @@ export interface Me {
   newUsers: number;
   /** Check-in reminders on (they're on unless turned off). */
   reminders: boolean;
+  /** "Someone liked your check-in" pushes on (on unless turned off). */
+  likeAlerts: boolean;
   /** null until they've picked lad mode or grown-up mode. */
   voice: Voice | null;
 }

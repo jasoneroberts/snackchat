@@ -4,7 +4,7 @@ import { currentUser } from "../lib/currentUser";
 import { pushToUser, vapidKeys } from "../lib/notify";
 
 // Push notifications on this phone. Anyone can turn them on for check-in
-// reminders; admins also hear about new people, photos, reports and snacks.
+// reminders and likes; admins also hear about new people, photos, reports and snacks.
 export const push = new Hono<AppContext>();
 
 // The public key the browser needs to subscribe.
@@ -45,7 +45,7 @@ push.post("/test", async (c) => {
   const sent = await pushToUser(c.env, new URL(c.req.url).origin, user.id, {
     kind: "test",
     title: "Crunchd notifications are on",
-    body: user.is_admin === 1 ? "You'll hear about new people, photos, reports and snacks here." : "We'll give you a nudge if you go a few days without a check-in.",
+    body: user.is_admin === 1 ? "You'll hear about new people, photos, reports and snacks here." : "You'll hear when someone likes your check-in, and get a nudge if you go a few days without one.",
     url: "/settings",
   });
   return c.json({ sent });
@@ -57,4 +57,12 @@ push.put("/reminders", async (c) => {
   if (typeof body?.on !== "boolean") return c.json({ error: "Say on or off." }, 400);
   await c.env.DB.prepare("UPDATE users SET reminders = ? WHERE id = ?").bind(body.on ? 1 : 0, currentUser(c).id).run();
   return c.json({ ok: true, reminders: body.on });
+});
+
+// "Someone liked your check-in" messages on or off: { on: boolean }. On unless turned off.
+push.put("/likes", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as { on?: unknown } | null;
+  if (typeof body?.on !== "boolean") return c.json({ error: "Say on or off." }, 400);
+  await c.env.DB.prepare("UPDATE users SET like_alerts = ? WHERE id = ?").bind(body.on ? 1 : 0, currentUser(c).id).run();
+  return c.json({ ok: true, likeAlerts: body.on });
 });
