@@ -10,6 +10,8 @@ import { withInvitePreview } from "./lib/linkPreview";
 import { currentUser } from "./lib/currentUser";
 import { devLoginUsername, getDevUser } from "./lib/devLogin";
 import { quickSignInOn } from "./lib/quickSignIn";
+import { isUsageFeature } from "../shared/usage";
+import { recordUsage } from "./lib/usage";
 import { checkErrorSpike, logError, pruneLogs, readClientError } from "./lib/health";
 import { newUserCount } from "./lib/notify";
 import { getSessionUser } from "./lib/session";
@@ -57,7 +59,7 @@ app.use("*", async (c, next) => {
 // has its own per-address limit, and error reports theirs.
 app.use("*", async (c, next) => {
   const user = c.get("user");
-  if (user && user.is_admin !== 1 && isWrite(c.req.method) && !c.req.path.startsWith("/api/auth/") && c.req.path !== "/api/errors") {
+  if (user && user.is_admin !== 1 && isWrite(c.req.method) && !c.req.path.startsWith("/api/auth/") && c.req.path !== "/api/errors" && c.req.path !== "/api/usage") {
     const { success } = await c.env.WRITE_LIMITER.limit({ key: `write:${user.id}` });
     if (!success) return c.json({ error: "Slow down a bit. Wait a minute and try again." }, 429);
   }
@@ -85,6 +87,10 @@ app.route("/cotw", cotw);
 app.get("/me", async (c) => {
   const user = c.get("user");
   if (!user) return c.json({ user: null, quickSignIn: quickSignInOn(c.env) });
+  // Every app load asks for /me, so this is where "opened the app today" is
+  // noted for the Stats page. waitUntil: it runs after the reply has gone,
+  // so it never slows the app down.
+  c.executionCtx.waitUntil(recordUsage(c.env.DB, user.id, "open"));
   const points = await c.env.DB.prepare(`SELECT (${totalPointsSql("?")}) AS total`)
     .bind(user.id)
     .first<{ total: number }>();
@@ -131,6 +137,18 @@ app.put("/me/voice", async (c) => {
   if (!isVoice(voice)) return c.json({ error: "Pick grown-up or lad mode." }, 400);
   await c.env.DB.prepare("UPDATE users SET voice = ? WHERE id = ?").bind(voice, user.id).run();
   return c.json({ voice });
+});
+
+// The app notes Wing It games and shares here (src/lib/track.ts), for the
+// admin Stats page. Not counted against the write limit: it's not a change
+// anyone else sees, and a busy sharer shouldn't be told to slow down.
+app.post("/usage", async (c) => {
+  const user = currentUser(c);
+  const { feature } = await c.req.json<{ feature?: unknown }>().catch(() => ({ feature: undefined }));
+  // "open" is only ever recorded by /me, so it can't be inflated from outside.
+  if (!isUsageFeature(feature) || feature === "open") return c.json({ error: "Unknown feature." }, 400);
+  await recordUsage(c.env.DB, user.id, feature);
+  return c.json({ ok: true });
 });
 
 // The app reports its own crashes here (see src/lib/reportError.ts). Works

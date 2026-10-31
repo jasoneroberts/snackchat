@@ -304,3 +304,71 @@ export interface InviteStats {
   checkedIn: number;
   points: number; // invite points earned so far
 }
+
+// Admin Stats page (GET /api/admin/stats). Weeks run Monday to Sunday, UTC.
+export interface StatsSummary {
+  /** Whether app opens, Wing It and shares are being recorded yet (migration 0030). */
+  hasUsage: boolean;
+  people: number;
+  /** Did anything this week (checked in, liked, voted, opened the app...). */
+  activeThisWeek: number;
+  /** Active this week and joined before it: the people who came back. */
+  returningThisWeek: number;
+  /** Active last week and again this week. */
+  keptFromLastWeek: number;
+  /** People with notifications turned on, on at least one phone. */
+  pushOn: number;
+  /** Newest week first. */
+  weeks: StatsWeek[];
+  features: StatsFeature[];
+  sources: StatsSource[];
+  inviters: StatsInviter[];
+  /** Everyone, most recently active first. */
+  everyone: StatsPerson[];
+}
+
+export interface StatsWeek {
+  weekStart: number;
+  joined: number;
+  active: number;
+  returning: number;
+  checkins: number;
+}
+
+export interface StatsFeature {
+  key: string;
+  label: string;
+  /** Last 7 days: how many times, and by how many people. */
+  week: number;
+  weekPeople: number;
+  /** Last 30 days. */
+  month: number;
+  monthPeople: number;
+}
+
+export interface StatsSource {
+  /** The ?ref= on their first link; null for people who came straight in. */
+  ref: string | null;
+  joined: number;
+  /** ...of whom this many have checked in at least once. */
+  checkedIn: number;
+  activeThisWeek: number;
+}
+
+export interface StatsInviter {
+  username: string;
+  joined: number;
+  checkedIn: number;
+}
+
+export interface StatsPerson {
+  username: string;
+  joinedAt: number;
+  ref: string | null;
+  checkins: number;
+  /** Last time they did anything, within the weeks shown; null if not in that time. */
+  lastActive: number | null;
+  /** How many of the weeks shown they were active in. */
+  weeksActive: number;
+  activeThisWeek: boolean;
+}

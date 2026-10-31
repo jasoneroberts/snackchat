@@ -5,6 +5,7 @@ import { GroupBadge } from "../components/GroupBadge";
 import { Link } from "../components/Link";
 import { inviteLink, inviteMessage, modeOf, whatsAppInvite } from "../lib/groups";
 import { useVoice } from "../lib/voice";
+import { track } from "../lib/track";
 
 export function Invite({ id }: { id: string }) {
   const { t } = useVoice();
@@ -38,6 +39,7 @@ export function Invite({ id }: { id: string }) {
 
   // The phone's own share sheet (Messages, Instagram, email...) where there is one.
   const shareOther = async () => {
+    track("share");
     if (navigator.share) {
       await navigator.share({ title: `Join ${group.name} on Crunchd`, text: message, url: link }).catch(() => {});
     } else {
@@ -56,7 +58,7 @@ export function Invite({ id }: { id: string }) {
       </div>
 
       {/* WhatsApp first: one message in a group chat can bring the whole chat in. */}
-      <a className="button big whatsapp" href={whatsAppInvite(group.name, group.inviteCode)} target="_blank" rel="noreferrer">
+      <a className="button big whatsapp" href={whatsAppInvite(group.name, group.inviteCode)} onClick={() => track("share")} target="_blank" rel="noreferrer">
         Send to a WhatsApp group
       </a>
       <p className="small muted no-margin centre">

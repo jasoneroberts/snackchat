@@ -543,3 +543,7 @@ button.cotw-side:disabled { cursor: default; }
 .cotw-percent { font-weight: 900; font-size: 1.15rem; color: var(--orange-dark); }
 .cotw-bar { width: 100%; flex: none; }
 .cotw-crown { position: absolute; top: -16px; font-size: 1.4rem; line-height: 1; }
+
+/* Settings > Stats: a green dot by people who've been active this week. */
+.stats-dot { display: inline-block; width: 8px; height: 8px; margin-left: 6px; border-radius: 50%; background: #2bb673; vertical-align: middle; }
+.sources tr.muted td { color: var(--muted); }

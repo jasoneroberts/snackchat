@@ -99,7 +99,7 @@ export async function exportAccount(db: D1Database, userId: string, origin: stri
     `SELECT id, username, CASE WHEN email LIKE '%.invalid' THEN NULL ELSE email END AS email, email_verified, country,
             is_private, voice, created_at FROM users WHERE id = ?`,
   );
-  const [checkins, attributes, photos, points, groups, follows, tastes, explore, badges, snacks, reports, blocks, likes, invites, votes] = await Promise.all([
+  const [checkins, attributes, photos, points, groups, follows, tastes, explore, badges, snacks, reports, blocks, likes, invites, votes, usage] = await Promise.all([
     all(
       `SELECT c.id, s.name AS snack, s.brand, c.overall, c.review, c.venue_text AS venue, c.paired_with, c.created_at
          FROM checkins c JOIN snacks s ON s.id = c.snack_id WHERE c.user_id = ? ORDER BY c.created_at`,
@@ -134,6 +134,9 @@ export async function exportAccount(db: D1Database, userId: string, origin: stri
     ),
     // Crisp of the Week votes. week_start is the Monday the battle began.
     all("SELECT v.week_start, s.name AS voted_for, v.created_at FROM cotw_votes v JOIN snacks s ON s.id = v.snack_id WHERE v.user_id = ?"),
+    // Days they opened the app, Wing It games and shares (for the admin Stats
+    // page). day = days since 1970. Empty if that table isn't there yet.
+    all("SELECT day, feature, times FROM app_usage WHERE user_id = ? ORDER BY day").catch(() => []),
   ]);
 
   return {
@@ -157,5 +160,6 @@ export async function exportAccount(db: D1Database, userId: string, origin: stri
     hearted: likes,
     invites,
     crispOfTheWeekVotes: votes,
+    appUsage: usage,
   };
 }

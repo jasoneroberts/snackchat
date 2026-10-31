@@ -17,6 +17,7 @@ import { validateSnackFields } from "../lib/validation";
 import { avatarKey } from "./avatars";
 import { clearWrongPins } from "../lib/pinLock";
 import { health } from "./health";
+import { stats } from "./stats";
 import { logoKey } from "./logos";
 
 // Photo approval. Every new check-in photo and profile picture waits here
@@ -59,6 +60,7 @@ admin.use("*", async (c, next) => {
 });
 
 admin.route("/health", health);
+admin.route("/stats", stats);
 
 /** How many things are waiting, for the badge in Settings. */
 export async function reviewCount(db: D1Database): Promise<number> {

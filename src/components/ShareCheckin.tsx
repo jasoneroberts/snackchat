@@ -5,6 +5,7 @@ import { makeShareCard, type ShareCardInput } from "../lib/shareCard";
 import { useVoice } from "../lib/voice";
 import type { BadgeState } from "../../shared/achievements";
 import { NewBadges } from "./Achievements";
+import { track } from "../lib/track";
 
 /**
  * Shown straight after a check-in: the points, a picture of it to share
@@ -70,6 +71,7 @@ export function ShareCheckin({
         await navigator.clipboard.writeText(text);
         setNote("Copied. Paste it into a chat.");
       }
+      track("share");
     } catch (err) {
       // Closing the share sheet without picking an app isn't an error.
       if ((err as Error).name !== "AbortError") setNote("Couldn't open sharing. Save the picture instead.");
@@ -100,7 +102,7 @@ export function ShareCheckin({
         {canShareFile ? "Share picture" : "Share"}
       </button>
       <div className="two-up">
-        <a className="button secondary" href={`https://wa.me/?text=${encodeURIComponent(text)}`} target="_blank" rel="noreferrer">
+        <a className="button secondary" href={`https://wa.me/?text=${encodeURIComponent(text)}`} onClick={() => track("share")} target="_blank" rel="noreferrer">
           WhatsApp
         </a>
         {card ? (
