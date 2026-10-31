@@ -187,6 +187,7 @@ export interface AdminUserRow {
   isDemo: boolean;
   joinedAt: number;
   signupRef: string | null; // the ?ref= they arrived with (shared/ref.ts)
+  invitedBy: string | null; // whose invite link they joined from (worker/lib/referrals.ts)
   lastActive: number | null; // newest sign-in or check-in
   checkins: number;
   points: number;
@@ -291,4 +292,12 @@ export interface CheckinForEdit {
   venue: string | null;
   pairedWith: string | null;
   photo: { id: string; status: "visible" | "pending" } | null;
+}
+
+// Your profile's "Invite friends" card (GET /api/account/invites).
+export interface InviteStats {
+  friends: { username: string; avatarId: string | null; checkedIn: boolean; points: number }[];
+  joined: number;
+  checkedIn: number;
+  points: number; // invite points earned so far
 }

@@ -9,7 +9,7 @@ import { makeVapidKeys, sendPush, type VapidKeys } from "./webpush";
 export type AdminEventKind = "user" | "photo" | "report" | "snack";
 
 export interface PushEvent {
-  kind: AdminEventKind | "reminder" | "test";
+  kind: AdminEventKind | "reminder" | "test" | "invite";
   title: string;
   body: string;
   url: string; // the page in the app to open when the notification is tapped

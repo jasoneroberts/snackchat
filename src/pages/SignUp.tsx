@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { api, ApiError } from "../api";
-import { signupRef } from "../lib/ref";
+import { signupInviter, signupRef } from "../lib/ref";
 import { Link } from "../components/Link";
 import { Turnstile } from "../components/Turnstile";
 
@@ -20,7 +20,7 @@ export function SignUp({ onSignedIn }: { onSignedIn: () => void }) {
     setError(null);
     setBusy(true);
     try {
-      await api("/auth/signup", { body: { ...form, turnstileToken: token, ref: signupRef() } });
+      await api("/auth/signup", { body: { ...form, turnstileToken: token, ref: signupRef(), invitedBy: signupInviter() } });
       onSignedIn();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong.");

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { rememberAccount } from "./lib/ref";
 import { adminToDo, api, type Me } from "./api";
 import { Link } from "./components/Link";
 import { TabBar } from "./components/TabBar";
@@ -56,6 +57,7 @@ export function App() {
       "/me",
     );
     setMe(user);
+    if (user) rememberAccount(user.username);
     setDevLogin(devLogin === true);
     setQuickSignIn(quickSignIn === true);
   }, []);

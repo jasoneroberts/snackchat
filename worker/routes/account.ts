@@ -3,6 +3,7 @@ import type { AppContext } from "../env";
 import { deleteAccount, exportAccount } from "../lib/account";
 import { verifyPassword } from "../lib/crypto";
 import { currentUser } from "../lib/currentUser";
+import { inviteStats } from "../lib/referrals";
 import { destroySession } from "../lib/session";
 
 // Your data: download it all, or delete your account. Settings links here.
@@ -20,6 +21,9 @@ account.get("/export", async (c) => {
     },
   });
 });
+
+// The friends who joined from your invite link, for the card on your profile.
+account.get("/invites", async (c) => c.json(await inviteStats(c.env.DB, currentUser(c).id)));
 
 // Delete your account for good: { pin } (your PIN or password), to be sure it's you.
 account.post("/delete", async (c) => {

@@ -2,7 +2,7 @@ import { useCallback, useState, type FormEvent } from "react";
 import { Link } from "../components/Link";
 import { Turnstile } from "../components/Turnstile";
 import { api, ApiError } from "../api";
-import { signupRef } from "../lib/ref";
+import { signupInviter, signupRef } from "../lib/ref";
 
 /**
  * Sign in with a name and a PIN. A new name makes an account (once the bot
@@ -17,13 +17,14 @@ export function QuickSignIn({ onSignedIn }: { onSignedIn: () => void }) {
   const onToken = useCallback((t: string | null) => setToken(t), []);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [inviter] = useState(signupInviter);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
     setBusy(true);
     try {
-      await api("/auth/quick", { body: { username, pin, turnstileToken: token ?? "", ref: signupRef() } });
+      await api("/auth/quick", { body: { username, pin, turnstileToken: token ?? "", ref: signupRef(), invitedBy: signupInviter() } });
       onSignedIn();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong.");
@@ -38,6 +39,7 @@ export function QuickSignIn({ onSignedIn }: { onSignedIn: () => void }) {
     <form className="card" onSubmit={submit}>
       <h1>Jump in</h1>
       <p className="muted">New here? Pick a name and a PIN. Been before? Use the same ones to get back in, on any phone.</p>
+      {inviter && <p className="invited-by">{inviter} invited you. Join and check in your first snack to say thanks.</p>}
       <label>
         Name
         <input

@@ -8,6 +8,7 @@ import { currentUser } from "../lib/currentUser";
 import { listCheckins, nextCursor, parseCursor } from "../lib/feed";
 import { overDailyLimit } from "../lib/limits";
 import { pingAdmins } from "../lib/notify";
+import { firstCheckinBonus, tellInviterAboutCheckin } from "../lib/referrals";
 
 export const checkins = new Hono<AppContext>();
 
@@ -65,7 +66,10 @@ checkins.post("/", async (c) => {
   const [seen, today] = await Promise.all([
     db.prepare("SELECT 1 FROM checkins WHERE user_id = ? AND snack_id = ? LIMIT 1").bind(user.id, snack.id).first(),
     db
-      .prepare("SELECT COALESCE(SUM(points), 0) AS total FROM points_ledger WHERE user_id = ? AND created_at >= ?")
+      // Only check-in points count toward the daily cap, not invite bonuses.
+      .prepare(
+        "SELECT COALESCE(SUM(points), 0) AS total FROM points_ledger WHERE user_id = ? AND created_at >= ? AND checkin_id IS NOT NULL",
+      )
       .bind(user.id, startOfUtcDay(time))
       .first<{ total: number }>(),
   ]);
@@ -103,6 +107,8 @@ checkins.post("/", async (c) => {
         .prepare("INSERT INTO points_ledger (user_id, checkin_id, reason, points, created_at) VALUES (?, ?, ?, ?, ?)")
         .bind(user.id, checkinId, line.reason, line.points, time),
     ),
+    // If they joined from a friend's invite and this is their first check-in, the friend gets a bonus.
+    ...firstCheckinBonus(db, { friendId: user.id, checkinId, time }),
   ];
   // Photos wait for an admin to approve them (routes/admin.ts); the check-in
   // and its points go live straight away.
@@ -121,6 +127,12 @@ checkins.post("/", async (c) => {
     throw err;
   }
 
+  const tellInviter = tellInviterAboutCheckin(c.env, new URL(c.req.url).origin, { checkinId, friendName: user.username });
+  try {
+    c.executionCtx.waitUntil(tellInviter);
+  } catch {
+    // No execution context (unit tests).
+  }
   if (photoId) {
     pingAdmins(c, { kind: "photo", title: "Photo to approve", body: `${user.username} added a photo of ${snack.name}.`, url: "/review" }, user.id);
   }

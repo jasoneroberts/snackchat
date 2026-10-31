@@ -1,9 +1,10 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { createMiddleware } from "hono/factory";
 import type { AppContext, Env } from "../env";
 import { hashPassword, newId, randomToken, sha256, verifyPassword } from "../lib/crypto";
 import { sendEmail } from "../lib/email";
 import { pingAdmins } from "../lib/notify";
+import { recordReferral, tellInviterAboutJoin } from "../lib/referrals";
 import { createSession, destroySession } from "../lib/session";
 import { placeholderEmail, quickSignInOn, validateQuickSignIn } from "../lib/quickSignIn";
 import { clearWrongPins, LOCK_MINUTES, pinLocked, recordWrongPin } from "../lib/pinLock";
@@ -74,9 +75,22 @@ auth.post("/signup", async (c) => {
 
   await sendVerificationEmail(c.env, new URL(c.req.url).origin, userId, input.email);
   await createSession(c, userId);
+  await creditInviter(c, userId, input.username, input.inviter);
   pingAdmins(c, newPerson(input.username, input.ref));
   return c.json({ ok: true }, 201);
 });
+
+/** A new account from someone's invite link: record it, pay the join bonus, tell the inviter. */
+async function creditInviter(c: Context<AppContext>, friendId: string, friendName: string, inviter: string | null) {
+  const paid = await recordReferral(c.env.DB, { friendId, inviter, time: now() });
+  if (!paid) return;
+  const job = tellInviterAboutJoin(c.env, new URL(c.req.url).origin, { ...paid, friendName });
+  try {
+    c.executionCtx.waitUntil(job);
+  } catch {
+    // No execution context (unit tests): the job still runs on its own.
+  }
+}
 
 const newPerson = (username: string, ref: string | null) => ({
   kind: "user" as const,
@@ -135,6 +149,7 @@ auth.post("/quick", async (c) => {
     return c.json({ error: "That name was just taken. Try another." }, 409);
   }
   await createSession(c, userId);
+  await creditInviter(c, userId, username, parsed.value.inviter);
   pingAdmins(c, newPerson(username, ref));
   return c.json({ ok: true, created: true }, 201);
 });
