@@ -304,3 +304,19 @@ export interface InviteStats {
   checkedIn: number;
   points: number; // invite points earned so far
 }
+
+/** GET /api/week: what happened for you last week (Monday to Sunday, UTC). See worker/lib/yourWeek.ts. */
+export interface YourWeek {
+  /** Hearts on your check-ins from other people. */
+  likes: number;
+  /** Up to two of the people who liked them, most hearts first. */
+  likers: string[];
+  /** How many different people liked them, for "and 3 others". */
+  likerCount: number;
+  /** Your own check-ins. */
+  checkins: number;
+  /** Check-ins by people in your squads. */
+  squadCheckins: number;
+  /** The best-rated of those. */
+  best: { poster: string; snack: string; snackId: string; overall: number } | null;
+}

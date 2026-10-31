@@ -34,7 +34,7 @@ import { sendStreakNudges } from "./lib/achievements";
 import { sendBattleResults } from "./lib/battle";
 import { achievements } from "./routes/achievements";
 import { cotw } from "./routes/cotw";
-import { DIGEST_DAY_UTC, DIGEST_HOUR_UTC, sendWeeklyDigests } from "./lib/weeklyDigest";
+import { week } from "./routes/week";
 
 // Where the app lives, for push messages sent from the cron (no request to read it from).
 const appOrigin = (env: Env) => (env.CANONICAL_HOST ? `https://${env.CANONICAL_HOST}` : "https://snackchat.jasoneroberts.workers.dev");
@@ -82,6 +82,7 @@ app.route("/account", account);
 app.route("/push", push);
 app.route("/achievements", achievements);
 app.route("/cotw", cotw);
+app.route("/week", week);
 
 app.get("/me", async (c) => {
   const user = c.get("user");
@@ -108,8 +109,7 @@ app.get("/me", async (c) => {
       openReports: user.is_admin === 1 ? await openReportCount(c.env.DB) : 0,
       // ...and how many people have joined since they last looked at Users.
       newUsers: user.is_admin === 1 ? await newUserCount(c.env.DB, user.id) : 0,
-      // Check-in reminders, like and squad messages on or off, and the weekly
-      // round-up (Settings > Notifications).
+      // Check-in reminders, like and squad messages on or off (Settings > Notifications).
       ...(await notificationPrefs(c.env.DB, user.id)),
     },
     devLogin: devLoginUsername(c.env) !== null,
@@ -118,21 +118,12 @@ app.get("/me", async (c) => {
 });
 
 /** All the notification switches in one read. Missing row counts as on. */
-async function notificationPrefs(
-  db: D1Database,
-  userId: string,
-): Promise<{ reminders: boolean; likeAlerts: boolean; squadAlerts: boolean; weeklyDigest: boolean }> {
+async function notificationPrefs(db: D1Database, userId: string): Promise<{ reminders: boolean; likeAlerts: boolean; squadAlerts: boolean }> {
   const row = await db
-    .prepare("SELECT reminders, like_alerts, squad_alerts, weekly_digest FROM users WHERE id = ?")
+    .prepare("SELECT reminders, like_alerts, squad_alerts FROM users WHERE id = ?")
     .bind(userId)
-    .first<{ reminders: number; like_alerts: number; squad_alerts: number; weekly_digest: number }>();
-  return {
-    reminders: row?.reminders !== 0,
-    likeAlerts: row?.like_alerts !== 0,
-    squadAlerts: row?.squad_alerts !== 0,
-    // The odd one out: off unless they turn it on.
-    weeklyDigest: row?.weekly_digest === 1,
-  };
+    .first<{ reminders: number; like_alerts: number; squad_alerts: number }>();
+  return { reminders: row?.reminders !== 0, likeAlerts: row?.like_alerts !== 0, squadAlerts: row?.squad_alerts !== 0 };
 }
 
 // Pick lad mode or grown-up mode. Only words and colours change.
@@ -188,8 +179,7 @@ app.onError((err, c) => {
 // Timed jobs, set in wrangler.jsonc "triggers". Every hour: check for an
 // error spike. At 03:00 UTC: back up the database and clear old logs. At
 // 18:00 UTC: reminders, plus streak nudges on Sundays and Crisp of the Week
-// results on Mondays. Sunday at 10:00 UTC: the weekly round-up for anyone
-// who asked for one.
+// results on Mondays.
 async function scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext) {
   if (controller.cron === "0 3 * * *") {
     const result = await runBackup(env.DB, env.PHOTOS);
@@ -199,9 +189,6 @@ async function scheduled(controller: ScheduledController, env: Env, ctx: Executi
     const result = await checkErrorSpike(env);
     if (result.alerted) console.log(`[alert] sent for ${result.errors} errors`);
     const at = new Date(controller.scheduledTime);
-    if (at.getUTCDay() === DIGEST_DAY_UTC && at.getUTCHours() === DIGEST_HOUR_UTC) {
-      console.log(`[digest] sent to ${await sendWeeklyDigests(env, appOrigin(env), Math.floor(controller.scheduledTime / 1000))}`);
-    }
     if (at.getUTCHours() === REMINDER_HOUR_UTC) {
       const now = Math.floor(controller.scheduledTime / 1000);
       // Sunday: a nudge for anyone whose weekly streak ends at midnight.
