@@ -33,7 +33,8 @@ import { Welcome } from "./pages/Welcome";
 import { Snack } from "./pages/Snack";
 import { PickVoice } from "./pages/PickVoice";
 import { markWelcomed, welcomed } from "./lib/install";
-import { setIconBadge } from "./lib/push";
+import { keepPushOn, setIconBadge } from "./lib/push";
+import { PushPrompt } from "./components/PushPrompt";
 import { VoiceProvider } from "./lib/voice";
 import { line } from "../shared/voice";
 
@@ -109,6 +110,12 @@ export function App() {
   useEffect(() => {
     if (me?.isAdmin && adminPage) setTimeout(refresh, 1500);
   }, [path]);
+
+  // Already allowed notifications on this phone? Make sure they're actually on
+  // for whoever is signed in (no tap needed: the phone already said yes).
+  useEffect(() => {
+    if (me?.id) keepPushOn().catch(() => {});
+  }, [me?.id]);
 
   if (me === undefined) return <p className="muted page">Loading…</p>;
 
@@ -355,6 +362,7 @@ export function App() {
             </button>
           </div>
         )}
+        <PushPrompt me={me} path={path} />
         <TabBar active={tab} meBadge={adminToDo(me)} />
       </div>
     </VoiceProvider>

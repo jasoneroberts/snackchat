@@ -2,8 +2,9 @@
 // a "subscription" (an address at Apple's, Google's or Mozilla's push
 // service plus keys) and the server keeps it to send messages to.
 import { api } from "../api";
+import { recall, remember, TURNED_OFF, type PushState } from "./pushAsk";
 
-export type PushState = "unsupported" | "needs-install" | "blocked" | "off" | "on";
+export type { PushState };
 
 const supported = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 
@@ -28,21 +29,41 @@ export async function pushState(): Promise<PushState> {
 
 export async function turnOnPush(): Promise<PushState> {
   if ((await Notification.requestPermission()) !== "granted") return "blocked";
+  remember(TURNED_OFF, null);
+  return subscribe();
+}
+
+// Make (or reuse) this phone's subscription and tell the server about it.
+async function subscribe(): Promise<PushState> {
   const reg = await navigator.serviceWorker.register("/sw.js");
   await navigator.serviceWorker.ready;
   const { publicKey } = await api<{ publicKey: string }>("/push/key");
-  const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: fromB64url(publicKey) });
+  const sub =
+    (await reg.pushManager.getSubscription()) ??
+    (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: fromB64url(publicKey) }));
   await api("/push", { method: "PUT", body: sub.toJSON() as Record<string, unknown> });
   return "on";
 }
 
 export async function turnOffPush(): Promise<PushState> {
+  remember(TURNED_OFF, "1"); // so keepPushOn() leaves it off
   const sub = await currentSubscription();
   if (sub) {
     await api("/push", { method: "DELETE", body: { endpoint: sub.endpoint } }).catch(() => {});
     await sub.unsubscribe();
   }
   return "off";
+}
+
+/**
+ * Run once when the app opens. If they've already said yes on this phone,
+ * make sure the subscription exists and the server has it under this
+ * account (it re-sends it each open, which also fixes it after someone else
+ * signs in on the same phone, or after the push service changed the address).
+ */
+export async function keepPushOn(): Promise<void> {
+  if (!supported() || Notification.permission !== "granted" || recall(TURNED_OFF)) return;
+  await subscribe();
 }
 
 function fromB64url(text: string): Uint8Array<ArrayBuffer> {
