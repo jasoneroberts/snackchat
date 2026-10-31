@@ -6,6 +6,7 @@ import { LATEST_PHOTO } from "../lib/photoSql";
 import { currentUser } from "../lib/currentUser";
 import { listCheckins } from "../lib/feed";
 import { blockedEitherWay } from "../lib/blocks";
+import { checkAchievements } from "../lib/achievements";
 
 export const users = new Hono<AppContext>();
 
@@ -33,7 +34,7 @@ users.get("/:username", async (c) => {
   if (blocked) return c.json({ profile, private: blocked === "hidden", blocked });
   if (user.is_private && user.id !== viewer.id) return c.json({ profile, private: true, blocked });
 
-  const [stats, points, checkins] = await Promise.all([
+  const [stats, points, checkins, achievements] = await Promise.all([
     db
       .prepare(
         "SELECT COUNT(*) AS checkins, COUNT(DISTINCT snack_id) AS snacks, AVG(overall) AS avg FROM checkins WHERE user_id = ?",
@@ -45,6 +46,9 @@ users.get("/:username", async (c) => {
       .bind(user.id)
       .first<{ total: number }>(),
     listCheckins(db, { viewerId: viewer.id, userId: user.id, limit: 20 }),
+    // Badges and streak. Opening a profile also hands out any badges already
+    // earned but not yet given (say, from likes or invites since last time).
+    checkAchievements(db, user.id).then((r) => r.page),
   ]);
 
   return c.json({
@@ -58,6 +62,7 @@ users.get("/:username", async (c) => {
       points: points?.total ?? 0,
     },
     checkins,
+    achievements,
   });
 });
 

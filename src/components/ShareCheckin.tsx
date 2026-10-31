@@ -3,6 +3,8 @@ import { logoFor } from "../lib/logos";
 import { withInviter } from "../lib/ref";
 import { makeShareCard, type ShareCardInput } from "../lib/shareCard";
 import { useVoice } from "../lib/voice";
+import type { BadgeState } from "../../shared/achievements";
+import { NewBadges } from "./Achievements";
 
 /**
  * Shown straight after a check-in: the points, a picture of it to share
@@ -17,6 +19,7 @@ export function ShareCheckin({
   username,
   review,
   photo,
+  newBadges = [],
   onDone,
 }: {
   points: number;
@@ -25,6 +28,7 @@ export function ShareCheckin({
   username: string;
   review: string | null;
   photo: Blob | null; // the photo they just took, if any
+  newBadges?: BadgeState[]; // badges this check-in earned
   onDone: () => void;
 }) {
   const { t } = useVoice();
@@ -78,6 +82,8 @@ export function ShareCheckin({
         <h1 className="title">{points > 0 ? `+${points} pts` : t("toast.checkedIn")}</h1>
         <p className="muted no-margin">{t("share.prompt", { category: snack.category })}</p>
       </div>
+
+      <NewBadges badges={newBadges} username={username} />
 
       <div className="share-preview">
         {card ? (

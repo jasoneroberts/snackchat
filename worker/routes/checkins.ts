@@ -11,6 +11,7 @@ import { inBackground, pingAdmins } from "../lib/notify";
 import { notifyLike } from "../lib/likeAlerts";
 import { notifySquads } from "../lib/squadAlerts";
 import { firstCheckinBonus, tellInviterAboutCheckin } from "../lib/referrals";
+import { newBadgesSafely } from "../lib/achievements";
 
 export const checkins = new Hono<AppContext>();
 
@@ -149,8 +150,16 @@ checkins.post("/", async (c) => {
   if (photoId && photoStatus === "pending") {
     pingAdmins(c, { kind: "photo", title: "Photo to approve", body: `${user.username} added a photo of ${snack.name}.`, url: "/review" }, user.id);
   }
+  // Any badges this check-in has just earned, for the "New badge!" on the share screen.
+  const newBadges = await newBadgesSafely(db, user.id, time);
   return c.json(
-    { id: checkinId, points: lines.reduce((sum, l) => sum + l.points, 0), lines, photoPending: photoId !== null && photoStatus === "pending" },
+    {
+      id: checkinId,
+      points: lines.reduce((sum, l) => sum + l.points, 0),
+      lines,
+      photoPending: photoId !== null && photoStatus === "pending",
+      newBadges,
+    },
     201,
   );
 });

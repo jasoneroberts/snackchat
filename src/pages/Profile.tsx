@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ProfilePage } from "../../shared/types";
 import { adminToDo, api, errorText, type Me } from "../api";
+import { Achievements } from "../components/Achievements";
 import { Avatar } from "../components/Avatar";
 import { CheckinCard } from "../components/CheckinCard";
 import { InviteFriends } from "../components/InviteFriends";
@@ -121,6 +122,8 @@ export function Profile({
           {isMe ? "Your snacks" : `${data.profile.username}'s snacks`} ({data.stats.snacks})
         </Link>
       )}
+
+      {data.achievements && <Achievements data={data.achievements} username={data.profile.username} isMe={isMe} />}
 
       {isMe && <InviteFriends username={me.username} />}
 
