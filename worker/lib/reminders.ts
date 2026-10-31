@@ -56,11 +56,21 @@ interface Due {
   reminder_count: number;
 }
 
-/** Send today's reminders. Returns how many people were sent one. */
-export async function sendReminders(env: Env, origin: string, nowSeconds = Math.floor(Date.now() / 1000)): Promise<number> {
+/**
+ * Send today's reminders. Returns how many people were sent one. `skip` is
+ * anyone already sent a push in this run (a streak nudge on a Sunday), who
+ * get theirs another day instead of two at once.
+ */
+export async function sendReminders(
+  env: Env,
+  origin: string,
+  nowSeconds = Math.floor(Date.now() / 1000),
+  skip: Set<string> = new Set(),
+): Promise<number> {
   const { results } = await env.DB.prepare(DUE_SQL).bind(nowSeconds).all<Due>();
   let reminded = 0;
   for (const u of results) {
+    if (skip.has(u.id)) continue;
     const days = u.last_checkin === null ? null : Math.floor((nowSeconds - u.last_checkin) / DAY);
     const sent = await pushToUser(env, origin, u.id, { kind: "reminder", url: "/checkin", ...reminderMessage(u.voice, days) });
     // Count it even if no phone took it, so a dead subscription can't cause a daily retry.

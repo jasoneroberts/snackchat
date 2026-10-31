@@ -3,6 +3,7 @@ import type { FeedItem } from "../../shared/types";
 import { api, errorText, type Me } from "../api";
 import { CheckinCard } from "../components/CheckinCard";
 import { Link } from "../components/Link";
+import { CotwCard } from "./Cotw";
 import { useVoice } from "../lib/voice";
 
 export function Feed({ me, onChanged }: { me: Me; onChanged: () => void }) {
@@ -39,6 +40,7 @@ export function Feed({ me, onChanged }: { me: Me; onChanged: () => void }) {
 
   return (
     <div className="page stack">
+      <CotwCard me={me} />
       {items.length === 0 && (
         <div className="empty">
           <h2>{t("feed.emptyTitle")}</h2>

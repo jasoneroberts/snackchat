@@ -1,4 +1,5 @@
 // Shapes the API sends back, shared so the front end and Worker agree.
+import type { AchievementsPage } from "./achievements";
 
 export interface FeedItem {
   id: string;
@@ -58,6 +59,8 @@ export interface ProfilePage {
   blocked: "you" | "hidden" | null;
   stats?: { checkins: number; snacks: number; avg: number | null; points: number };
   checkins?: FeedItem[];
+  /** Badges and weekly streak (shared/achievements.ts). */
+  achievements?: AchievementsPage;
 }
 
 /** One snack someone has checked in, with their own ratings of it. */

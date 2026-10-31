@@ -17,14 +17,15 @@ export interface ShareCardInput {
   site: string; // "getcrunchd.com"
 }
 
-const W = 1080;
-const H = 1920;
-const ORANGE = "#f28c28";
-const ORANGE_DARK = "#9a4a06";
-const INK = "#2b1d0e";
-const MUTED = "#6b5640";
-const CREAM = "#fff4e0";
-const FONT = "Nunito, system-ui, sans-serif";
+// Shared with the badge and Crisp of the Week pictures (badgeCard.ts, battleCard.ts).
+export const W = 1080;
+export const H = 1920;
+export const ORANGE = "#f28c28";
+export const ORANGE_DARK = "#9a4a06";
+export const INK = "#2b1d0e";
+export const MUTED = "#6b5640";
+export const CREAM = "#fff4e0";
+export const FONT = "Nunito, system-ui, sans-serif";
 
 /** Draws the card and gives it back as a JPEG, ready for navigator.share. */
 export async function makeShareCard(input: ShareCardInput): Promise<Blob> {
@@ -184,7 +185,7 @@ export async function makeShareCard(input: ShareCardInput): Promise<Blob> {
   );
 }
 
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+export function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.arcTo(x + w, y, x + w, y + h, r);
@@ -195,7 +196,7 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
 }
 
 /** A five-point star in a size × size box, filled from the left by `fill` (0 to 1), like the app's stars. */
-function drawStar(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, fill: number) {
+export function drawStar(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, fill: number) {
   const cx = x + size / 2;
   const cy = y + size / 2 + size * 0.04;
   const outer = size / 2;
@@ -219,16 +220,16 @@ function drawStar(ctx: CanvasRenderingContext2D, x: number, y: number, size: num
 }
 
 /** Draws an image into a square, either filling it (cropping the edges) or fitting inside it. */
-function drawFit(ctx: CanvasRenderingContext2D, img: CanvasImageSource & { width: number; height: number }, x: number, y: number, size: number, mode: "cover" | "contain") {
+export function drawFit(ctx: CanvasRenderingContext2D, img: CanvasImageSource & { width: number; height: number }, x: number, y: number, size: number, mode: "cover" | "contain") {
   const scale = mode === "cover" ? Math.max(size / img.width, size / img.height) : Math.min(size / img.width, size / img.height);
   const w = img.width * scale;
   const h = img.height * scale;
   ctx.drawImage(img, x + (size - w) / 2, y + (size - h) / 2, w, h);
 }
 
-type Picture = { image: ImageBitmap | HTMLImageElement; logo: boolean };
+export type Picture = { image: ImageBitmap | HTMLImageElement; logo: boolean };
 
-async function loadPicture(p: ShareCardInput["picture"]): Promise<Picture | null> {
+export async function loadPicture(p: ShareCardInput["picture"]): Promise<Picture | null> {
   try {
     if (!p) return null;
     if ("blob" in p) return { image: await createImageBitmap(p.blob), logo: false };
@@ -240,7 +241,7 @@ async function loadPicture(p: ShareCardInput["picture"]): Promise<Picture | null
   }
 }
 
-function loadImage(src: string): Promise<HTMLImageElement | null> {
+export function loadImage(src: string): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => resolve(img);

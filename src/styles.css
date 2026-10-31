@@ -515,3 +515,31 @@ select:focus { outline: 2px solid var(--orange); border-color: transparent; }
 .wingit .button.secondary.wingit-back { color: #fff4e0; border-color: #fff4e0; }
 .wingit-link { width: 100%; text-align: left; font: inherit; cursor: pointer; }
 .wingit-card.waking { opacity: 0.6; pointer-events: none; }
+/* Badges and streaks (src/components/Achievements.tsx) */
+.streak-line { display: flex; align-items: center; gap: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--line-soft); }
+.streak-flame { font-size: 2rem; line-height: 1; }
+.streak-flame.out { filter: grayscale(1); opacity: 0.45; }
+.badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+.badge-cell { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); color: inherit; font: inherit; cursor: pointer; text-align: center; }
+.badge-cell.locked .badge-medal { filter: grayscale(1); opacity: 0.4; }
+.badge-cell.locked .badge-name { color: var(--muted); }
+.badge-medal { width: 48px; height: 48px; flex-shrink: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 1.6rem; background: radial-gradient(circle at 35% 30%, #ffe39a, #f2a93b); box-shadow: inset 0 0 0 3px rgb(255 255 255 / 0.6); }
+.badge-medal.big { width: 96px; height: 96px; font-size: 3.2rem; align-self: center; }
+.badge-medal.big.locked { filter: grayscale(1); opacity: 0.45; }
+.badge-name { font-size: 0.72rem; font-weight: 800; line-height: 1.15; }
+.badge-progress { font-size: 0.68rem; font-weight: 800; color: var(--muted); }
+.new-badge { display: flex; align-items: center; gap: 12px; background: var(--card); border: 2px solid var(--orange); border-radius: 16px; padding: 10px 12px; }
+.small-preview img { height: min(40vh, 360px); }
+
+/* Crisp of the Week (src/pages/Cotw.tsx) */
+.cotw-card { border: 2px solid var(--orange); }
+.cotw-matchup { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: stretch; gap: 8px; }
+.cotw-vs { align-self: center; font-weight: 900; color: var(--muted); }
+.cotw-side { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 18px 6px 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); color: inherit; font: inherit; text-align: center; }
+button.cotw-side { cursor: pointer; }
+button.cotw-side:disabled { cursor: default; }
+.cotw-side.picked { border: 2px solid var(--orange); background: color-mix(in srgb, var(--orange) 10%, var(--card)); }
+.cotw-name { font-weight: 900; line-height: 1.2; overflow-wrap: anywhere; }
+.cotw-percent { font-weight: 900; font-size: 1.15rem; color: var(--orange-dark); }
+.cotw-bar { width: 100%; flex: none; }
+.cotw-crown { position: absolute; top: -16px; font-size: 1.4rem; line-height: 1; }

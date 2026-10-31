@@ -30,6 +30,10 @@ import { blocks, reports } from "./routes/safety";
 import { snacks } from "./routes/snacks";
 import { users } from "./routes/users";
 import { REMINDER_HOUR_UTC, sendReminders } from "./lib/reminders";
+import { sendStreakNudges } from "./lib/achievements";
+import { sendBattleResults } from "./lib/battle";
+import { achievements } from "./routes/achievements";
+import { cotw } from "./routes/cotw";
 
 // Where the app lives, for push messages sent from the cron (no request to read it from).
 const appOrigin = (env: Env) => (env.CANONICAL_HOST ? `https://${env.CANONICAL_HOST}` : "https://snackchat.jasoneroberts.workers.dev");
@@ -75,6 +79,8 @@ app.route("/reports", reports);
 app.route("/blocks", blocks);
 app.route("/account", account);
 app.route("/push", push);
+app.route("/achievements", achievements);
+app.route("/cotw", cotw);
 
 app.get("/me", async (c) => {
   const user = c.get("user");
@@ -169,7 +175,9 @@ app.onError((err, c) => {
 });
 
 // Timed jobs, set in wrangler.jsonc "triggers". Every hour: check for an
-// error spike. At 03:00 UTC: back up the database and clear old logs.
+// error spike. At 03:00 UTC: back up the database and clear old logs. At
+// 18:00 UTC: reminders, plus streak nudges on Sundays and Crisp of the Week
+// results on Mondays.
 async function scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext) {
   if (controller.cron === "0 3 * * *") {
     const result = await runBackup(env.DB, env.PHOTOS);
@@ -178,8 +186,15 @@ async function scheduled(controller: ScheduledController, env: Env, ctx: Executi
   } else {
     const result = await checkErrorSpike(env);
     if (result.alerted) console.log(`[alert] sent for ${result.errors} errors`);
-    if (new Date(controller.scheduledTime).getUTCHours() === REMINDER_HOUR_UTC) {
-      const reminded = await sendReminders(env, appOrigin(env));
+    const at = new Date(controller.scheduledTime);
+    if (at.getUTCHours() === REMINDER_HOUR_UTC) {
+      const now = Math.floor(controller.scheduledTime / 1000);
+      // Sunday: a nudge for anyone whose weekly streak ends at midnight.
+      const nudged = at.getUTCDay() === 0 ? await sendStreakNudges(env, appOrigin(env), now) : new Set<string>();
+      if (nudged.size) console.log(`[streaks] nudged ${nudged.size}`);
+      // Monday: last week's Crisp of the Week result, to everyone who voted.
+      if (at.getUTCDay() === 1) console.log(`[cotw] result sent to ${await sendBattleResults(env, appOrigin(env), now)}`);
+      const reminded = await sendReminders(env, appOrigin(env), now, nudged);
       console.log(`[reminders] sent to ${reminded}`);
     }
   }

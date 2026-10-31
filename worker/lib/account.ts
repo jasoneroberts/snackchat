@@ -99,7 +99,7 @@ export async function exportAccount(db: D1Database, userId: string, origin: stri
     `SELECT id, username, CASE WHEN email LIKE '%.invalid' THEN NULL ELSE email END AS email, email_verified, country,
             is_private, voice, created_at FROM users WHERE id = ?`,
   );
-  const [checkins, attributes, photos, points, groups, follows, tastes, explore, badges, snacks, reports, blocks, likes, invites] = await Promise.all([
+  const [checkins, attributes, photos, points, groups, follows, tastes, explore, badges, snacks, reports, blocks, likes, invites, votes] = await Promise.all([
     all(
       `SELECT c.id, s.name AS snack, s.brand, c.overall, c.review, c.venue_text AS venue, c.paired_with, c.created_at
          FROM checkins c JOIN snacks s ON s.id = c.snack_id WHERE c.user_id = ? ORDER BY c.created_at`,
@@ -132,6 +132,8 @@ export async function exportAccount(db: D1Database, userId: string, origin: stri
          FROM referrals r JOIN users fu ON fu.id = r.friend_id JOIN users iu ON iu.id = r.inviter_id
         WHERE r.friend_id = ?1 OR r.inviter_id = ?1`,
     ),
+    // Crisp of the Week votes. week_start is the Monday the battle began.
+    all("SELECT v.week_start, s.name AS voted_for, v.created_at FROM cotw_votes v JOIN snacks s ON s.id = v.snack_id WHERE v.user_id = ?"),
   ]);
 
   return {
@@ -154,5 +156,6 @@ export async function exportAccount(db: D1Database, userId: string, origin: stri
     blocked: blocks,
     hearted: likes,
     invites,
+    crispOfTheWeekVotes: votes,
   };
 }
