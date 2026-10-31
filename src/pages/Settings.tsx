@@ -171,10 +171,11 @@ export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<v
 }
 
 /**
- * Push notifications on this phone. Everyone can have check-in reminders;
+ * Push notifications on this phone. Everyone can have check-in reminders
+ * and "someone liked your check-in" messages;
  * admins also hear about new people, photos to approve, reports and new
- * snacks. Each phone is turned on separately; reminders are one switch for
- * the account.
+ * snacks. Each phone is turned on separately; reminders and likes are each
+ * one switch for the account.
  */
 function Notifications({ me, onChanged }: { me: Me; onChanged: () => Promise<void> }) {
   const [state, setState] = useState<PushState | null>(null);
@@ -211,7 +212,7 @@ function Notifications({ me, onChanged }: { me: Me; onChanged: () => Promise<voi
         {state === "on" && <span className="small accent">On</span>}
       </div>
       <p className="small muted no-margin">
-        A nudge if you go {REMIND_AFTER_DAYS} days without a check-in
+        Hear when someone likes your check-in, and get a nudge if you go {REMIND_AFTER_DAYS} days without one
         {me.isAdmin ? ", plus new people, photos to approve, reports and new snacks as they happen." : "."}
       </p>
       {state === "needs-install" && (
@@ -253,6 +254,23 @@ function Notifications({ me, onChanged }: { me: Me; onChanged: () => Promise<voi
             }}
           />
           Remind me to check in
+        </label>
+      )}
+      {state === "on" && (
+        <label className="radio-row">
+          <input
+            type="checkbox"
+            checked={me.likeAlerts}
+            disabled={busy}
+            onChange={(e) => {
+              const on = e.target.checked;
+              void run(async () => {
+                await api("/push/likes", { method: "PUT", body: { on } });
+                await onChanged();
+              }, on ? "Like messages on." : "Like messages off.");
+            }}
+          />
+          Tell me when someone likes my check-in
         </label>
       )}
       {note && <p className="small muted no-margin">{note}</p>}

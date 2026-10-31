@@ -100,13 +100,19 @@ app.get("/me", async (c) => {
       openReports: user.is_admin === 1 ? await openReportCount(c.env.DB) : 0,
       // ...and how many people have joined since they last looked at Users.
       newUsers: user.is_admin === 1 ? await newUserCount(c.env.DB, user.id) : 0,
-      // Check-in reminders on or off (Settings > Notifications).
-      reminders: (await c.env.DB.prepare("SELECT reminders FROM users WHERE id = ?").bind(user.id).first<number>("reminders")) !== 0,
+      // Check-in reminders and like messages on or off (Settings > Notifications).
+      ...(await notificationPrefs(c.env.DB, user.id)),
     },
     devLogin: devLoginUsername(c.env) !== null,
     quickSignIn: quickSignInOn(c.env),
   });
 });
+
+/** Both notification switches in one read. Missing row or column counts as on. */
+async function notificationPrefs(db: D1Database, userId: string): Promise<{ reminders: boolean; likeAlerts: boolean }> {
+  const row = await db.prepare("SELECT reminders, like_alerts FROM users WHERE id = ?").bind(userId).first<{ reminders: number; like_alerts: number }>();
+  return { reminders: row?.reminders !== 0, likeAlerts: row?.like_alerts !== 0 };
+}
 
 // Pick lad mode or grown-up mode. Only words and colours change.
 app.put("/me/voice", async (c) => {

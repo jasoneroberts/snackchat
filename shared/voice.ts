@@ -73,8 +73,8 @@ export const LINES = {
   // The "Turn on notifications?" sheet (src/components/PushPrompt.tsx)
   "push.title": { grownup: "Turn on notifications?", lad: "Want a nudge?" },
   "push.body": {
-    grownup: "We'll give you a nudge if you go {days} days without a check-in. You can turn it off in Settings.",
-    lad: "We'll give you a shout if you go {days} days without logging a {snack}. Turn it off in Settings whenever.",
+    grownup: "Hear when someone likes your check-in, and get a nudge if you go {days} days without one. You can turn these off in Settings.",
+    lad: "Hear when someone hearts your {snack}, and get a shout if you go {days} days without logging one. Turn it off in Settings whenever.",
   },
   "push.yes": { grownup: "Turn on", lad: "Go on then" },
   "push.no": { grownup: "Not now", lad: "Nah" },

@@ -7,7 +7,8 @@ import { pointsFor, startOfUtcDay, validateCheckin } from "../lib/checkin";
 import { currentUser } from "../lib/currentUser";
 import { listCheckins, nextCursor, parseCursor } from "../lib/feed";
 import { overDailyLimit } from "../lib/limits";
-import { pingAdmins } from "../lib/notify";
+import { inBackground, pingAdmins } from "../lib/notify";
+import { notifyLike } from "../lib/likeAlerts";
 
 export const checkins = new Hono<AppContext>();
 
@@ -282,13 +283,16 @@ const likeCount = (db: D1Database, viewerId: string, checkinId: string) =>
     .bind(viewerId, checkinId)
     .first<number>("n");
 
-// Heart a check-in. Doing it twice is harmless (INSERT OR IGNORE).
+// Heart a check-in. Doing it twice is harmless (INSERT OR IGNORE). A new
+// heart also pushes a message to the check-in's owner (lib/likeAlerts.ts),
+// after the response has gone so the heart turns red straight away.
 checkins.put("/:id/like", async (c) => {
   const user = currentUser(c);
   const id = c.req.param("id");
   const db = c.env.DB;
   if (!(await canSee(db, user.id, id))) return c.json({ error: "Check-in not found." }, 404);
-  await db.prepare("INSERT OR IGNORE INTO likes (checkin_id, user_id, created_at) VALUES (?, ?, ?)").bind(id, user.id, now()).run();
+  const added = await db.prepare("INSERT OR IGNORE INTO likes (checkin_id, user_id, created_at) VALUES (?, ?, ?)").bind(id, user.id, now()).run();
+  if (added.meta.changes) inBackground(c, notifyLike(c.env, new URL(c.req.url).origin, id, user.id));
   return c.json({ liked: true, likes: await likeCount(db, user.id, id) });
 });
 
