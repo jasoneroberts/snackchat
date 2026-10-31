@@ -46,3 +46,12 @@ export const PRIOR_WEIGHT = 3;
 export function weightedRating(avg: number, count: number, overallMean: number, prior = PRIOR_WEIGHT): number {
   return (avg * count + overallMean * prior) / (count + prior);
 }
+
+/**
+ * SQL for someone's points total: every point in the ledger except those for
+ * check-ins marked scored = 0 (posts kept for show, e.g. an admin's test
+ * check-ins from before launch). `user` is a column or bind parameter.
+ */
+export const totalPointsSql = (user: string) =>
+  `SELECT COALESCE(SUM(tp.points), 0) FROM points_ledger tp LEFT JOIN checkins tc ON tc.id = tp.checkin_id
+    WHERE tp.user_id = ${user} AND (tc.id IS NULL OR tc.scored = 1)`;

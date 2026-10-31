@@ -1,3 +1,4 @@
+import { totalPointsSql } from "../lib/boards";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import type { AdminReport, AdminSnackPhoto, AdminSnackRow, AdminUserRow, BrandRow, DemoStatus, DietRow, ReviewQueue } from "../../shared/types";
@@ -353,7 +354,7 @@ admin.get("/users", async (c) => {
             u.signup_ref AS signupRef, u.id LIKE 'demo-%' AS isDemo,
             (SELECT iu.username FROM referrals r JOIN users iu ON iu.id = r.inviter_id WHERE r.friend_id = u.id) AS invitedBy,
             (SELECT COUNT(*) FROM checkins c WHERE c.user_id = u.id) AS checkins,
-            (SELECT IFNULL(SUM(p.points), 0) FROM points_ledger p WHERE p.user_id = u.id) AS points,
+            (${totalPointsSql("u.id")}) AS points,
             (SELECT COUNT(*) FROM group_members g WHERE g.user_id = u.id) AS groups,
             MAX(IFNULL((SELECT MAX(s.created_at) FROM sessions s WHERE s.user_id = u.id), 0),
                 IFNULL((SELECT MAX(c.created_at) FROM checkins c WHERE c.user_id = u.id), 0)) AS lastActive

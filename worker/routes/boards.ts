@@ -58,11 +58,11 @@ boards.get("/people", async (c) => {
     `SELECT u.username, u.avatar_id AS avatarId,
             (SELECT COALESCE(SUM(pl.points), 0) FROM points_ledger pl
                JOIN checkins c ON c.id = pl.checkin_id JOIN snacks s ON s.id = c.snack_id
-              WHERE pl.user_id = u.id AND pl.created_at >= ?2 AND ${TYPES})${invitePointsSql("u.id", "?2")} AS points,
+              WHERE pl.user_id = u.id AND pl.created_at >= ?2 AND c.scored = 1 AND ${TYPES})${invitePointsSql("u.id", "?2")} AS points,
             (SELECT COUNT(*) FROM checkins c JOIN snacks s ON s.id = c.snack_id
-              WHERE c.user_id = u.id AND c.created_at >= ?2 AND ${TYPES}) AS checkins,
+              WHERE c.user_id = u.id AND c.created_at >= ?2 AND c.scored = 1 AND ${TYPES}) AS checkins,
             (SELECT COUNT(DISTINCT c.snack_id) FROM checkins c JOIN snacks s ON s.id = c.snack_id
-              WHERE c.user_id = u.id AND c.created_at >= ?2 AND ${TYPES}) AS snacks
+              WHERE c.user_id = u.id AND c.created_at >= ?2 AND c.scored = 1 AND ${TYPES}) AS snacks
        FROM users u
       WHERE ${WHO} AND ${NOT_ADMIN_ON_GLOBAL}`,
   )
@@ -96,7 +96,7 @@ boards.get("/snacks", async (c) => {
        FROM checkins c
        JOIN snacks s ON s.id = c.snack_id
        JOIN users u ON u.id = c.user_id
-      WHERE c.created_at >= ?2 AND s.status = 'approved' AND ${WHO} AND ${TYPES}
+      WHERE c.created_at >= ?2 AND c.scored = 1 AND s.status = 'approved' AND ${WHO} AND ${TYPES}
         AND (?5 IS NULL OR s.category_id IN (SELECT value FROM json_each(?5)))${dietSql(diets)}
       GROUP BY s.id`,
   )
