@@ -3,12 +3,14 @@ import { api, errorText, type Me } from "../api";
 import { Avatar } from "../components/Avatar";
 import { DemoData } from "../components/DemoData";
 import { Link } from "../components/Link";
+import { navigate } from "../router";
 import { VoiceChoice } from "../components/VoiceChoice";
 import { YourData } from "../components/YourData";
 import { Cropper } from "../components/Cropper";
 import { AVATAR_SIDE } from "../lib/image";
 import { pushState, turnOffPush, turnOnPush, type PushState } from "../lib/push";
 import { REMIND_AFTER_DAYS } from "../../shared/reminders";
+import { bestScore, foundGoldenCrisp, playWingIt, releaseGoldenCrisp } from "../lib/goldenCrisp";
 
 export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<void> }) {
   const [busy, setBusy] = useState(false);
@@ -122,11 +124,30 @@ export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<v
         <span className="muted small">Suggest a fix to a name or photo</span>
       </Link>
 
+      {/* The hidden game: only listed once you've caught the Golden Crisp (admins always see it). */}
+      {(foundGoldenCrisp() || me.isAdmin) && (
+        <button type="button" className="card-plain row settings-link wingit-link" onClick={playWingIt}>
+          <b className="grow">Wing It</b>
+          <span className="muted small">{bestScore() > 0 ? `Your best: ${bestScore()}` : "The Golden Crisp game"}</span>
+        </button>
+      )}
+
       <YourData />
 
       {me.isAdmin && (
         <>
           <h2 className="section-title admin-heading">Admin</h2>
+          <button
+            type="button"
+            className="card-plain row settings-link wingit-link"
+            onClick={() => {
+              navigate("/");
+              setTimeout(() => releaseGoldenCrisp(), 600);
+            }}
+          >
+            <b className="grow">Release the Golden Crisp</b>
+            <span className="muted small">See it fly over the feed (test)</span>
+          </button>
           <Link href="/review" className="card-plain row settings-link">
             <b className="grow">Photo approvals</b>
             {me.reviewCount > 0 ? <span className="count-badge">{me.reviewCount}</span> : <span className="muted small">All clear</span>}

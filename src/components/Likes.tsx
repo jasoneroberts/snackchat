@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { FeedItem, Liker } from "../../shared/types";
 import { api, errorText } from "../api";
 import { timeAgo } from "../lib/format";
+import { maybeReleaseGoldenCrisp } from "../lib/goldenCrisp";
 import { Avatar } from "./Avatar";
 import { Link } from "./Link";
 
@@ -29,6 +30,8 @@ export function Likes({ item }: { item: FeedItem }) {
       // The server's count includes anyone else who liked it meanwhile.
       setLiked(r.liked);
       setCount(r.likes);
+      // Now and then, a like sends the Golden Crisp fluttering past (the hidden game).
+      if (next && r.liked) maybeReleaseGoldenCrisp("like");
     } catch {
       setLiked(!next);
       setCount((n) => n + (next ? -1 : 1));
