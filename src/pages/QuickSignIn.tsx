@@ -44,7 +44,7 @@ export function QuickSignIn({ onSignedIn }: { onSignedIn: () => void }) {
         Name
         <input
           value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          onChange={(e) => setUsername(e.target.value.replace(/ /g, "_"))}
           required
           autoComplete="username"
           autoCapitalize="none"

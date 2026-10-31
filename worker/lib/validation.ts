@@ -18,7 +18,7 @@ export interface SignUpInput {
 
 export function validateSignUp(body: unknown): { ok: true; value: SignUpInput } | { ok: false; error: string } {
   const b = (body ?? {}) as Record<string, unknown>;
-  const username = typeof b.username === "string" ? b.username.trim() : "";
+  const username = typeof b.username === "string" ? b.username.trim().replace(/\s+/g, "_") : "";
   const email = typeof b.email === "string" ? b.email.trim().toLowerCase() : "";
   const password = typeof b.password === "string" ? b.password : "";
   const inviteCode = typeof b.inviteCode === "string" ? b.inviteCode.trim() : "";
