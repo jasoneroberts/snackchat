@@ -39,6 +39,10 @@ function readPeriod(value: string | undefined): BoardPeriod {
 // NULL, ?4 the group's snack types as JSON or NULL.
 const WHO = `(CASE WHEN ?3 IS NULL THEN (u.is_private = 0 OR u.id = ?1)
                    ELSE u.id IN (SELECT user_id FROM group_members WHERE group_id = ?3) END)`;
+// Admins (Jase) run the app, so they stay off the global people tables,
+// even their own view of them. Their check-ins still count towards snack
+// ratings and their squads' tables.
+const NOT_ADMIN_ON_GLOBAL = `(?3 IS NOT NULL OR u.is_admin = 0)`;
 const TYPES = `(?4 IS NULL OR s.category_id IN (SELECT value FROM json_each(?4)))`;
 
 // People ranked by points, check-ins or different snacks.
@@ -60,7 +64,7 @@ boards.get("/people", async (c) => {
             (SELECT COUNT(DISTINCT c.snack_id) FROM checkins c JOIN snacks s ON s.id = c.snack_id
               WHERE c.user_id = u.id AND c.created_at >= ?2 AND ${TYPES}) AS snacks
        FROM users u
-      WHERE ${WHO}`,
+      WHERE ${WHO} AND ${NOT_ADMIN_ON_GLOBAL}`,
   )
     .bind(user.id, boardStart(readPeriod(c.req.query("period")), now()), scope.groupId, scope.categories)
     .all<Omit<PeopleRow, "value" | "rank">>();
