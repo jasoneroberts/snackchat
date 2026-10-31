@@ -336,6 +336,15 @@ fieldset legend { padding: 0; margin-bottom: 6px; }
 .brand-suggestion .icon-button { margin: 0; width: 40px; height: 40px; border-radius: 999px; font-weight: 900; font-size: 1.1rem; }
 .suggestion-yes { background: var(--orange); color: var(--on-orange, var(--ink)); }
 .suggestion-no { border: 2px solid var(--ink) !important; }
+.brand-suggestions { margin: 8px 0 2px 54px; display: flex; flex-direction: column; gap: 6px; }
+.brand-suggestions p { margin: 0; }
+.brand-suggestion-note { margin: 8px 0 2px 54px; }
+.logo-picks { display: flex; gap: 8px; flex-wrap: wrap; }
+.logo-pick { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px; border: 2px solid var(--line); border-radius: 14px; background: var(--card); cursor: pointer; }
+.logo-pick img { width: 60px; height: 60px; object-fit: contain; background: #fff; border-radius: 10px; }
+.logo-pick.picked { border-color: var(--orange); box-shadow: 0 0 0 2px var(--orange); }
+.logo-pick-tag { font-size: 0.7rem; font-weight: 800; color: var(--muted, inherit); }
+.brand-suggestion-actions { display: flex; align-items: center; gap: 14px; }
 .brand-logo-slot { width: 44px; height: 44px; flex-shrink: 0; border-radius: 10px; border: 1px dashed var(--line); display: flex; align-items: center; justify-content: center; }
 .brand-row .button { position: relative; overflow: hidden; }
 .brand-row input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
