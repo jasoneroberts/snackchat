@@ -478,3 +478,40 @@ select:focus { outline: 2px solid var(--orange); border-color: transparent; }
 .invite-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .invite-list li { display: flex; align-items: center; gap: 8px; }
 .invited-by { background: var(--cream-deep); border-radius: 10px; padding: 8px 12px; font-weight: 700; }
+
+/* The Golden Crisp: flutters across the screen now and then after a like or check-in. */
+.golden-crisp { position: fixed; left: 0; z-index: 80; background: none; border: 0; padding: 6px; cursor: pointer; animation: crisp-across 6.5s linear forwards; }
+.golden-crisp.flip { animation-name: crisp-back; }
+.golden-crisp.flip canvas { transform: scaleX(-1); } /* face the way it's flying */
+.golden-crisp-bob { display: block; animation: crisp-bob 0.9s ease-in-out infinite alternate; filter: drop-shadow(0 6px 10px rgb(154 74 6 / 0.35)); }
+@keyframes crisp-across { from { transform: translateX(-110px); } to { transform: translateX(calc(100vw + 20px)); } }
+@keyframes crisp-back { from { transform: translateX(calc(100vw + 20px)); } to { transform: translateX(-110px); } }
+@keyframes crisp-bob { from { translate: 0 -22px; } to { translate: 0 22px; } }
+@media (prefers-reduced-motion: reduce) {
+  /* No dashing across: it just appears in the middle for a few seconds. */
+  .golden-crisp, .golden-crisp.flip { left: calc(50% - 48px); animation: crisp-stay 6s ease forwards; }
+  .golden-crisp-bob { animation: none; }
+  @keyframes crisp-stay { 0% { opacity: 0; } 10%, 85% { opacity: 1; } 100% { opacity: 0; } }
+}
+
+/* Wing It, the hidden game: full screen over everything. */
+.wingit { position: fixed; inset: 0; z-index: 90; background: #2a1608; color: #fff4e0; user-select: none; -webkit-user-select: none; }
+.wingit-canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.wingit-hud { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 12px; padding: max(12px, env(safe-area-inset-top)) 16px 0; pointer-events: none; }
+.wingit-score { font-size: 2.4rem; font-weight: 900; text-shadow: 0 2px 0 #000; min-width: 2ch; }
+.wingit-best { flex: 1; font-weight: 800; opacity: 0.8; }
+.wingit-close { pointer-events: auto; width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgb(0 0 0 / 0.35); color: #fff4e0; font-size: 1.6rem; line-height: 1; cursor: pointer; }
+.wingit-card { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(320px, calc(100% - 32px)); background: rgb(30 16 6 / 0.88); border: 2px solid #f6c445; border-radius: 20px; padding: 20px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.wingit-intro { pointer-events: none; top: 46%; } /* touches go through to the canvas to take off */
+.wingit-card h2 { font-size: 1.8rem; font-weight: 900; color: #f6c445; }
+.wingit-card p { margin: 0; line-height: 1.4; }
+.wingit-banner { font-weight: 900; color: #ffe58a; }
+.wingit-hint { font-weight: 900; color: #f6c445; animation: wingit-pulse 1s ease-in-out infinite alternate; }
+@keyframes wingit-pulse { from { opacity: 0.5; } to { opacity: 1; } }
+.wingit-line { font-weight: 800; }
+.wingit-final { font-size: 3.4rem !important; font-weight: 900; color: #f6c445; line-height: 1 !important; }
+.wingit-sub { opacity: 0.85; font-weight: 700; }
+.wingit-actions { display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 8px; }
+.wingit .button.secondary.wingit-back { color: #fff4e0; border-color: #fff4e0; }
+.wingit-link { width: 100%; text-align: left; font: inherit; cursor: pointer; }
+.wingit-card.waking { opacity: 0.6; pointer-events: none; }

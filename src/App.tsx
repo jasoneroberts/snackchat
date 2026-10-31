@@ -36,6 +36,8 @@ import { PickVoice } from "./pages/PickVoice";
 import { markWelcomed, welcomed } from "./lib/install";
 import { keepPushOn, setIconBadge } from "./lib/push";
 import { PushPrompt } from "./components/PushPrompt";
+import { GoldenCrisp } from "./components/GoldenCrisp";
+import { maybeReleaseGoldenCrisp } from "./lib/goldenCrisp";
 import { VoiceProvider } from "./lib/voice";
 import { line } from "../shared/voice";
 
@@ -233,6 +235,9 @@ export function App() {
           setToast({ title: points > 0 ? `+${points} pts` : checkedIn, body: `${line(voice, "toast.onBoard", { vars: { name } })}${photoNote}` });
           refresh();
           navigate("/");
+          // Sometimes the Golden Crisp flutters over the feed afterwards: wait
+          // until the feed is showing so it isn't missed during the page change.
+          setTimeout(() => maybeReleaseGoldenCrisp("checkin"), 1500);
         }}
       />
     );
@@ -365,6 +370,7 @@ export function App() {
           </div>
         )}
         <PushPrompt me={me} path={path} />
+        <GoldenCrisp />
         <TabBar active={tab} meBadge={adminToDo(me)} />
       </div>
     </VoiceProvider>
