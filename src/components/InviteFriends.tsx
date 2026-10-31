@@ -42,7 +42,8 @@ export function InviteFriends({ username }: { username: string }) {
       <h2 className="section-title no-margin">Invite friends</h2>
       <p className="small muted no-margin">
         Get <b>{INVITE_POINTS.join} pts</b> when a friend joins with your link, and <b>{INVITE_POINTS.firstCheckin} more</b> after
-        their first check-in. Invite points add to your total, not the weekly tables.
+        their first check-in.{" "}
+        {INVITE_POINTS.onBoards ? "They count on the points tables too." : "Invite points add to your total, not the tables."}
       </p>
       <div className="row">
         <a className="button whatsapp grow" href={`https://wa.me/?text=${encodeURIComponent(message)}`} target="_blank" rel="noreferrer">

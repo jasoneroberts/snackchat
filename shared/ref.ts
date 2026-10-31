@@ -29,4 +29,8 @@ export const INVITE_POINTS = {
   join: 5, // a friend makes an account from your link
   firstCheckin: 15, // ...and then checks in for the first time
   friendsPerDay: 5, // each bonus is paid for at most this many friends a day
+  // Whether invite points count on the people and squad points tables (not
+  // just your total). On while Crunchd is small; set to false if fake
+  // accounts ever show up to farm them.
+  onBoards: true,
 } as const;

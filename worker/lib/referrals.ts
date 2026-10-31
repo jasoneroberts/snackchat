@@ -10,9 +10,10 @@
 // - You can't invite yourself: the new account can't be the inviter, demo
 //   people can't invite, and the app drops a link from a name that has
 //   already signed in on the same phone (src/lib/ref.ts).
-// - The points go in points_ledger with no check-in, so they add to your
-//   total but never to a weekly, monthly or squad board (those only count
-//   points joined to check-ins). Cheating can't win a table.
+// - The points go in points_ledger with no check-in. Boards only count
+//   points joined to check-ins, plus invitePointsSql() below while
+//   INVITE_POINTS.onBoards is on. Turning it off takes them off every table
+//   at once and leaves them on your total.
 
 import { INVITE_POINTS } from "../../shared/ref";
 import type { InviteStats } from "../../shared/types";
@@ -126,6 +127,19 @@ export function tellInviterAboutJoin(env: Env, origin: string, opts: { inviterId
     body: `${opts.friendName} joined Crunchd from your invite. You'll get ${INVITE_POINTS.firstCheckin} more when they check in.`,
     url: "/me",
   });
+}
+
+/**
+ * SQL to add to a board's points sum: the invite points `userCol` earned
+ * since the bind parameter `since`. They count whatever snack types the
+ * board or squad covers, since they aren't for a snack. Empty when
+ * INVITE_POINTS.onBoards is off.
+ */
+export function invitePointsSql(userCol: string, since: string): string {
+  if (!INVITE_POINTS.onBoards) return "";
+  return ` + (SELECT COALESCE(SUM(ip.points), 0) FROM points_ledger ip
+               WHERE ip.user_id = ${userCol} AND ip.checkin_id IS NULL
+                 AND ip.reason IN ('invite_join', 'invite_checkin') AND ip.created_at >= ${since})`;
 }
 
 /** Your invite numbers, for the card on your profile. */

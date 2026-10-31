@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { cleanInviter, INVITE_POINTS } from "../shared/ref";
-import { firstCheckinBonus, inviteStats, recordReferral } from "../worker/lib/referrals";
+import { firstCheckinBonus, invitePointsSql, inviteStats, recordReferral } from "../worker/lib/referrals";
 import { validateQuickSignIn } from "../worker/lib/quickSignIn";
 
 // Node's own modules, loaded by name so the type check (which has no Node types) skips them.
@@ -96,14 +96,21 @@ describe("invite links", () => {
     expect(stats.friends[0]).toMatchObject({ username: "sam", checkedIn: true });
   });
 
-  it("keeps invite points off the boards (no check-in attached)", async () => {
+  it("adds invite points to board sums while onBoards is on, kept apart from check-in points", async () => {
     await addUser("sam", "sam");
     await recordReferral(db, { friendId: "sam", inviter: "jase", time: T });
     await checkIn("sam", "c1", T + 60);
-    const onBoards = await db
+    // None of jase's points hang off a check-in, so the check-in part of a board sum is 0...
+    const onCheckins = await db
       .prepare("SELECT COUNT(*) AS n FROM points_ledger WHERE user_id = 'jase' AND checkin_id IS NOT NULL")
       .first<number>("n");
-    expect(onBoards).toBe(0);
+    expect(onCheckins).toBe(0);
+    // ...and the extra board SQL adds the invite points from the period start on.
+    const board = (since: number) =>
+      db.prepare(`SELECT 0${invitePointsSql("u.id", "?1")} AS n FROM users u WHERE u.id = 'jase'`).bind(since).first<number>("n");
+    const all = INVITE_POINTS.join + INVITE_POINTS.firstCheckin;
+    expect(await board(T)).toBe(INVITE_POINTS.onBoards ? all : 0);
+    expect(await board(T + 30)).toBe(INVITE_POINTS.onBoards ? INVITE_POINTS.firstCheckin : 0);
   });
 
   it("ignores unknown names, demo people and yourself", async () => {
