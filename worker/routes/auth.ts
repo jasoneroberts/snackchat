@@ -116,7 +116,9 @@ auth.post("/quick", async (c) => {
     // No PIN (demo people, or an account an admin has locked) can't be signed into.
     if (!user.password_hash || !(await verifyPassword(pin, user.password_hash))) {
       await recordWrongPin(c.env.CACHE, user.id);
-      return c.json({ error: "Wrong name or PIN." }, 401);
+      // Names are public (boards, profiles), so saying it's taken gives nothing away,
+      // and it tells a new person to pick another name instead of retrying.
+      return c.json({ error: "That name's taken. If it's yours, check your PIN. If not, pick another name." }, 401);
     }
     await clearWrongPins(c.env.CACHE, user.id);
     await createSession(c, user.id);
