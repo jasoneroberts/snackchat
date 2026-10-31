@@ -5,6 +5,8 @@ import type { AppContext } from "../env";
 import { newId } from "../lib/crypto";
 import { currentUser } from "../lib/currentUser";
 import {
+  champions,
+  lastWeek,
   MAX_MEMBERS,
   MAX_OWNED_GROUPS,
   newInviteCode,
@@ -43,28 +45,51 @@ export const groupPictureKey = (groupId: string, pictureId: string) => `groups/$
 // types, or NULL for all of them.
 const COUNTS = `s.category_id IN (SELECT value FROM json_each(?3)) OR ?3 IS NULL`;
 
-// What each scoring mode adds up for one member (m.user_id) since ?2.
+// What each scoring mode adds up for one member (m.user_id) from ?2 up to
+// (not including) ?4. ?4 is NULL for "up to now" (the live board); last
+// week's crown passes the Monday this week started.
+const BEFORE = (col: string) => `(?4 IS NULL OR ${col} < ?4)`;
 const SCORE_SQL: Record<ScoringMode, string> = {
   points: `(SELECT COALESCE(SUM(pl.points), 0) FROM points_ledger pl
              JOIN checkins c ON c.id = pl.checkin_id JOIN snacks s ON s.id = c.snack_id
-            WHERE pl.user_id = m.user_id AND pl.created_at >= ?2 AND c.scored = 1 AND (${COUNTS}))${invitePointsSql("m.user_id", "?2")}`,
+            WHERE pl.user_id = m.user_id AND pl.created_at >= ?2 AND ${BEFORE("pl.created_at")}
+              AND c.scored = 1 AND (${COUNTS}))${invitePointsSql("m.user_id", "?2", "?4")}`,
   checkins: `SELECT COUNT(*) FROM checkins c JOIN snacks s ON s.id = c.snack_id
-              WHERE c.user_id = m.user_id AND c.created_at >= ?2 AND c.scored = 1 AND (${COUNTS})`,
+              WHERE c.user_id = m.user_id AND c.created_at >= ?2 AND ${BEFORE("c.created_at")}
+                AND c.scored = 1 AND (${COUNTS})`,
   unique: `SELECT COUNT(DISTINCT c.snack_id) FROM checkins c JOIN snacks s ON s.id = c.snack_id
-            WHERE c.user_id = m.user_id AND c.created_at >= ?2 AND c.scored = 1 AND (${COUNTS})`,
+            WHERE c.user_id = m.user_id AND c.created_at >= ?2 AND ${BEFORE("c.created_at")}
+              AND c.scored = 1 AND (${COUNTS})`,
 };
 
-/** The group's leaderboard for the current period, every member included. */
-async function leaderboard(db: D1Database, g: GroupRow): Promise<BoardRow[]> {
+type ScoreRow = { username: string; avatarId: string | null; role: BoardRow["role"]; value: number };
+
+/** Every current member's score between two times (until = null means up to now). */
+async function scores(db: D1Database, g: GroupRow, since: number, until: number | null): Promise<ScoreRow[]> {
   const { results } = await db
     .prepare(
       `SELECT u.username, u.avatar_id AS avatarId, m.role, (${SCORE_SQL[g.scoring_mode]}) AS value
          FROM group_members m JOIN users u ON u.id = m.user_id
         WHERE m.group_id = ?1`,
     )
-    .bind(g.id, periodStart(g.reset_period, now()), g.categories)
-    .all<{ username: string; avatarId: string | null; role: BoardRow["role"]; value: number }>();
-  return rank(results);
+    .bind(g.id, since, g.categories, until)
+    .all<ScoreRow>();
+  return results;
+}
+
+/** The group's leaderboard for the current period, every member included. */
+async function leaderboard(db: D1Database, g: GroupRow): Promise<BoardRow[]> {
+  return rank(await scores(db, g, periodStart(g.reset_period, now()), null));
+}
+
+/**
+ * Who wears the crown this week: the top scorer last Monday to Sunday, by
+ * the squad's own scoring and snack types. Only people still in the squad
+ * can win, and nobody does if nobody scored. Ties share it.
+ */
+async function lastWeekChampions(db: D1Database, g: GroupRow): Promise<GroupPage["champions"]> {
+  const { start, end } = lastWeek(now());
+  return champions(await scores(db, g, start, end)).map((r) => ({ username: r.username, value: r.value }));
 }
 
 async function membership(db: D1Database, groupId: string, userId: string) {
@@ -253,8 +278,9 @@ groups.get("/:id", async (c) => {
   const g = await membership(c.env.DB, c.req.param("id"), user.id);
   if (!g) return c.json({ error: "Group not found." }, 404);
 
-  const [board, favourite] = await Promise.all([
+  const [board, crowned, favourite] = await Promise.all([
     leaderboard(c.env.DB, g),
+    lastWeekChampions(c.env.DB, g),
     // Best average rating among snacks the members have checked in.
     c.env.DB.prepare(
       `SELECT s.id, s.name, s.brand, s.category_id AS category, s.status,
@@ -284,6 +310,7 @@ groups.get("/:id", async (c) => {
     myRole: g.role,
     periodEnd: periodEnd(g.reset_period, now()),
     board,
+    champions: crowned,
     favourite: favourite ?? null,
   };
   return c.json(page);

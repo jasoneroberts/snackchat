@@ -242,6 +242,11 @@ fieldset legend { padding: 0; margin-bottom: 6px; }
 .board li { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-top: 1px solid var(--line-soft); }
 .board li.me { background: var(--cream-deep); }
 .board-rank { width: 22px; text-align: center; font-weight: 900; }
+/* Last week's squad champion: a small crown tipped on the avatar's top-right edge. */
+.crowned { position: relative; display: inline-flex; flex-shrink: 0; }
+.crowned .crown { position: absolute; top: -30%; right: -22%; transform: rotate(18deg); filter: drop-shadow(0 1px 1px rgba(43, 29, 14, 0.25)); pointer-events: none; }
+.champion-note { margin: 0; padding: 10px 14px; border-top: 1px solid var(--line-soft); display: flex; align-items: center; gap: 6px; }
+.champion-note .crown { flex-shrink: 0; }
 .board-note { margin: 0; padding: 10px 14px 14px; }
 
 /* Boards */

@@ -107,6 +107,8 @@ export interface GroupPage {
   myRole: "owner" | "admin" | "member";
   periodEnd: number | null; // Unix seconds, null when the board never resets
   board: BoardRow[];
+  /** Last Monday-to-Sunday week's top scorer(s), who wear a crown; empty if nobody scored. */
+  champions: { username: string; value: number }[];
   favourite: (SnackSummary & { avg: number; checkins: number }) | null;
 }
 

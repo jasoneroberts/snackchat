@@ -16,10 +16,13 @@ export function CheckinCard({
   item,
   mine,
   onDelete,
+  crowned = false,
 }: {
   item: FeedItem;
   mine: boolean;
   onDelete?: (id: string) => void;
+  /** On a squad page: this person was the squad's champion last week. */
+  crowned?: boolean;
 }) {
   const category = getCategory(item.snack.category);
   const { t } = useVoice();
@@ -34,7 +37,7 @@ export function CheckinCard({
     <article className="checkin">
       <header className="checkin-head">
         <Link href={`/u/${item.username}`} className="plain">
-          <Avatar username={item.username} avatarId={item.avatarId} />
+          <Avatar username={item.username} avatarId={item.avatarId} crown={crowned} />
         </Link>
         <div className="grow">
           <div>

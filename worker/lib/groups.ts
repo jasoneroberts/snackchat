@@ -87,3 +87,21 @@ export function rank<T extends { value: number; username: string }>(rows: T[]): 
     return { ...row, rank: current };
   });
 }
+
+/**
+ * Last week's window for the squad crown: the Monday-to-Monday (UTC) week
+ * before this one, whatever the squad's own reset period is.
+ */
+export function lastWeek(nowSeconds: number): { start: number; end: number } {
+  const end = periodStart("weekly", nowSeconds);
+  return { start: end - 7 * 86400, end };
+}
+
+/**
+ * Last week's champions: whoever came top, provided they scored something.
+ * Joint winners all keep a crown, so a tie at the top crowns everyone on it.
+ */
+export function champions<T extends { value: number; username: string }>(rows: T[]): T[] {
+  const best = Math.max(0, ...rows.map((r) => r.value));
+  return best > 0 ? rows.filter((r) => r.value === best).sort((a, b) => a.username.localeCompare(b.username)) : [];
+}
