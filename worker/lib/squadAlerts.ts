@@ -7,6 +7,8 @@
 //   - the poster's profile is private (the squad feed hides their check-ins
 //     too, so a push would point at something you can't see),
 //   - the squad mate turned these off in Settings (users.squad_alerts = 0),
+//   - the squad mate asked for a weekly round-up instead (users.weekly_digest
+//     = 1; the check-in is counted in their Sunday push, see weeklyDigest.ts),
 //   - the poster already checked in within the last SESSION_GAP seconds.
 //     Someone working through a sharing bag of six snacks buzzes your phone
 //     once, for the first one, not six times. The rest are in the feed.
@@ -90,7 +92,7 @@ export async function notifySquads(
            JOIN groups g ON g.id = mine.group_id
            JOIN users r ON r.id = theirs.user_id
           WHERE mine.user_id = ?1
-            AND r.squad_alerts = 1 AND r.id NOT LIKE 'demo-%'
+            AND r.squad_alerts = 1 AND r.weekly_digest = 0 AND r.id NOT LIKE 'demo-%'
             AND NOT ${blockedEitherWay("r.id", "?1")}
             AND EXISTS (SELECT 1 FROM push_subscriptions p WHERE p.user_id = r.id)
           GROUP BY r.id
