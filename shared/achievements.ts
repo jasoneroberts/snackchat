@@ -1,10 +1,10 @@
-// Achievements (badges), weekly streaks and Crisp of the Week: the parts the
+// Achievements (badges), weekly streaks and last week's champions: the parts the
 // app and the server both need. The server works out who has earned what
 // (worker/lib/achievements.ts); the app shows them (src/components/Achievements.tsx).
 
 /**
  * What a badge counts. Each one is a number worked out from someone's
- * check-ins, likes, squads and votes (see `progressFor` in
+ * check-ins, likes, squads and invites (see `progressFor` in
  * worker/lib/achievements.ts). A badge is earned when its metric reaches `goal`.
  */
 export type Metric =
@@ -24,8 +24,6 @@ export type Metric =
   | "scampi_low" // times you rated Scampi Fries 2 or under
   | "scampi_high" // times you rated Scampi Fries 4.5 or more
   | "streak" // best weekly streak ever
-  | "votes" // Crisp of the Week votes
-  | "backed" // Crisp of the Week winners you voted for
   | "secret"; // never counted: given out by a hidden game (see SECRET_BADGES)
 
 export interface BadgeDef {
@@ -62,8 +60,6 @@ export const BADGES: BadgeDef[] = [
   { id: "scampi_disciple", name: "Scampi Fries Disciple", emoji: "🦐", description: "Rate Scampi Fries 4.5 stars or more.", metric: "scampi_high", goal: 1 },
   { id: "on_a_roll", name: "On a Roll", emoji: "🔥", description: "Check in 4 weeks in a row.", metric: "streak", goal: 4 },
   { id: "crunch_machine", name: "Crunch Machine", emoji: "⚙️", description: "Check in 12 weeks in a row.", metric: "streak", goal: 12 },
-  { id: "swing_voter", name: "Swing Voter", emoji: "🗳️", description: "Vote in 3 Crisp of the Week battles.", metric: "votes", goal: 3 },
-  { id: "kingmaker", name: "Kingmaker", emoji: "👑", description: "Back the Crisp of the Week winner 3 times.", metric: "backed", goal: 3 },
   {
     id: "golden_crisp",
     name: "Golden Crisp",
@@ -157,38 +153,14 @@ export const isEarly = (seconds: number) => {
   return h >= 5 && h < 8;
 };
 
-// Crisp of the Week ------------------------------------------------------------
+// Last week's champions ----------------------------------------------------------
+// Shown at the top of the feed on Mondays (worker/lib/champions.ts).
 
-export interface BattleSnack {
-  id: string;
-  name: string;
-  brand: string | null;
-  category: string;
-  photoId: string | null;
-}
-
-export interface Battle {
+export interface Champions {
+  /** Monday 00:00 UTC of the week that just finished. */
   weekStart: number;
-  /** When voting closes: next Monday, 00:00 UTC. */
-  endsAt: number;
-  a: BattleSnack;
-  b: BattleSnack;
-  /** Vote counts. Only sent once you've voted, so nobody just follows the crowd. Always sent for past battles. */
-  votes: { a: number; b: number } | null;
-  myVote: string | null;
-  /** For past battles: the winner's id, or null for a dead heat. */
-  winner?: string | null;
-}
-
-export interface BattlePage {
-  current: Battle | null;
-  last: Battle | null;
-}
-
-/** Whole-number percentages that add up to 100 (or both 0 with no votes). */
-export function percentages(a: number, b: number): { a: number; b: number } {
-  const total = a + b;
-  if (total === 0) return { a: 0, b: 0 };
-  const pa = Math.round((a / total) * 100);
-  return { a: pa, b: 100 - pa };
+  /** Top of the Table's snacks for that week, ranked as the Table ranks "This week". Null if nothing was rated. */
+  snack: { id: string; name: string; brand: string | null; category: string; photoId: string | null; avg: number; count: number } | null;
+  /** Most points that week, as on the global people Table (admins left out). Null if nobody scored. */
+  person: { username: string; avatarId: string | null; points: number } | null;
 }

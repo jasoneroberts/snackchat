@@ -117,7 +117,7 @@ export function ShareBadge({ badge, username, onClose }: { badge: BadgeState; us
   );
 }
 
-/** "New badge!" rows, shown after a check-in or a vote. */
+/** "New badge!" rows, shown after a check-in. */
 export function NewBadges({ badges, username }: { badges: BadgeState[]; username: string }) {
   const [sharing, setSharing] = useState<BadgeState | null>(null);
   if (!badges.length) return null;

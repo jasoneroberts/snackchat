@@ -31,9 +31,8 @@ import { snacks } from "./routes/snacks";
 import { users } from "./routes/users";
 import { REMINDER_HOUR_UTC, sendReminders } from "./lib/reminders";
 import { sendStreakNudges } from "./lib/achievements";
-import { sendBattleResults } from "./lib/battle";
 import { achievements } from "./routes/achievements";
-import { cotw } from "./routes/cotw";
+import { champions } from "./routes/champions";
 import { DIGEST_DAY_UTC, DIGEST_HOUR_UTC, sendWeeklyDigests } from "./lib/weeklyDigest";
 
 // Where the app lives, for push messages sent from the cron (no request to read it from).
@@ -81,7 +80,7 @@ app.route("/blocks", blocks);
 app.route("/account", account);
 app.route("/push", push);
 app.route("/achievements", achievements);
-app.route("/cotw", cotw);
+app.route("/champions", champions);
 
 app.get("/me", async (c) => {
   const user = c.get("user");
@@ -187,9 +186,8 @@ app.onError((err, c) => {
 
 // Timed jobs, set in wrangler.jsonc "triggers". Every hour: check for an
 // error spike. At 03:00 UTC: back up the database and clear old logs. At
-// 18:00 UTC: reminders, plus streak nudges on Sundays and Crisp of the Week
-// results on Mondays. Sunday at 10:00 UTC: the weekly round-up for anyone
-// who asked for one.
+// 18:00 UTC: reminders, plus streak nudges on Sundays. Sunday at 10:00 UTC:
+// the weekly round-up for anyone who asked for one.
 async function scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext) {
   if (controller.cron === "0 3 * * *") {
     const result = await runBackup(env.DB, env.PHOTOS);
@@ -207,8 +205,6 @@ async function scheduled(controller: ScheduledController, env: Env, ctx: Executi
       // Sunday: a nudge for anyone whose weekly streak ends at midnight.
       const nudged = at.getUTCDay() === 0 ? await sendStreakNudges(env, appOrigin(env), now) : new Set<string>();
       if (nudged.size) console.log(`[streaks] nudged ${nudged.size}`);
-      // Monday: last week's Crisp of the Week result, to everyone who voted.
-      if (at.getUTCDay() === 1) console.log(`[cotw] result sent to ${await sendBattleResults(env, appOrigin(env), now)}`);
       const reminded = await sendReminders(env, appOrigin(env), now, nudged);
       console.log(`[reminders] sent to ${reminded}`);
     }
