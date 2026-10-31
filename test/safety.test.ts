@@ -29,7 +29,7 @@ describe("the bad-word filter is used", () => {
 
   it("on snack names and makers", () => {
     expect(validateSnackFields({ name: "Fuck Puffs", brand: "", category: "crisps" }, () => true).ok).toBe(false);
-    expect(validateSnackFields({ name: "Scampi Fries", brand: "Smiths", category: "pub" }, () => true).ok).toBe(true);
+    expect(validateSnackFields({ name: "Scampi Fries", brand: "Smiths", category: "crisps" }, () => true).ok).toBe(true);
   });
 
   it("on group names", () => {

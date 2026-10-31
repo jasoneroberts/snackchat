@@ -4,7 +4,7 @@ import { filterFor, filterShort, filterTypes, REST, TYPE_ORDER, typeFilters } fr
 
 describe("snack type filters", () => {
   it("lad mode has the short list, in Jase's order", () => {
-    expect(typeFilters("lad").map((f) => f.label)).toEqual(["All", "Crisps", "Pub snacks", "Choc", "Chews", "Biscuits", "Nuts", "Rest"]);
+    expect(typeFilters("lad").map((f) => f.label)).toEqual(["All", "Crisps", "Choc", "Chews", "Biscuits", "Nuts", "Rest"]);
   });
 
   it("grown-up mode lists every type, in the same order", () => {

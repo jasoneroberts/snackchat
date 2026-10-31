@@ -13,14 +13,13 @@ export interface TypeFilter {
 export const REST = "rest";
 
 // Most-logged types first. Anything not listed goes in Rest.
-const ORDER = ["crisps", "pub", "chocolate", "chews", "biscuits", "nuts"];
+const ORDER = ["crisps", "chocolate", "chews", "biscuits", "nuts"];
 const REST_TYPES = CATEGORIES.map((c) => c.id).filter((id) => !ORDER.includes(id));
 /** Every snack type, in pill order. */
 export const TYPE_ORDER = [...ORDER, ...REST_TYPES];
 
 const LAD_LABELS: Record<string, string> = {
   crisps: "Crisps",
-  pub: "Pub snacks",
   chocolate: "Choc",
   chews: "Chews",
   biscuits: "Biscuits",
@@ -55,7 +54,7 @@ export function filterFor(voice: Voice, id: string): string {
   return typeFilters(voice).some((f) => f.id === id) ? id : "";
 }
 
-/** "crisps", "pub snacks", or "the rest" for captions. */
+/** "crisps", "sweets", or "the rest" for captions. */
 export function filterShort(id: string): string | null {
   if (id === REST) return "the rest";
   return getCategory(id)?.short ?? null;
