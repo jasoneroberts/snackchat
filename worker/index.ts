@@ -101,7 +101,7 @@ app.get("/me", async (c) => {
       openReports: user.is_admin === 1 ? await openReportCount(c.env.DB) : 0,
       // ...and how many people have joined since they last looked at Users.
       newUsers: user.is_admin === 1 ? await newUserCount(c.env.DB, user.id) : 0,
-      // Check-in reminders and like messages on or off (Settings > Notifications).
+      // Check-in reminders, like and squad messages on or off (Settings > Notifications).
       ...(await notificationPrefs(c.env.DB, user.id)),
     },
     devLogin: devLoginUsername(c.env) !== null,
@@ -109,10 +109,13 @@ app.get("/me", async (c) => {
   });
 });
 
-/** Both notification switches in one read. Missing row or column counts as on. */
-async function notificationPrefs(db: D1Database, userId: string): Promise<{ reminders: boolean; likeAlerts: boolean }> {
-  const row = await db.prepare("SELECT reminders, like_alerts FROM users WHERE id = ?").bind(userId).first<{ reminders: number; like_alerts: number }>();
-  return { reminders: row?.reminders !== 0, likeAlerts: row?.like_alerts !== 0 };
+/** All the notification switches in one read. Missing row counts as on. */
+async function notificationPrefs(db: D1Database, userId: string): Promise<{ reminders: boolean; likeAlerts: boolean; squadAlerts: boolean }> {
+  const row = await db
+    .prepare("SELECT reminders, like_alerts, squad_alerts FROM users WHERE id = ?")
+    .bind(userId)
+    .first<{ reminders: number; like_alerts: number; squad_alerts: number }>();
+  return { reminders: row?.reminders !== 0, likeAlerts: row?.like_alerts !== 0, squadAlerts: row?.squad_alerts !== 0 };
 }
 
 // Pick lad mode or grown-up mode. Only words and colours change.

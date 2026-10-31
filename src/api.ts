@@ -19,6 +19,8 @@ export interface Me {
   reminders: boolean;
   /** "Someone liked your check-in" pushes on (on unless turned off). */
   likeAlerts: boolean;
+  /** "Someone in your squad just checked in" pushes on (on unless turned off). */
+  squadAlerts: boolean;
   /** null until they've picked lad mode or grown-up mode. */
   voice: Voice | null;
 }
