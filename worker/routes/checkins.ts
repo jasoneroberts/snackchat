@@ -13,6 +13,9 @@ import { firstCheckinBonus, tellInviterAboutCheckin } from "../lib/referrals";
 
 export const checkins = new Hono<AppContext>();
 
+/** Admins' own photos go straight up; everyone else's wait in the review queue. */
+const photoStatusFor = (user: { is_admin: number }) => (user.is_admin === 1 ? "visible" : "pending");
+
 const now = () => Math.floor(Date.now() / 1000);
 
 // The browser shrinks photos before upload (src/lib/image.ts), so 5 MB is plenty.
@@ -111,13 +114,14 @@ checkins.post("/", async (c) => {
     // If they joined from a friend's invite and this is their first check-in, the friend gets a bonus.
     ...firstCheckinBonus(db, { friendId: user.id, checkinId, time }),
   ];
-  // Photos wait for an admin to approve them (routes/admin.ts); the check-in
-  // and its points go live straight away.
+  // Photos wait for an admin to approve them (routes/admin.ts), except an
+  // admin's own; the check-in and its points go live straight away.
+  const photoStatus = photoStatusFor(user);
   if (photoId && photoKey) {
     statements.push(
       db
-        .prepare("INSERT INTO photos (id, checkin_id, r2_key, status, created_at) VALUES (?, ?, ?, 'pending', ?)")
-        .bind(photoId, checkinId, photoKey, time),
+        .prepare("INSERT INTO photos (id, checkin_id, r2_key, status, created_at) VALUES (?, ?, ?, ?, ?)")
+        .bind(photoId, checkinId, photoKey, photoStatus, time),
     );
   }
 
@@ -129,10 +133,13 @@ checkins.post("/", async (c) => {
   }
 
   inBackground(c, tellInviterAboutCheckin(c.env, new URL(c.req.url).origin, { checkinId, friendName: user.username }));
-  if (photoId) {
+  if (photoId && photoStatus === "pending") {
     pingAdmins(c, { kind: "photo", title: "Photo to approve", body: `${user.username} added a photo of ${snack.name}.`, url: "/review" }, user.id);
   }
-  return c.json({ id: checkinId, points: lines.reduce((sum, l) => sum + l.points, 0), lines }, 201);
+  return c.json(
+    { id: checkinId, points: lines.reduce((sum, l) => sum + l.points, 0), lines, photoPending: photoId !== null && photoStatus === "pending" },
+    201,
+  );
 });
 
 // One of your own check-ins, to edit it: the details, its sliders and its
@@ -232,8 +239,8 @@ checkins.patch("/:id", async (c) => {
   if (photoId && photoKey) {
     statements.push(
       db
-        .prepare("INSERT INTO photos (id, checkin_id, r2_key, status, created_at) VALUES (?, ?, ?, 'pending', ?)")
-        .bind(photoId, id, photoKey, now()),
+        .prepare("INSERT INTO photos (id, checkin_id, r2_key, status, created_at) VALUES (?, ?, ?, ?, ?)")
+        .bind(photoId, id, photoKey, photoStatusFor(user), now()),
     );
   }
 
@@ -245,10 +252,11 @@ checkins.patch("/:id", async (c) => {
   }
   // Old files go once the database no longer points at them.
   if (old.length) await c.env.PHOTOS.delete(old.map((p) => p.r2_key));
-  if (photoId) {
+  const pending = photoId !== null && photoStatusFor(user) === "pending";
+  if (pending) {
     pingAdmins(c, { kind: "photo", title: "Photo to approve", body: `${user.username} changed the photo on a check-in.`, url: "/review" }, user.id);
   }
-  return c.json({ ok: true, photoPending: photoId !== null });
+  return c.json({ ok: true, photoPending: pending });
 });
 
 // Delete your own check-in. Its sliders, photo rows and points go with it

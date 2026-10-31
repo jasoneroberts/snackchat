@@ -47,11 +47,11 @@ const COUNTS = `s.category_id IN (SELECT value FROM json_each(?3)) OR ?3 IS NULL
 const SCORE_SQL: Record<ScoringMode, string> = {
   points: `(SELECT COALESCE(SUM(pl.points), 0) FROM points_ledger pl
              JOIN checkins c ON c.id = pl.checkin_id JOIN snacks s ON s.id = c.snack_id
-            WHERE pl.user_id = m.user_id AND pl.created_at >= ?2 AND (${COUNTS}))${invitePointsSql("m.user_id", "?2")}`,
+            WHERE pl.user_id = m.user_id AND pl.created_at >= ?2 AND c.scored = 1 AND (${COUNTS}))${invitePointsSql("m.user_id", "?2")}`,
   checkins: `SELECT COUNT(*) FROM checkins c JOIN snacks s ON s.id = c.snack_id
-              WHERE c.user_id = m.user_id AND c.created_at >= ?2 AND (${COUNTS})`,
+              WHERE c.user_id = m.user_id AND c.created_at >= ?2 AND c.scored = 1 AND (${COUNTS})`,
   unique: `SELECT COUNT(DISTINCT c.snack_id) FROM checkins c JOIN snacks s ON s.id = c.snack_id
-            WHERE c.user_id = m.user_id AND c.created_at >= ?2 AND (${COUNTS})`,
+            WHERE c.user_id = m.user_id AND c.created_at >= ?2 AND c.scored = 1 AND (${COUNTS})`,
 };
 
 /** The group's leaderboard for the current period, every member included. */
@@ -261,7 +261,7 @@ groups.get("/:id", async (c) => {
               ${BOARD_AVG_SQL} AS avg, COUNT(*) AS checkins, (${LATEST_PHOTO}) AS photoId
          FROM checkins c JOIN snacks s ON s.id = c.snack_id
         WHERE c.user_id IN (SELECT user_id FROM group_members WHERE group_id = ?1)
-          AND (s.category_id IN (SELECT value FROM json_each(?2)) OR ?2 IS NULL)
+          AND (s.category_id IN (SELECT value FROM json_each(?2)) OR ?2 IS NULL) AND c.scored = 1
         GROUP BY s.id
         ORDER BY avg DESC, checkins DESC
         LIMIT 1`,

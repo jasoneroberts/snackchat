@@ -11,7 +11,7 @@ describe("validateSignUp", () => {
 
   it.each([
     [{ username: "ab" }, "Usernames"],
-    [{ username: "has space" }, "Usernames"],
+    [{ username: "has-dash" }, "Usernames"],
     [{ email: "not-an-email" }, "email address"],
     [{ password: "short" }, "10 characters"],
     [{ inviteCode: "" }, "invite-only"],

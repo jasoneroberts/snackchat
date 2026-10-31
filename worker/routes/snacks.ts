@@ -39,8 +39,8 @@ snacks.get("/", async (c) => {
 
   const { results } = await c.env.DB.prepare(
     `SELECT s.id, s.name, s.brand, s.category_id AS category, s.status,
-            (SELECT COUNT(*) FROM checkins WHERE snack_id = s.id) AS checkins,
-            (SELECT AVG(overall) FROM checkins WHERE snack_id = s.id) AS avg,
+            (SELECT COUNT(*) FROM checkins WHERE snack_id = s.id AND scored = 1) AS checkins,
+            (SELECT AVG(overall) FROM checkins WHERE snack_id = s.id AND scored = 1) AS avg,
             (${LATEST_PHOTO}) AS photoId
        FROM snacks s
       WHERE (s.status = 'approved' OR (s.status = 'pending' AND s.created_by = ?))
@@ -78,17 +78,21 @@ snacks.post("/", async (c) => {
   if (existing) return c.json({ snack: existing });
 
   const id = newId();
+  // An admin's new snack is in the catalogue straight away; anyone else's waits for one.
+  const status = user.is_admin === 1 ? "approved" : "pending";
   await c.env.DB.prepare(
-    "INSERT INTO snacks (id, name, brand, category_id, status, created_by, created_at) VALUES (?, ?, ?, ?, 'pending', ?, ?)",
+    "INSERT INTO snacks (id, name, brand, category_id, status, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
   )
-    .bind(id, name, brand || null, category, user.id, now())
+    .bind(id, name, brand || null, category, status, user.id, now())
     .run();
-  pingAdmins(
-    c,
-    { kind: "snack", title: "New snack to check", body: `${user.username} added ${brand ? `${brand} ` : ""}${name}.`, url: "/admin/snacks" },
-    user.id,
-  );
-  return c.json({ snack: { id, name, brand: brand || null, category, status: "pending" } }, 201);
+  if (status === "pending") {
+    pingAdmins(
+      c,
+      { kind: "snack", title: "New snack to check", body: `${user.username} added ${brand ? `${brand} ` : ""}${name}.`, url: "/admin/snacks" },
+      user.id,
+    );
+  }
+  return c.json({ snack: { id, name, brand: brand || null, category, status } }, 201);
 });
 
 // Makers people have used on approved snacks, most-used first, to suggest
@@ -141,14 +145,14 @@ snacks.get("/:id", async (c) => {
 
   const [stats, attrs, rank, checkins] = await Promise.all([
     db
-      .prepare("SELECT COUNT(*) AS count, AVG(overall) AS avg FROM checkins WHERE snack_id = ?")
+      .prepare("SELECT COUNT(*) AS count, AVG(overall) AS avg FROM checkins WHERE snack_id = ? AND scored = 1")
       .bind(id)
       .first<{ count: number; avg: number | null }>(),
     db
       .prepare(
         `SELECT a.attribute, AVG(a.value) AS avg, COUNT(*) AS count
            FROM checkin_attributes a JOIN checkins c ON c.id = a.checkin_id
-          WHERE c.snack_id = ?
+          WHERE c.snack_id = ? AND c.scored = 1
           GROUP BY a.attribute`,
       )
       .bind(id)
@@ -159,7 +163,7 @@ snacks.get("/:id", async (c) => {
         `SELECT rank, total FROM (
            SELECT c.snack_id, RANK() OVER (ORDER BY ${BOARD_AVG_SQL} DESC) AS rank, COUNT(*) OVER () AS total
              FROM checkins c JOIN snacks s ON s.id = c.snack_id
-            WHERE s.category_id = ?
+            WHERE s.category_id = ? AND c.scored = 1
             GROUP BY c.snack_id)
           WHERE snack_id = ?`,
       )

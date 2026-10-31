@@ -1,3 +1,4 @@
+import { totalPointsSql } from "./lib/boards";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { csrf } from "hono/csrf";
@@ -78,7 +79,7 @@ app.route("/push", push);
 app.get("/me", async (c) => {
   const user = c.get("user");
   if (!user) return c.json({ user: null, quickSignIn: quickSignInOn(c.env) });
-  const points = await c.env.DB.prepare("SELECT COALESCE(SUM(points), 0) AS total FROM points_ledger WHERE user_id = ?")
+  const points = await c.env.DB.prepare(`SELECT (${totalPointsSql("?")}) AS total`)
     .bind(user.id)
     .first<{ total: number }>();
   return c.json({

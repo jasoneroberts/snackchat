@@ -52,9 +52,15 @@ avatars.post("/", async (c) => {
   await c.env.PHOTOS.put(avatarKey(user.id, avatarId), photo.stream(), {
     httpMetadata: { contentType: photo.type },
   });
-  await c.env.DB.prepare("UPDATE users SET avatar_pending_id = ? WHERE id = ?").bind(avatarId, user.id).run();
   // Replacing a picture that was still waiting? Its file isn't needed any more.
   if (user.avatar_pending_id) await c.env.PHOTOS.delete(avatarKey(user.id, user.avatar_pending_id));
+  // An admin's own picture needs no approval: it replaces the old one now.
+  if (user.is_admin === 1) {
+    await c.env.DB.prepare("UPDATE users SET avatar_id = ?, avatar_pending_id = NULL WHERE id = ?").bind(avatarId, user.id).run();
+    if (user.avatar_id) await c.env.PHOTOS.delete(avatarKey(user.id, user.avatar_id));
+    return c.json({ avatarId, avatarPendingId: null }, 201);
+  }
+  await c.env.DB.prepare("UPDATE users SET avatar_pending_id = ? WHERE id = ?").bind(avatarId, user.id).run();
   pingAdmins(c, { kind: "photo", title: "Profile picture to approve", body: `${user.username} wants a new profile picture.`, url: "/review" }, user.id);
   return c.json({ avatarPendingId: avatarId }, 201);
 });

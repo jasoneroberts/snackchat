@@ -21,10 +21,11 @@ export function quickSignInOn(env: { QUICK_SIGNIN?: string }): boolean {
 
 export function validateQuickSignIn(body: unknown): { ok: true; value: QuickSignInInput } | { ok: false; error: string } {
   const b = (body ?? {}) as Record<string, unknown>;
-  const username = typeof b.username === "string" ? b.username.trim() : "";
+  // "sam dale" becomes sam_dale: spaces are the commonest reason a name is refused.
+  const username = typeof b.username === "string" ? b.username.trim().replace(/\s+/g, "_") : "";
   const pin = typeof b.pin === "string" ? b.pin.trim() : "";
   const turnstileToken = typeof b.turnstileToken === "string" ? b.turnstileToken : "";
-  if (!USERNAME_RE.test(username)) return { ok: false, error: "Names are 3 to 20 letters, numbers or underscores." };
+  if (!USERNAME_RE.test(username)) return { ok: false, error: "Names are 3 to 20 letters or numbers, with _ instead of spaces (like sam_k)." };
   if (!PIN_RE.test(pin)) return { ok: false, error: "PINs are 4 to 8 digits." };
   return { ok: true, value: { username, pin, turnstileToken, ref: cleanRef(b.ref), inviter: cleanInviter(b.invitedBy) } };
 }

@@ -43,7 +43,7 @@ explore.get("/", async (c) => {
         `SELECT s.id, s.name, s.brand, s.category_id AS category, s.status,
                 AVG(c.overall) AS avg, COUNT(*) AS count, (${LATEST_PHOTO}) AS photoId
            FROM checkins c JOIN snacks s ON s.id = c.snack_id
-          WHERE s.status = 'approved'
+          WHERE s.status = 'approved' AND c.scored = 1
             AND s.id NOT IN (SELECT snack_id FROM checkins WHERE user_id = ?1)
             AND s.id NOT IN (SELECT snack_id FROM explore_choices WHERE user_id = ?1)
             AND (?2 IS NULL OR s.category_id IN (SELECT value FROM json_each(?2)))${dietSql(diets)}
@@ -56,6 +56,7 @@ explore.get("/", async (c) => {
       .prepare(
         `SELECT c.snack_id AS snackId, a.attribute, AVG(a.value) AS avg
            FROM checkin_attributes a JOIN checkins c ON c.id = a.checkin_id
+          WHERE c.scored = 1
           GROUP BY c.snack_id, a.attribute`,
       )
       .all<{ snackId: string; attribute: string; avg: number }>(),

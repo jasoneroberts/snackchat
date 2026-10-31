@@ -15,7 +15,9 @@ describe("validateQuickSignIn", () => {
 
   it("rejects bad names and PINs", () => {
     expect(validateQuickSignIn({ username: "s", pin: "1234" }).ok).toBe(false);
-    expect(validateQuickSignIn({ username: "sam k", pin: "1234" }).ok).toBe(false);
+    expect(validateQuickSignIn({ username: "sam-k", pin: "1234" }).ok).toBe(false);
+    // Spaces turn into underscores rather than being refused.
+    expect(validateQuickSignIn({ username: "sam  dale", pin: "1234" })).toMatchObject({ ok: true, value: { username: "sam_dale" } });
     expect(validateQuickSignIn({ username: "sam", pin: "123" }).ok).toBe(false);
     expect(validateQuickSignIn({ username: "sam", pin: "123456789" }).ok).toBe(false);
     expect(validateQuickSignIn({ username: "sam", pin: "12a4" }).ok).toBe(false);

@@ -1,3 +1,4 @@
+import { totalPointsSql } from "../lib/boards";
 import { Hono } from "hono";
 import type { TriedSnack } from "../../shared/types";
 import type { AppContext } from "../env";
@@ -40,7 +41,7 @@ users.get("/:username", async (c) => {
       .bind(user.id)
       .first<{ checkins: number; snacks: number; avg: number | null }>(),
     db
-      .prepare("SELECT COALESCE(SUM(points), 0) AS total FROM points_ledger WHERE user_id = ?")
+      .prepare(`SELECT (${totalPointsSql("?")}) AS total`)
       .bind(user.id)
       .first<{ total: number }>(),
     listCheckins(db, { viewerId: viewer.id, userId: user.id, limit: 20 }),
