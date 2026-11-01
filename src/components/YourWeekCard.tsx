@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import type { YourWeek } from "../../shared/types";
 import { api } from "../api";
-import { isUkMonday, weekLines } from "../lib/yourWeek";
+import { weekLines } from "../lib/yourWeek";
+import { isUkMonday } from "./ChampionsCard";
 import { useVoice } from "../lib/voice";
 import { Link } from "./Link";
 

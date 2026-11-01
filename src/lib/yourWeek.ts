@@ -4,11 +4,6 @@
 import type { YourWeek } from "../../shared/types";
 import { rating } from "./format";
 
-/** Monday on a UK clock, when the card shows. */
-export function isUkMonday(date = new Date()): boolean {
-  return new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short" }).format(date) === "Mon";
-}
-
 /** "Sam", "Sam and Dave", "Sam, Dave and 3 others". */
 export function names(list: string[], total: number): string {
   const rest = total - list.length;

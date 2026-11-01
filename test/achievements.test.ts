@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { BADGES, isEarly, isLate, percentages, streakFrom, ukHour, weekNumber, weekStartOf } from "../shared/achievements";
+import { BADGES, isEarly, isLate, streakFrom, ukHour, weekNumber, weekStartOf } from "../shared/achievements";
 import { awardSecretBadge, checkAchievements, sendStreakNudges, streakMessage } from "../worker/lib/achievements";
-import { battleView, castVote, ensureBattle, pickPair, repickBattle, resultMessage, sendBattleResults } from "../worker/lib/battle";
+import { lastWeeksChampions } from "../worker/lib/champions";
 import type { Env } from "../worker/env";
 
 // Pushes are recorded instead of sent.
@@ -76,6 +76,7 @@ const crisps = async (count: number) =>
 beforeEach(async () => {
   db = fakeD1();
   pushed.length = 0;
+  n = 0;
   await addUser("jase");
   await addUser("sam");
 });
@@ -185,70 +186,38 @@ describe("streak nudges", () => {
   });
 });
 
-describe("Crisp of the Week", () => {
-  const first = () => 0; // always picks the top two
-  it("picks two crisps, the most checked-in first, and the same pair for everyone", async () => {
-    const [a, b, c] = await crisps(3);
-    await checkIn("jase", c, NOW - DAY);
-    await checkIn("sam", c, NOW - DAY);
-    await checkIn("sam", b, NOW - DAY);
-    const battle = await ensureBattle(db, NOW, { random: first });
-    expect([battle!.snack_a, battle!.snack_b]).toEqual([c, b]);
-    expect(battle!.week_start).toBe(MONDAY);
-    expect(await ensureBattle(db, NOW + DAY)).toEqual(battle);
-    expect(a).toBeTruthy();
+describe("last week's champions", () => {
+  const ledger = (userId: string, checkinId: string, points: number, time: number) =>
+    db.prepare("INSERT INTO points_ledger (user_id, checkin_id, reason, points, created_at) VALUES (?, ?, 'new_snack', ?, ?)").bind(userId, checkinId, points, time).run();
+
+  it("crowns last week's top snack and top scorer, ignoring this week", async () => {
+    const [a, b] = await crisps(2);
+    const lastWeek = MONDAY - 3 * DAY;
+    await checkIn("jase", a, lastWeek, 4); // c1
+    await checkIn("sam", a, lastWeek, 4.5); // c2: a averages 4.25
+    await checkIn("sam", b, lastWeek, 4); // c3
+    await checkIn("sam", b, MONDAY + DAY, 5); // c4: this week, doesn't count
+    await ledger("jase", "c1", 10, lastWeek);
+    await ledger("sam", "c2", 10, lastWeek);
+    await ledger("sam", "c3", 10, lastWeek);
+    await ledger("jase", "c4", 50, MONDAY + DAY);
+    const result = await lastWeeksChampions(db, NOW);
+    expect(result.weekStart).toBe(MONDAY - 7 * DAY);
+    expect(result.snack).toMatchObject({ id: a, avg: 4.25, count: 2 });
+    expect(result.person).toMatchObject({ username: "sam", points: 20 });
   });
 
-  it("rests last few weeks' snacks", async () => {
-    const lastWeek = await ensureBattle(db, NOW - 7 * DAY, { random: first });
-    const pair = await pickPair(db, MONDAY, { random: first });
-    expect(pair).not.toContain(lastWeek!.snack_a);
-    expect(pair).not.toContain(lastWeek!.snack_b);
+  it("leaves admins off, like the global Table", async () => {
+    const [a] = await crisps(1);
+    await checkIn("jase", a, MONDAY - DAY, 4);
+    await ledger("jase", "c1", 10, MONDAY - DAY);
+    await db.prepare("UPDATE users SET is_admin = 1 WHERE id = 'jase'").run();
+    const result = await lastWeeksChampions(db, NOW);
+    expect(result.person).toBeNull();
+    expect(result.snack?.id).toBe(a); // their rating still counts for the snack
   });
 
-  it("hides the count until you vote, lets you change your vote, and only for this week's two", async () => {
-    const battle = (await ensureBattle(db, NOW, { random: first }))!;
-    expect((await battleView(db, battle, "jase", NOW)).votes).toBeNull();
-    expect(await castVote(db, "jase", "seed-scampi-fries", NOW)).toBe("Pick one of this week's two.");
-    expect(await castVote(db, "jase", battle.snack_a, NOW)).toBeNull();
-    expect(await castVote(db, "sam", battle.snack_a, NOW)).toBeNull();
-    expect(await castVote(db, "sam", battle.snack_b, NOW)).toBeNull(); // changed their mind
-    const view = await battleView(db, battle, "jase", NOW);
-    expect(view).toMatchObject({ votes: { a: 1, b: 1 }, myVote: battle.snack_a });
-    expect(view.a.name).toBeTruthy();
-  });
-
-  it("starts again when an admin repicks", async () => {
-    const battle = (await ensureBattle(db, NOW, { random: first }))!;
-    await castVote(db, "jase", battle.snack_a, NOW);
-    const fresh = (await repickBattle(db, NOW, first))!;
-    expect([fresh.snack_a, fresh.snack_b]).not.toContain(battle.snack_a);
-    expect((await battleView(db, fresh, "jase", NOW)).myVote).toBeNull();
-  });
-
-  it("tells last week's voters who won, once, and counts Kingmaker and Swing Voter", async () => {
-    const lastWeekTime = NOW - 7 * DAY;
-    const battle = (await ensureBattle(db, lastWeekTime, { random: first }))!;
-    await castVote(db, "jase", battle.snack_a, lastWeekTime);
-    await castVote(db, "sam", battle.snack_a, lastWeekTime);
-    const env = { DB: db } as unknown as Env;
-    const mondayEvening = MONDAY + 18 * 3600;
-    expect(await sendBattleResults(env, "https://x", mondayEvening)).toBe(2);
-    expect(pushed[0].title).toMatch(/is Crisp of the Week$/);
-    expect(await sendBattleResults(env, "https://x", mondayEvening)).toBe(0);
-    const past = await battleView(db, battle, "nobody", NOW);
-    expect(past).toMatchObject({ winner: battle.snack_a, votes: { a: 2, b: 0 } });
-    const progress = (await checkAchievements(db, "jase", NOW)).page.badges;
-    expect(progress.find((b) => b.id === "kingmaker")!.progress).toBe(1);
-    expect(progress.find((b) => b.id === "swing_voter")!.progress).toBe(1);
-  });
-
-  it("words the result", () => {
-    expect(resultMessage(null, { winner: "Wotsits", a: "Wotsits", b: "Quavers" }, { a: 64, b: 36 }).body).toBe(
-      "Wotsits beat Quavers 64% to 36%. This week's battle is up. Get your vote in.",
-    );
-    expect(resultMessage("lad", { winner: null, a: "A", b: "B" }, { a: 50, b: 50 }).title).toContain("dead heat");
-    expect(percentages(1, 2)).toEqual({ a: 33, b: 67 });
-    expect(percentages(0, 0)).toEqual({ a: 0, b: 0 });
+  it("is empty after a quiet week", async () => {
+    expect(await lastWeeksChampions(db, NOW)).toMatchObject({ snack: null, person: null });
   });
 });
