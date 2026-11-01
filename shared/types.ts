@@ -107,6 +107,10 @@ export interface GroupPage {
   myRole: "owner" | "admin" | "member";
   periodEnd: number | null; // Unix seconds, null when the board never resets
   board: BoardRow[];
+  /** Last Monday-to-Sunday week's top scorer(s), who wear a crown; empty if nobody scored. */
+  champions: { username: string; value: number }[];
+  /** True when the champion tied on score and won by getting there first. */
+  championTie: boolean;
   favourite: (SnackSummary & { avg: number; checkins: number }) | null;
 }
 
@@ -307,7 +311,7 @@ export interface InviteStats {
 
 // Admin Stats page (GET /api/admin/stats). Weeks run Monday to Sunday, UTC.
 export interface StatsSummary {
-  /** Whether app opens, Wing It and shares are being recorded yet (migration 0030). */
+  /** Whether app opens, Wing It and shares are being recorded yet (migration 0031). */
   hasUsage: boolean;
   people: number;
   /** Did anything this week (checked in, liked, voted, opened the app...). */
@@ -371,4 +375,20 @@ export interface StatsPerson {
   /** How many of the weeks shown they were active in. */
   weeksActive: number;
   activeThisWeek: boolean;
+}
+
+/** GET /api/week: what happened for you last week (Monday to Sunday, UTC). See worker/lib/yourWeek.ts. */
+export interface YourWeek {
+  /** Hearts on your check-ins from other people. */
+  likes: number;
+  /** Up to two of the people who liked them, most hearts first. */
+  likers: string[];
+  /** How many different people liked them, for "and 3 others". */
+  likerCount: number;
+  /** Your own check-ins. */
+  checkins: number;
+  /** Check-ins by people in your squads. */
+  squadCheckins: number;
+  /** The best-rated of those. */
+  best: { poster: string; snack: string; snackId: string; overall: number } | null;
 }

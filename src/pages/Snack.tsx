@@ -8,11 +8,14 @@ import { Link } from "../components/Link";
 import { DietBadges } from "../components/DietFilter";
 import { ReportButton } from "../components/Report";
 import { SnackTile } from "../components/SnackTile";
+import { Crown } from "../components/Avatar";
+import { snackCrownLabel, useCrowns } from "../lib/crowns";
 import { rating } from "../lib/format";
 
 export function Snack({ id, me }: { id: string; me: Me }) {
   const [data, setData] = useState<SnackPage | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const crowns = useCrowns();
 
   useEffect(() => {
     setData(null);
@@ -23,6 +26,7 @@ export function Snack({ id, me }: { id: string; me: Me }) {
 
   if (error) return <p className="error page">{error}</p>;
   if (!data) return <p className="muted page">Loading…</p>;
+  const crownLabel = snackCrownLabel(crowns?.snacks[data.snack.id]);
 
   const { snack } = data;
   const category = getCategory(snack.category);
@@ -33,6 +37,11 @@ export function Snack({ id, me }: { id: string; me: Me }) {
       <SnackTile snack={{ ...snack, photoId: snack.photoId ?? photo }} />
       <div>
         <h1 className="title">{snack.name}</h1>
+        {crownLabel && (
+          <div className="small accent row-inline">
+            <Crown size={15} label={crownLabel} /> {crownLabel}
+          </div>
+        )}
         <div className="muted">
           {[snack.brand, category?.name, snack.country === "GB" ? "UK" : snack.country].filter(Boolean).join(" · ")}
           {snack.status === "pending" && <span className="tag">new, waiting for approval</span>}

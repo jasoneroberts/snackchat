@@ -8,7 +8,7 @@ export const today = (nowSeconds = Math.floor(Date.now() / 1000)) => Math.floor(
  * first time wins and later ones do nothing); anything else adds one.
  *
  * Never throws: usage counts are nice to have, and must never break the
- * thing the person was actually doing. (Before migration 0030 is applied the
+ * thing the person was actually doing. (Before migration 0031 is applied the
  * table doesn't exist, and this quietly does nothing.)
  */
 export async function recordUsage(db: D1Database, userId: string, feature: UsageFeature): Promise<void> {
@@ -26,7 +26,7 @@ export async function recordUsage(db: D1Database, userId: string, feature: Usage
   }
 }
 
-/** Whether migration 0030 has been applied yet. */
+/** Whether migration 0031 has been applied yet. */
 export async function hasUsageTable(db: D1Database): Promise<boolean> {
   const row = await db.prepare("SELECT 1 AS ok FROM sqlite_master WHERE type = 'table' AND name = 'app_usage'").first();
   return row !== null;

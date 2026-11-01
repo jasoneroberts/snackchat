@@ -12,7 +12,7 @@ import { hasUsageTable } from "../lib/usage";
 //
 // Almost everything is worked out from tables the app already has (every
 // check-in, like and vote has a time on it). Only app opens, Wing It and
-// shares need their own table (app_usage, migration 0030); until that's
+// shares need their own table (app_usage, migration 0031); until that's
 // applied those lines are simply left out.
 export const stats = new Hono<AppContext>();
 

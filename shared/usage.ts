@@ -1,6 +1,6 @@
 // Things the app records about how it's used, for the admin Stats page.
 // Only what isn't already stored elsewhere: check-ins, likes, votes etc. have
-// their own tables. See migrations/0030_app_usage.sql.
+// their own tables. See migrations/0031_app_usage.sql.
 
 export const USAGE_FEATURES = {
   open: "Opened the app", // once a day, recorded by GET /api/me
