@@ -383,7 +383,7 @@ admin.post("/users/:id/pin", async (c) => {
   const updated = await db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").bind(await hashPassword(pin), id).run();
   if (updated.meta.changes !== 1) return c.json({ error: "Person not found." }, 404);
   await db.prepare("DELETE FROM sessions WHERE user_id = ?").bind(id).run();
-  await clearWrongPins(c.env.CACHE, id);
+  await clearWrongPins(db, id);
   return c.json({ pin });
 });
 
