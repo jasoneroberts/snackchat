@@ -42,7 +42,8 @@ export async function lastWeeksChampions(db: D1Database, nowSeconds: number): Pr
       .sort((a, b) => b.avg - a.avg || b.count - a.count || a.name.localeCompare(b.name))[0] ?? null;
 
   // People: points earned last week, as on the global people Table (public
-  // profiles, admins left out, invite points counted while they count there).
+  // profiles, invite points counted while they count there). Admins are on it
+  // like anyone else; their pre-launch test check-ins are scored = 0.
   // invitePointsSql adds points from its start time on, so take away
   // whatever came after the week ended.
   const { results: people } = await db
@@ -55,7 +56,7 @@ export async function lastWeeksChampions(db: D1Database, nowSeconds: number): Pr
                   WHERE pl.user_id = u.id AND pl.created_at >= ?1 AND pl.created_at < ?2 AND c.scored = 1)
                 ${invitePointsSql("u.id", "?1")} - (0${invitePointsSql("u.id", "?2")}) AS points
            FROM users u
-          WHERE u.is_private = 0 AND u.is_admin = 0 AND u.id NOT LIKE 'demo-%')
+          WHERE u.is_private = 0 AND u.id NOT LIKE 'demo-%')
         WHERE points > 0
         ORDER BY points DESC, lastAt, username
         LIMIT 1`,
