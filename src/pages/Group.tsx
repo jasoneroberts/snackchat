@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { getCategory } from "../../shared/catalogue";
 import type { FeedItem, GroupPage } from "../../shared/types";
 import { api, errorText, type Me } from "../api";
-import { Avatar } from "../components/Avatar";
+import { Avatar, Crown } from "../components/Avatar";
 import { CheckinCard } from "../components/CheckinCard";
 import { GroupBadge } from "../components/GroupBadge";
 import { Link } from "../components/Link";
@@ -13,6 +13,10 @@ import { navigate } from "../router";
 import { useVoice } from "../lib/voice";
 
 const SMALL_SQUAD = 4;
+
+/** "amy and bob", "amy, bob and cat". */
+const joinNames = (names: string[]) =>
+  names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 
 export function Group({ id, me }: { id: string; me: Me }) {
   const { t } = useVoice();
@@ -47,6 +51,9 @@ export function Group({ id, me }: { id: string; me: Me }) {
   const mode = modeOf(group.scoringMode);
   const types = group.categories?.map((c) => getCategory(c)?.short ?? c).join(", ");
   const isOwner = data.myRole === "owner";
+  // Last week's winner(s) wear a crown on the table and on their check-ins here.
+  const crowned = new Set(data.champions.map((c) => c.username));
+  const champ = data.champions[0];
 
   const leaveOrDelete = async () => {
     const question = isOwner
@@ -104,7 +111,7 @@ export function Group({ id, me }: { id: string; me: Me }) {
               <li key={r.username} className={isMe ? "me" : undefined}>
                 <span className="board-rank">{r.rank}</span>
                 <Link href={`/u/${r.username}`} className="plain row grow">
-                  <Avatar username={r.username} avatarId={r.avatarId} size={34} />
+                  <Avatar username={r.username} avatarId={r.avatarId} size={34} crown={crowned.has(r.username)} />
                   <span className="grow">
                     <b>{r.username}</b>
                     {isMe && <span className="muted"> (you)</span>}
@@ -118,6 +125,23 @@ export function Group({ id, me }: { id: string; me: Me }) {
             );
           })}
         </ol>
+        {champ && (
+          <p className="champion-note small muted">
+            <Crown size={14} />
+            <span>
+              {data.champions.length === 1 ? (
+                <>
+                  <b>{champ.username}</b> won last week with {champ.value} {mode.unit}
+                  {data.championTie && " (a tie, but they got there first)"}
+                </>
+              ) : (
+                <>
+                  <b>{joinNames(data.champions.map((c) => c.username))}</b> tied last week on {champ.value} {mode.unit}
+                </>
+              )}
+            </span>
+          </p>
+        )}
       </section>
 
       {/* Small squads are where people drift off, so nudge until there's a proper table. */}
@@ -165,7 +189,7 @@ export function Group({ id, me }: { id: string; me: Me }) {
                     {t("title.group").toLowerCase()}'s snack types.
                   </p>
                 )}
-                <CheckinCard item={item} mine={item.username === me.username} />
+                <CheckinCard item={item} mine={item.username === me.username} crowned={crowned.has(item.username)} />
               </div>
             );
           })
