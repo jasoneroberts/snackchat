@@ -6,8 +6,8 @@ import { sendEmail } from "../lib/email";
 import { inBackground, pingAdmins } from "../lib/notify";
 import { recordReferral, tellInviterAboutJoin } from "../lib/referrals";
 import { createSession, destroySession } from "../lib/session";
-import { placeholderEmail, quickSignInOn, validateQuickSignIn } from "../lib/quickSignIn";
-import { clearWrongPins, LOCK_MINUTES, pinLocked, recordWrongPin } from "../lib/pinLock";
+import { COMMON_PIN_ERROR, isCommonPin, placeholderEmail, quickSignInOn, validateQuickSignIn } from "../lib/quickSignIn";
+import { clearWrongPins, lockWait, recordWrongPin } from "../lib/pinLock";
 import { verifyTurnstile } from "../lib/turnstile";
 import { validateSignUp } from "../lib/validation";
 import { badWordError } from "../../shared/badWords";
@@ -95,40 +95,65 @@ const newPerson = (username: string, ref: string | null) => ({
 });
 
 // Quick sign-in: a name and a PIN.
-// - A new name makes an account, once the Turnstile bot check passes.
-// - An existing name signs in with its PIN. Wrong PINs are limited per name.
+// - Every try needs the Turnstile bot check, so a script can't sweep common
+//   PINs across the (public) names.
+// - A new name makes an account, if its PIN isn't one guessers try first.
+// - An existing name signs in with its PIN. Wrong PINs are limited per name
+//   (lib/pinLock.ts).
+//
+// Speed: the bot check is a call to Cloudflare, so it runs at the same time
+// as the database lookup and the PIN check instead of before them. Nothing
+// here waits on the other, so sign-in takes as long as the slower of the two.
 auth.post("/quick", async (c) => {
   if (!quickSignInOn(c.env)) return c.json({ error: "Not found" }, 404);
   const parsed = validateQuickSignIn(await c.req.json().catch(() => null));
   if (!parsed.ok) return c.json({ error: parsed.error }, 400);
   const { username, pin, turnstileToken, ref } = parsed.value;
   const db = c.env.DB;
+  const time = now();
 
-  const user = await db
-    .prepare("SELECT id, password_hash FROM users WHERE username = ?")
+  const botCheck = verifyTurnstile(c.env.TURNSTILE_SECRET_KEY, turnstileToken, c.req.header("cf-connecting-ip") ?? null);
+  const lookup = db
+    .prepare(
+      `SELECT u.id, u.password_hash AS hash, f.locked_until AS lockedUntil, f.user_id IS NOT NULL AS hasFailures
+         FROM users u LEFT JOIN pin_failures f ON f.user_id = u.id
+        WHERE u.username = ?`,
+    )
     .bind(username)
-    .first<{ id: string; password_hash: string | null }>();
+    .first<{ id: string; hash: string | null; lockedUntil: number | null; hasFailures: number }>();
+  // The PIN check starts as soon as the row arrives, while the bot check may still be running.
+  // No PIN (demo people, or an account an admin has locked) can't be signed into.
+  const pinCheck = lookup.then((user) =>
+    user?.hash && !(user.lockedUntil && user.lockedUntil > time) ? verifyPassword(pin, user.hash) : false,
+  );
+  const [human, user, pinRight] = await Promise.all([botCheck, lookup, pinCheck]);
+
+  if (user?.lockedUntil && user.lockedUntil > time) {
+    return c.json({ error: `Too many wrong PINs for this name. Try again in ${lockWait(user.lockedUntil, time)}.` }, 429);
+  }
+  // Checked after the lock so a locked name says so, but before the PIN result
+  // is used: without a passing bot check, a try tells nobody anything, and a
+  // wrong PIN isn't counted (so bots can't lock people out without solving it).
+  if (!human) return c.json({ error: "The bot check didn't pass. Wait a moment and try again." }, 400);
 
   if (user) {
-    if (await pinLocked(c.env.CACHE, user.id)) {
-      return c.json({ error: `Too many wrong PINs for this name. Try again in ${LOCK_MINUTES} minutes.` }, 429);
-    }
-    // No PIN (demo people, or an account an admin has locked) can't be signed into.
-    if (!user.password_hash || !(await verifyPassword(pin, user.password_hash))) {
-      await recordWrongPin(c.env.CACHE, user.id);
+    if (!pinRight) {
+      const after = await recordWrongPin(db, user.id, time);
+      if (after.lockedUntil > time) {
+        return c.json({ error: `Too many wrong PINs for this name. Try again in ${lockWait(after.lockedUntil, time)}.` }, 429);
+      }
       // Names are public (boards, profiles), so saying it's taken gives nothing away,
       // and it tells a new person to pick another name instead of retrying.
       return c.json({ error: "That name's taken. If it's yours, check your PIN. If not, pick another name." }, 401);
     }
-    await clearWrongPins(c.env.CACHE, user.id);
+    // Only names with a wrong PIN on record have a row to clear, and it needn't hold up sign-in.
+    if (user.hasFailures) inBackground(c, clearWrongPins(db, user.id));
     await createSession(c, user.id);
     return c.json({ ok: true, created: false });
   }
 
-  // A new account. Bots are stopped here, before any work.
-  if (!(await verifyTurnstile(c.env.TURNSTILE_SECRET_KEY, turnstileToken, c.req.header("cf-connecting-ip") ?? null))) {
-    return c.json({ error: "The bot check didn't pass. Wait a moment and try again." }, 400);
-  }
+  // A new account.
+  if (isCommonPin(pin)) return c.json({ error: COMMON_PIN_ERROR }, 400);
   const rude = badWordError({ name: username });
   if (rude) return c.json({ error: rude }, 400);
 

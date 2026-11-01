@@ -24,7 +24,12 @@ export function AdminUsers({ meId }: { meId: string }) {
   }, []);
 
   const resetPin = async (u: AdminUserRow) => {
-    if (!confirm(`Give ${u.username} a new PIN? Their old one stops working and they're signed out.`)) return;
+    // Whoever gets the new PIN gets the account, and PIN accounts have no email to check against.
+    const sure = confirm(
+      `Give ${u.username} a new PIN? Their old one stops working and they're signed out.\n\n` +
+        "Only if you're sure it's them: someone you know, or who can name their last few check-ins and their squads.",
+    );
+    if (!sure) return;
     setBusy(u.id);
     setError(null);
     setNewPin(null);
