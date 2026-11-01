@@ -92,3 +92,21 @@ describe("join lines in the feed", () => {
     expect(out.map((e) => (e.kind === "checkin" ? e.item.id : e.item.username))).toEqual(["x", "bob", "ann", "y"]);
   });
 });
+
+describe("welcome pushes", () => {
+  it("name who welcomed you, with lad words", async () => {
+    const { welcomeMessage } = await import("../worker/lib/welcomeAlerts");
+    expect(welcomeMessage("grownup", "sam", 0)).toEqual({ title: "sam welcomed you to Crunchd", body: "sam liked that you joined Crunchd." });
+    expect(welcomeMessage(null, "sam", 2).body).toBe("sam and 2 others liked that you joined Crunchd.");
+    expect(welcomeMessage("lad", "dave", 1).title).toBe("dave says welcome, legend");
+  });
+
+  it("skip people with no phone signed up for pushes", async () => {
+    const { notifyWelcome } = await import("../worker/lib/welcomeAlerts");
+    const env = { DB: db } as never;
+    // No phone signed up for pushes: nothing to send, and nothing remembered.
+    expect(await notifyWelcome(env, "https://x", "ann", "bob")).toBe(0);
+    const seen = await db.prepare("SELECT COUNT(*) AS n FROM welcome_notices").first<number>("n");
+    expect(seen).toBe(0);
+  });
+});

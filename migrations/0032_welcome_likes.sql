@@ -11,3 +11,12 @@ CREATE TABLE welcome_likes (
 CREATE INDEX welcome_likes_by_user ON welcome_likes (user_id);
 -- The feed looks up joins by time.
 CREATE INDEX users_by_created ON users (created_at);
+
+-- Who we've already pushed "X welcomed you" about, so unlike/like again
+-- only buzzes the new member once per person (like like_notices).
+CREATE TABLE welcome_notices (
+  member_id   TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  liker_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at  INTEGER NOT NULL,
+  PRIMARY KEY (member_id, liker_id)
+);
