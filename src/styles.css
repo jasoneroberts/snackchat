@@ -336,8 +336,9 @@ fieldset legend { padding: 0; margin-bottom: 6px; }
 [data-voice="lad"] .section-title,
 .voice-option[data-voice="lad"] .voice-name { text-transform: uppercase; letter-spacing: 0.02em; }
 /* Beer-mat badges: square-ish and red rather than round and green. */
-[data-voice="lad"] .points-badge,
 [data-voice="lad"] .count-badge { background: var(--mat-red); color: #fff; border-radius: 4px; }
+/* Points on a check-in: a faint red tint with soft pink text, so it reads as a beer-mat stamp, not an alert. */
+[data-voice="lad"] .points-badge { background: color-mix(in srgb, var(--mat-red) 16%, transparent); color: #e8a0a9; font-weight: 700; border: 1px solid color-mix(in srgb, var(--mat-red) 35%, transparent); border-radius: 4px; }
 [data-voice="lad"] .photo-drop { border-color: var(--line); }
 [data-voice="lad"] .link-box { border-color: var(--line); }
 
@@ -577,9 +578,11 @@ button.cotw-side:disabled { cursor: default; }
 /* Last week's champions (src/components/ChampionsCard.tsx) */
 .champions-card { border: 2px solid var(--orange); }
 .champion-row { display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; }
-.champion-medal { font-size: 1.6rem; width: 32px; text-align: center; flex-shrink: 0; }
+/* Emojis kept quiet: a touch smaller, softer colour and slightly see-through, so the names and snacks lead. */
+.champion-medal { font-size: 1.2rem; width: 26px; text-align: center; flex-shrink: 0; opacity: 0.85; filter: saturate(0.75); }
 .wingit-badge { opacity: 1; color: #ffd36b; font-weight: 900; }
 
 /* Your week (src/components/YourWeekCard.tsx) */
 .week-row { display: flex; align-items: flex-start; gap: 10px; color: inherit; text-decoration: none; line-height: 1.35; }
-.week-icon { width: 24px; text-align: center; flex-shrink: 0; }
+/* Smaller than the text and a little faded; line-height keeps it level with the first line of text. */
+.week-icon { width: 20px; text-align: center; flex-shrink: 0; font-size: 0.85rem; line-height: 1.6; opacity: 0.8; filter: saturate(0.7); }
