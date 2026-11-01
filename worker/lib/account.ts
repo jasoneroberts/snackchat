@@ -99,7 +99,7 @@ export async function exportAccount(db: D1Database, userId: string, origin: stri
     `SELECT id, username, CASE WHEN email LIKE '%.invalid' THEN NULL ELSE email END AS email, email_verified, country,
             is_private, voice, created_at FROM users WHERE id = ?`,
   );
-  const [checkins, attributes, photos, points, groups, follows, tastes, explore, badges, snacks, reports, blocks, likes, invites, votes, usage] = await Promise.all([
+  const [checkins, attributes, photos, points, groups, follows, tastes, explore, badges, snacks, reports, blocks, likes, welcomes, invites, votes, usage] = await Promise.all([
     all(
       `SELECT c.id, s.name AS snack, s.brand, c.overall, c.review, c.venue_text AS venue, c.paired_with, c.created_at
          FROM checkins c JOIN snacks s ON s.id = c.snack_id WHERE c.user_id = ? ORDER BY c.created_at`,
@@ -125,6 +125,11 @@ export async function exportAccount(db: D1Database, userId: string, origin: stri
       `SELECT u.username AS checked_in_by, s.name AS snack, l.created_at FROM likes l
          JOIN checkins c ON c.id = l.checkin_id JOIN users u ON u.id = c.user_id JOIN snacks s ON s.id = c.snack_id
         WHERE l.user_id = ? ORDER BY l.created_at`,
+    ),
+    // Likes you gave to people's "joined Crunchd" lines.
+    all(
+      `SELECT u.username AS joined, w.created_at FROM welcome_likes w JOIN users u ON u.id = w.member_id
+        WHERE w.user_id = ? ORDER BY w.created_at`,
     ),
     // Invites both ways: who brought you, and who you brought.
     all(
@@ -158,6 +163,7 @@ export async function exportAccount(db: D1Database, userId: string, origin: stri
     reportsMade: reports,
     blocked: blocks,
     hearted: likes,
+    welcomed: welcomes,
     invites,
     crispOfTheWeekVotes: votes,
     appUsage: usage,

@@ -237,7 +237,7 @@ function Notifications({ me, onChanged }: { me: Me; onChanged: () => Promise<voi
         {state === "on" && <span className="small accent">On</span>}
       </div>
       <p className="small muted no-margin">
-        Hear when someone likes your check-in, and get a nudge if you go {REMIND_AFTER_DAYS} days without one
+        Hear when someone likes your check-in or welcomes you, and get a nudge if you go {REMIND_AFTER_DAYS} days without one
         {me.isAdmin ? ", plus new people, photos to approve, reports and new snacks as they happen." : "."}
       </p>
       {state === "needs-install" && (
@@ -295,7 +295,7 @@ function Notifications({ me, onChanged }: { me: Me; onChanged: () => Promise<voi
               }, on ? "Like messages on." : "Like messages off.");
             }}
           />
-          Tell me when someone likes my check-in
+          Tell me when someone likes my check-in or welcomes me
         </label>
       )}
       {state === "on" && (
