@@ -5,6 +5,9 @@ export interface Env {
   DB: D1Database;
   CACHE: KVNamespace;
   PHOTOS: R2Bucket;
+  // Cloudflare Images, for small copies of photos (lib/thumbs.ts). Optional:
+  // without it the full photos are served.
+  IMAGES?: ImagesBinding;
   AUTH_LIMITER: RateLimit;
   WRITE_LIMITER: RateLimit;
   APP_NAME: string;

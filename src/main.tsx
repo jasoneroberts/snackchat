@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { listenForUpdates } from "./lib/appUpdate";
 import { registerServiceWorker } from "./lib/push";
 import { rememberRef } from "./lib/ref";
 import { listenForErrors } from "./lib/reportError";
@@ -12,6 +13,7 @@ import "./lib/install";
 listenForErrors();
 rememberRef();
 registerServiceWorker();
+listenForUpdates();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

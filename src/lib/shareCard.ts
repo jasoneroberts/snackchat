@@ -29,7 +29,7 @@ export const FONT = "Nunito, system-ui, sans-serif";
 
 /** Draws the card and gives it back as a JPEG, ready for navigator.share. */
 export async function makeShareCard(input: ShareCardInput): Promise<Blob> {
-  // The page loads Nunito from Google Fonts; make sure the weights are ready
+  // The page loads Nunito (self-hosted, see styles.css); make sure the weights are ready
   // before drawing, or the canvas quietly falls back to a system font.
   await Promise.all(["900 80px Nunito", "800 40px Nunito", "700 40px Nunito"].map((f) => document.fonts.load(f))).catch(() => {});
   const [picture, icon] = await Promise.all([loadPicture(input.picture), loadImage("/icon-512.png")]);

@@ -1,38 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState, type ComponentType } from "react";
 import { rememberAccount } from "./lib/ref";
 import { adminToDo, api, type Me } from "./api";
+import { clearSnapshots, readSnapshot, writeSnapshot } from "./lib/snapshot";
 import { Link } from "./components/Link";
 import { TabBar } from "./components/TabBar";
 import { matchPath, navigate, usePath } from "./router";
-import { AdminSnacks } from "./pages/AdminSnacks";
-import { AdminUsers } from "./pages/AdminUsers";
-import { Boards } from "./pages/Boards";
-import { CheckIn } from "./pages/CheckIn";
 import { ComingSoon } from "./pages/ComingSoon";
-import { BrandLogos } from "./pages/BrandLogos";
-import { AdminReports } from "./pages/AdminReports";
-import { Health } from "./pages/Health";
-import { Privacy, Terms } from "./pages/Legal";
-import { DietCheck } from "./pages/DietCheck";
-import { Explore } from "./pages/Explore";
 import { Feed } from "./pages/Feed";
 import { Cotw } from "./pages/Cotw";
-import { Group } from "./pages/Group";
-import { Groups } from "./pages/Groups";
 import { Home, VerifyNotice } from "./pages/Home";
-import { Invite } from "./pages/Invite";
-import { Join } from "./pages/Join";
-import { LogIn } from "./pages/LogIn";
-import { NewGroup } from "./pages/NewGroup";
-import { Profile } from "./pages/Profile";
 import { QuickSignIn } from "./pages/QuickSignIn";
-import { Settings } from "./pages/Settings";
-import { AllSnacks } from "./pages/AllSnacks";
-import { TriedSnacks } from "./pages/TriedSnacks";
-import { Review } from "./pages/Review";
-import { SignUp } from "./pages/SignUp";
-import { Welcome } from "./pages/Welcome";
-import { Snack } from "./pages/Snack";
 import { PickVoice } from "./pages/PickVoice";
 import { markWelcomed, welcomed } from "./lib/install";
 import { keepPushOn, setIconBadge } from "./lib/push";
@@ -42,6 +19,52 @@ import { maybeReleaseGoldenCrisp } from "./lib/goldenCrisp";
 import { VoiceProvider } from "./lib/voice";
 import { line } from "../shared/voice";
 
+// Code splitting: the feed (where the app opens) is in the first download;
+// every other page is its own small file, fetched the first time it's needed.
+// Once the feed is up, they're all fetched quietly in the background (see
+// preloadPages below), so tapping a tab doesn't wait for the network. The
+// service worker keeps them all on the phone after that (public/sw.js).
+const pageLoaders: (() => Promise<unknown>)[] = [];
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- any page's props
+function lazyPage<M extends Record<K, ComponentType<any>>, K extends keyof M>(load: () => Promise<M>, name: K) {
+  pageLoaders.push(load);
+  return lazy(() => load().then((m) => ({ default: m[name] })));
+}
+const AdminSnacks = lazyPage(() => import("./pages/AdminSnacks"), "AdminSnacks");
+const AdminUsers = lazyPage(() => import("./pages/AdminUsers"), "AdminUsers");
+const Boards = lazyPage(() => import("./pages/Boards"), "Boards");
+const CheckIn = lazyPage(() => import("./pages/CheckIn"), "CheckIn");
+const BrandLogos = lazyPage(() => import("./pages/BrandLogos"), "BrandLogos");
+const AdminReports = lazyPage(() => import("./pages/AdminReports"), "AdminReports");
+const Health = lazyPage(() => import("./pages/Health"), "Health");
+const Privacy = lazyPage(() => import("./pages/Legal"), "Privacy");
+const Terms = lazyPage(() => import("./pages/Legal"), "Terms");
+const DietCheck = lazyPage(() => import("./pages/DietCheck"), "DietCheck");
+const Explore = lazyPage(() => import("./pages/Explore"), "Explore");
+const Group = lazyPage(() => import("./pages/Group"), "Group");
+const Groups = lazyPage(() => import("./pages/Groups"), "Groups");
+const Invite = lazyPage(() => import("./pages/Invite"), "Invite");
+const Join = lazyPage(() => import("./pages/Join"), "Join");
+const LogIn = lazyPage(() => import("./pages/LogIn"), "LogIn");
+const NewGroup = lazyPage(() => import("./pages/NewGroup"), "NewGroup");
+const Profile = lazyPage(() => import("./pages/Profile"), "Profile");
+const Settings = lazyPage(() => import("./pages/Settings"), "Settings");
+const AllSnacks = lazyPage(() => import("./pages/AllSnacks"), "AllSnacks");
+const TriedSnacks = lazyPage(() => import("./pages/TriedSnacks"), "TriedSnacks");
+const Review = lazyPage(() => import("./pages/Review"), "Review");
+const SignUp = lazyPage(() => import("./pages/SignUp"), "SignUp");
+const Welcome = lazyPage(() => import("./pages/Welcome"), "Welcome");
+const Snack = lazyPage(() => import("./pages/Snack"), "Snack");
+
+const pageLoading = <p className="muted page">Loading…</p>;
+
+/** Fetch every page's file while the phone is otherwise idle. */
+function preloadPages() {
+  const run = () => pageLoaders.forEach((load) => load().catch(() => {}));
+  if ("requestIdleCallback" in window) requestIdleCallback(run, { timeout: 3000 });
+  else setTimeout(run, 1500);
+}
+
 interface Toast {
   title: string;
   body: string;
@@ -49,7 +72,9 @@ interface Toast {
 
 export function App() {
   const path = usePath();
-  const [me, setMe] = useState<Me | null | undefined>(undefined); // undefined = still loading
+  // Start from who was signed in last time on this phone (lib/snapshot.ts), so
+  // the app draws at once; /me then confirms it. undefined = still loading.
+  const [me, setMe] = useState<Me | null | undefined>(() => readSnapshot<Me>("me") ?? undefined);
   const [devLogin, setDevLogin] = useState(false);
   const [quickSignIn, setQuickSignIn] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
@@ -60,13 +85,25 @@ export function App() {
       "/me",
     );
     setMe(user);
-    if (user) rememberAccount(user.username);
+    if (user) {
+      rememberAccount(user.username);
+      writeSnapshot("me", user);
+    } else clearSnapshots(); // signed out, or the session ran out
     setDevLogin(devLogin === true);
     setQuickSignIn(quickSignIn === true);
   }, []);
 
   useEffect(() => {
-    refreshMe().catch(() => setMe(null));
+    const check = () =>
+      refreshMe().catch(() => {
+        // No signal (or a server hiccup): keep showing the last-seen copy.
+        // With no copy, fall back to the signed-out page as before.
+        setMe((prev) => prev ?? null);
+      });
+    check();
+    // Signal back: check again so the points and badges are current.
+    window.addEventListener("online", check);
+    return () => window.removeEventListener("online", check);
   }, [refreshMe]);
 
   // Lad mode's colours come from CSS keyed on <html data-voice="lad">.
@@ -83,6 +120,7 @@ export function App() {
 
   const logOut = async () => {
     await api("/auth/logout", { method: "POST" });
+    clearSnapshots();
     setMe(null);
     navigate("/");
   };
@@ -115,6 +153,11 @@ export function App() {
   useEffect(() => {
     if (me?.isAdmin && adminPage) setTimeout(refresh, 1500);
   }, [path]);
+
+  // Signed in: fetch the other pages' files in the background (see lazyPage).
+  useEffect(() => {
+    if (me?.id) preloadPages();
+  }, [me?.id]);
 
   // Already allowed notifications on this phone? Make sure they're actually on
   // for whoever is signed in (no tap needed: the phone already said yes).
@@ -158,7 +201,9 @@ export function App() {
             </Link>
           </nav>
         </header>
-        <main>{page}</main>
+        <main>
+          <Suspense fallback={pageLoading}>{page}</Suspense>
+        </main>
       </div>
     );
   }
@@ -186,13 +231,15 @@ export function App() {
       <VoiceProvider voice={voice}>
         <div className="app">
           <main>
-            <Welcome
-              me={me}
-              onDone={() => {
-                markWelcomed();
-                setSeenWelcome(true);
-              }}
-            />
+            <Suspense fallback={pageLoading}>
+              <Welcome
+                me={me}
+                onDone={() => {
+                  markWelcomed();
+                  setSeenWelcome(true);
+                }}
+              />
+            </Suspense>
           </main>
         </div>
       </VoiceProvider>
@@ -359,7 +406,10 @@ export function App() {
         </header>
         <main className="shell-main">
           <VerifyNotice me={me} />
-          {page}
+          {/* A key per address, so a page still loading doesn't hold up the next one. */}
+          <Suspense key={path} fallback={pageLoading}>
+            {page}
+          </Suspense>
         </main>
         {toast && (
           <div className="toast" role="status">

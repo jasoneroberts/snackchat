@@ -1,7 +1,12 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { api } from "../api";
 import { foundGoldenCrisp, markFound, onGoldenCrisp } from "../lib/goldenCrisp";
-import { CrispBadge, CrispGame } from "./CrispGame";
+
+// The crisp and the Wing It game are drawn by code most opens never need, so
+// it's a separate file, fetched only when the Golden Crisp first appears
+// (the service worker has usually stored it on the phone by then).
+const CrispBadge = lazy(() => import("./CrispGame").then((m) => ({ default: m.CrispBadge })));
+const CrispGame = lazy(() => import("./CrispGame").then((m) => ({ default: m.CrispGame })));
 
 /**
  * Lives once at the top of the signed-in app (App.tsx). It waits for the
@@ -48,7 +53,7 @@ export function GoldenCrisp() {
   };
 
   return (
-    <>
+    <Suspense fallback={null}>
       {flight && (
         <button
           key={flight.id}
@@ -65,6 +70,6 @@ export function GoldenCrisp() {
         </button>
       )}
       {playing && <CrispGame banner={banner} onClose={() => setPlaying(false)} />}
-    </>
+    </Suspense>
   );
 }

@@ -1,4 +1,5 @@
 import { useLogo } from "../lib/logos";
+import { photoUrl } from "../lib/photos";
 
 /**
  * A snack's picture: its newest community photo, otherwise its maker's logo
@@ -18,6 +19,6 @@ export function SnackTile({
   if (!snack.photoId && !logoId) return null;
   const style = size ? { width: size, height: size } : undefined;
   const classes = `snack-tile ${size ? "" : "wide"} ${snack.photoId ? "" : "logo"} ${className}`;
-  const src = snack.photoId ? `/api/photos/${snack.photoId}` : `/api/logos/${logoId}`;
+  const src = snack.photoId ? photoUrl(snack.photoId, size ? "small" : "wide") : `/api/logos/${logoId}`;
   return <img className={classes} style={style} src={src} alt="" loading="lazy" />;
 }

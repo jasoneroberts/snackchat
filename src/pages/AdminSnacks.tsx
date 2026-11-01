@@ -6,6 +6,7 @@ import { Link } from "../components/Link";
 import { SnackTile } from "../components/SnackTile";
 import { timeAgo } from "../lib/format";
 import { useLogo } from "../lib/logos";
+import { photoUrl } from "../lib/photos";
 
 type Filter = "all" | "pending" | "nopic";
 
@@ -234,7 +235,7 @@ function SnackEditor({ snack, onSaved }: { snack: AdminSnackRow; onSaved: () => 
           <div className="admin-photos">
             {photos.map((p) => (
               <figure key={p.id} className={p.id === mainId ? "admin-photo main" : "admin-photo"}>
-                <img src={`/api/photos/${p.id}`} alt="" loading="lazy" />
+                <img src={photoUrl(p.id, "small")} alt="" loading="lazy" />
                 <figcaption className="small muted">{p.username}</figcaption>
                 <span className="admin-photo-actions small">
                   {p.id === mainId ? (

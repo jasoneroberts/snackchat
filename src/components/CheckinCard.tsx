@@ -10,6 +10,7 @@ import { PhotoViewer } from "./PhotoViewer";
 import { ReportButton } from "./Report";
 import { SnackTile } from "./SnackTile";
 import { Stars } from "./Stars";
+import { photoUrl as photoUrlFor } from "../lib/photos";
 
 
 export function CheckinCard({
@@ -27,7 +28,7 @@ export function CheckinCard({
   // Show sliders in their usual order rather than the order they were saved.
   const [viewing, setViewing] = useState(false);
   const close = useCallback(() => setViewing(false), []);
-  const photoUrl = `/api/photos/${item.photoId}`;
+  const photoUrl = item.photoId ? photoUrlFor(item.photoId) : "";
   const chips = attributesFor(item.snack.category).filter((a) => item.attributes[a.key] !== undefined);
 
   return (
@@ -55,7 +56,7 @@ export function CheckinCard({
         {/* Their photo as a thumbnail that opens full screen, or else the maker's logo, or nothing. */}
         {item.photoId ? (
           <button type="button" className="checkin-thumb" aria-label={`Show photo of ${item.snack.name}`} onClick={() => setViewing(true)}>
-            <img src={photoUrl} alt="" loading="lazy" />
+            <img src={photoUrlFor(item.photoId, "small")} alt="" loading="lazy" />
           </button>
         ) : (
           <SnackTile snack={{ brand: item.snack.brand }} size={64} className="checkin-thumb" />

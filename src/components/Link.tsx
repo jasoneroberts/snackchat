@@ -1,4 +1,5 @@
 import type { AnchorHTMLAttributes } from "react";
+import { newVersionReady } from "../lib/appUpdate";
 import { navigate } from "../router";
 
 export function Link({ href, ...rest }: AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) {
@@ -8,7 +9,9 @@ export function Link({ href, ...rest }: AnchorHTMLAttributes<HTMLAnchorElement> 
       onClick={(e) => {
         if (e.metaKey || e.ctrlKey || e.shiftKey) return;
         e.preventDefault();
-        navigate(href);
+        // A new version is downloaded: load the page for real so it's used.
+        if (newVersionReady()) window.location.assign(href);
+        else navigate(href);
       }}
       {...rest}
     />

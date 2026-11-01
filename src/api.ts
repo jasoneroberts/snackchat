@@ -43,18 +43,32 @@ export async function api<T>(
   init: { method?: string; body?: Record<string, unknown> | FormData } = {},
 ): Promise<T> {
   const isForm = init.body instanceof FormData;
-  const res = await fetch(`/api${path}`, {
-    method: init.method ?? (init.body ? "POST" : "GET"),
-    headers: init.body && !isForm ? { "Content-Type": "application/json" } : undefined,
-    body: isForm ? (init.body as FormData) : init.body ? JSON.stringify(init.body) : undefined,
-    credentials: "same-origin",
-  });
+  let res: Response;
+  try {
+    res = await fetch(`/api${path}`, {
+      method: init.method ?? (init.body ? "POST" : "GET"),
+      headers: init.body && !isForm ? { "Content-Type": "application/json" } : undefined,
+      body: isForm ? (init.body as FormData) : init.body ? JSON.stringify(init.body) : undefined,
+      credentials: "same-origin",
+    });
+  } catch {
+    // fetch() only throws when there was no answer at all: no signal, or the connection dropped.
+    throw new OfflineError();
+  }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new ApiError((data as { error?: string }).error ?? "Something went wrong.", res.status);
   return data as T;
 }
 
+/** No answer from the server at all (no signal), as opposed to the server saying no. */
+export class OfflineError extends Error {
+  constructor() {
+    super("No signal. Try again when you're back online.");
+  }
+}
+
 /** Everything waiting for an admin: the number on the Me tab and the app icon. */
 export const adminToDo = (me: Me) => (me.isAdmin ? me.reviewCount + me.pendingSnacks + me.openReports + me.newUsers : 0);
 
-export const errorText = (err: unknown) => (err instanceof ApiError ? err.message : "Something went wrong.");
+export const errorText = (err: unknown) =>
+  err instanceof ApiError || err instanceof OfflineError ? err.message : "Something went wrong.";

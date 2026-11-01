@@ -5,9 +5,12 @@ import { CheckinCard } from "../components/CheckinCard";
 import { Link } from "../components/Link";
 import { CotwCard } from "./Cotw";
 import { useVoice } from "../lib/voice";
+import { readSnapshot, writeSnapshot } from "../lib/snapshot";
 
 export function Feed({ me, onChanged }: { me: Me; onChanged: () => void }) {
-  const [items, setItems] = useState<FeedItem[] | null>(null);
+  // The feed as it was last time, drawn straight away while the fresh one loads (lib/snapshot.ts).
+  const snapKey = `feed.${me.id}`;
+  const [items, setItems] = useState<FeedItem[] | null>(() => readSnapshot<FeedItem[]>(snapKey));
   const [next, setNext] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -19,6 +22,8 @@ export function Feed({ me, onChanged }: { me: Me; onChanged: () => void }) {
     );
     setItems((prev) => (before && prev ? [...prev, ...page.items] : page.items));
     setNext(page.next);
+    setError(null);
+    if (!before) writeSnapshot(snapKey, page.items);
   };
 
   useEffect(() => {
@@ -35,11 +40,13 @@ export function Feed({ me, onChanged }: { me: Me; onChanged: () => void }) {
     }
   };
 
-  if (error) return <p className="error page">{error}</p>;
+  // With a last-seen copy on screen, a failed refresh (no signal) leaves it up.
+  if (error && !items) return <p className="error page">{error}</p>;
   if (!items) return <p className="muted page">Loading…</p>;
 
   return (
     <div className="page stack">
+      {error && <p className="error">{error}</p>}
       <CotwCard me={me} />
       {items.length === 0 && (
         <div className="empty">
