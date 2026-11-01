@@ -99,7 +99,7 @@ export async function exportAccount(db: D1Database, userId: string, origin: stri
     `SELECT id, username, CASE WHEN email LIKE '%.invalid' THEN NULL ELSE email END AS email, email_verified, country,
             is_private, voice, created_at FROM users WHERE id = ?`,
   );
-  const [checkins, attributes, photos, points, groups, follows, tastes, explore, badges, snacks, reports, blocks, likes, welcomes, invites, votes, usage] = await Promise.all([
+  const [checkins, attributes, photos, points, groups, follows, tastes, explore, badges, snacks, reports, blocks, likes, welcomes, invites, tips, votes, usage] = await Promise.all([
     all(
       `SELECT c.id, s.name AS snack, s.brand, c.overall, c.review, c.venue_text AS venue, c.paired_with, c.created_at
          FROM checkins c JOIN snacks s ON s.id = c.snack_id WHERE c.user_id = ? ORDER BY c.created_at`,
@@ -116,7 +116,10 @@ export async function exportAccount(db: D1Database, userId: string, origin: stri
       `SELECT u.username, f.created_at FROM follows f JOIN users u ON u.id = f.followee_id WHERE f.follower_id = ?`,
     ),
     all("SELECT category_id AS snack_type, attribute, value FROM taste_by_type WHERE user_id = ?"),
-    all("SELECT s.name AS snack, e.choice, e.created_at FROM explore_choices e JOIN snacks s ON s.id = e.snack_id WHERE e.user_id = ?"),
+    all(`SELECT s.name AS snack, e.choice, e.created_at, bu.username AS bagged_from
+       FROM explore_choices e JOIN snacks s ON s.id = e.snack_id
+       LEFT JOIN checkins bc ON bc.id = e.from_checkin_id LEFT JOIN users bu ON bu.id = bc.user_id
+      WHERE e.user_id = ?`),
     all("SELECT badge_id, earned_at FROM user_badges WHERE user_id = ?"),
     all("SELECT name, brand, category_id AS snack_type, status, created_at FROM snacks WHERE created_by = ?"),
     all("SELECT target_type, reason, note, resolved, created_at FROM reports WHERE reporter_id = ?"),
@@ -136,6 +139,13 @@ export async function exportAccount(db: D1Database, userId: string, origin: stri
       `SELECT fu.username AS friend, iu.username AS invited_by, r.joined_at, r.checked_in_at
          FROM referrals r JOIN users fu ON fu.id = r.friend_id JOIN users iu ON iu.id = r.inviter_id
         WHERE r.friend_id = ?1 OR r.inviter_id = ?1`,
+    ),
+    // Bag tips both ways: snacks you tried after bagging them from someone's
+    // check-in, and people who tried one after bagging it from yours.
+    all(
+      `SELECT bu.username AS tried_by, tu.username AS bagged_from, s.name AS snack, t.points, t.created_at
+         FROM bag_tips t JOIN users bu ON bu.id = t.user_id JOIN users tu ON tu.id = t.tipper_id JOIN snacks s ON s.id = t.snack_id
+        WHERE t.user_id = ?1 OR t.tipper_id = ?1`,
     ),
     // Crisp of the Week votes. week_start is the Monday the battle began.
     all("SELECT v.week_start, s.name AS voted_for, v.created_at FROM cotw_votes v JOIN snacks s ON s.id = v.snack_id WHERE v.user_id = ?"),
@@ -165,6 +175,7 @@ export async function exportAccount(db: D1Database, userId: string, origin: stri
     hearted: likes,
     welcomed: welcomes,
     invites,
+    bagTips: tips,
     crispOfTheWeekVotes: votes,
     appUsage: usage,
   };

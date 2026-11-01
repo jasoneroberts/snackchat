@@ -13,6 +13,7 @@ import { notifyLike } from "../lib/likeAlerts";
 import { notifySquads } from "../lib/squadAlerts";
 import { firstCheckinBonus, tellInviterAboutCheckin } from "../lib/referrals";
 import { newBadgesSafely } from "../lib/achievements";
+import { bagFromCheckin, bagTipStatements, tellTipper, tipFor, unbagFromCheckin } from "../lib/bagTips";
 
 export const checkins = new Hono<AppContext>();
 
@@ -121,6 +122,8 @@ checkins.post("/", async (c) => {
     ),
     // If they joined from a friend's invite and this is their first check-in, the friend gets a bonus.
     ...firstCheckinBonus(db, { friendId: user.id, checkinId, time }),
+    // If they bagged this snack from someone's check-in and this is their first go, that person gets a tip.
+    ...bagTipStatements(db, { userId: user.id, snackId: snack.id, checkinId, time }),
   ];
   // Photos wait for an admin to approve them (routes/admin.ts), except an
   // admin's own; the check-in and its points go live straight away.
@@ -141,6 +144,7 @@ checkins.post("/", async (c) => {
   }
 
   inBackground(c, tellInviterAboutCheckin(c.env, new URL(c.req.url).origin, { checkinId, friendName: user.username }));
+  inBackground(c, tellTipper(c.env, new URL(c.req.url).origin, { checkinId, baggerName: user.username }));
   // Squad mates hear about it too (lib/squadAlerts.ts), once per snacking session.
   inBackground(
     c,
@@ -157,7 +161,7 @@ checkins.post("/", async (c) => {
     pingAdmins(c, { kind: "photo", title: "Photo to approve", body: `${user.username} added a photo of ${snack.name}.`, url: "/review" }, user.id);
   }
   // Any badges this check-in has just earned, for the "New badge!" on the share screen.
-  const newBadges = await newBadgesSafely(db, user.id, time);
+  const [newBadges, tip] = await Promise.all([newBadgesSafely(db, user.id, time), tipFor(db, checkinId)]);
   return c.json(
     {
       id: checkinId,
@@ -165,6 +169,8 @@ checkins.post("/", async (c) => {
       lines,
       photoPending: photoId !== null && photoStatus === "pending",
       newBadges,
+      // "Sam gets +10 pts for putting you onto it", when this was a bagged snack.
+      tip,
     },
     201,
   );
@@ -346,6 +352,22 @@ checkins.delete("/:id/like", async (c) => {
   const db = c.env.DB;
   await db.prepare("DELETE FROM likes WHERE checkin_id = ? AND user_id = ?").bind(id, user.id).run();
   return c.json({ liked: false, likes: await likeCount(db, user.id, id) });
+});
+
+// Bag the snack in someone's check-in to try later. When you check it in for
+// the first time, they get a tip (lib/bagTips.ts).
+checkins.put("/:id/bag", async (c) => {
+  const user = currentUser(c);
+  const r = await bagFromCheckin(c.env.DB, user.id, c.req.param("id"), now());
+  if (!r.ok) return c.json({ error: r.error }, r.status);
+  return c.json({ bagged: true, tipper: r.tipper });
+});
+
+// Un-bag it.
+checkins.delete("/:id/bag", async (c) => {
+  const user = currentUser(c);
+  await unbagFromCheckin(c.env.DB, user.id, c.req.param("id"));
+  return c.json({ bagged: false });
 });
 
 // Who hearted a check-in, newest first. People you can't see are left out.

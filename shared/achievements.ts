@@ -21,6 +21,7 @@ export type Metric =
   | "hearts" // hearts on your check-ins from other people
   | "squads" // squads you're in
   | "invites" // friends who joined from your invite link
+  | "tips" // snacks people bagged from your check-ins and then tried (worker/lib/bagTips.ts)
   | "scampi_low" // times you rated Scampi Fries 2 or under
   | "scampi_high" // times you rated Scampi Fries 4.5 or more
   | "streak" // best weekly streak ever
@@ -57,6 +58,8 @@ export const BADGES: BadgeDef[] = [
   { id: "fan_favourite", name: "Fan Favourite", emoji: "❤️", description: "Get 25 hearts on your check-ins.", metric: "hearts", goal: 25 },
   { id: "squad_up", name: "Squad Up", emoji: "🤝", description: "Join or start a squad.", metric: "squads", goal: 1 },
   { id: "squad_captain", name: "Squad Captain", emoji: "🧢", description: "Get 5 friends to join with your invite link.", metric: "invites", goal: 5 },
+  { id: "tastemaker", name: "Tastemaker", emoji: "🛍️", description: "Someone bags a snack from your check-in, then tries it.", metric: "tips", goal: 1 },
+  { id: "trendsetter", name: "Trendsetter", emoji: "📣", description: "Get 10 people to try a snack they bagged from your check-ins.", metric: "tips", goal: 10 },
   { id: "scampi_sceptic", name: "Scampi Fries Sceptic", emoji: "🤨", description: "Rate Scampi Fries 2 stars or under.", metric: "scampi_low", goal: 1 },
   { id: "scampi_disciple", name: "Scampi Fries Disciple", emoji: "🦐", description: "Rate Scampi Fries 4.5 stars or more.", metric: "scampi_high", goal: 1 },
   { id: "on_a_roll", name: "On a Roll", emoji: "🔥", description: "Check in 4 weeks in a row.", metric: "streak", goal: 4 },

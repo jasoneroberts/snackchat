@@ -102,6 +102,22 @@ export const LINES = {
   "explore.rejected": { grownup: "Ignored", lad: "Ignored" },
   "explore.tried": { grownup: "Check in", lad: "Log it" },
 
+  // "Bag it" under someone's check-in (src/components/BagIt.tsx)
+  "bag.hint": {
+    grownup: "Saved. Try it and {name} gets +{pts} pts for the tip.",
+    lad: "Bagged. Get one down you and {name} pockets +{pts} pts.",
+  },
+  "bag.count": { grownup: "{n} saved it to try", lad: "{n} bagged it" },
+  "bag.tried": { grownup: "{n} tried it", lad: "{n} actually had one" },
+  "bag.thanked": {
+    grownup: "You saved this from {name}'s check-in, so they get +{pts} pts for the tip.",
+    lad: "You bagged this off {name}. They pocket +{pts} pts for the tip.",
+  },
+  "bag.thankedNoPts": {
+    grownup: "You saved this from {name}'s check-in. We've let them know.",
+    lad: "You bagged this off {name}. We've told them.",
+  },
+
   // Boards
   "boards.people": { grownup: "People", lad: "Lads" },
   "boards.snacks": { grownup: "Snacks", lad: "The {snack}" },

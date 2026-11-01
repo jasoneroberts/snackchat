@@ -15,6 +15,7 @@
 //   INVITE_POINTS.onBoards is on. Turning it off takes them off every table
 //   at once and leaves them on your total.
 
+import { BAG_POINTS } from "../../shared/bag";
 import { INVITE_POINTS } from "../../shared/ref";
 import type { InviteStats } from "../../shared/types";
 import type { Env } from "../env";
@@ -130,17 +131,23 @@ export function tellInviterAboutJoin(env: Env, origin: string, opts: { inviterId
 }
 
 /**
- * SQL to add to a board's points sum: the invite points `userCol` earned
+ * SQL to add to a board's points sum: the invite points (and bag tips) `userCol` earned
  * since the bind parameter `since`. They count whatever snack types the
  * board or squad covers, since they aren't for a snack. Empty when
  * INVITE_POINTS.onBoards is off.
  */
 export function invitePointsSql(userCol: string, since: string, until?: string): string {
-  if (!INVITE_POINTS.onBoards) return "";
+  // Bag tips (lib/bagTips.ts) are the same kind of points: earned for
+  // someone else's check-in, so they ride along here under their own switch.
+  const reasons = [
+    ...(INVITE_POINTS.onBoards ? ["'invite_join'", "'invite_checkin'"] : []),
+    ...(BAG_POINTS.onBoards ? ["'bag_tip'"] : []),
+  ];
+  if (!reasons.length) return "";
   const before = until ? ` AND (${until} IS NULL OR ip.created_at < ${until})` : "";
   return ` + (SELECT COALESCE(SUM(ip.points), 0) FROM points_ledger ip
                WHERE ip.user_id = ${userCol} AND ip.checkin_id IS NULL
-                 AND ip.reason IN ('invite_join', 'invite_checkin') AND ip.created_at >= ${since}${before})`;
+                 AND ip.reason IN (${reasons.join(", ")}) AND ip.created_at >= ${since}${before})`;
 }
 
 /** Your invite numbers, for the card on your profile. */

@@ -21,6 +21,7 @@ export function ShareCheckin({
   review,
   photo,
   newBadges = [],
+  tip = null,
   onDone,
 }: {
   points: number;
@@ -30,6 +31,8 @@ export function ShareCheckin({
   review: string | null;
   photo: Blob | null; // the photo they just took, if any
   newBadges?: BadgeState[]; // badges this check-in earned
+  /** Whose check-in you bagged this from, when this try just earned them a tip. */
+  tip?: { username: string; points: number } | null;
   onDone: () => void;
 }) {
   const { t } = useVoice();
@@ -83,6 +86,11 @@ export function ShareCheckin({
       <div className="centre stack-sm">
         <h1 className="title">{points > 0 ? `+${points} pts` : t("toast.checkedIn")}</h1>
         <p className="muted no-margin">{t("share.prompt", { category: snack.category })}</p>
+        {tip && (
+          <p className="small no-margin share-tip">
+            {t(tip.points > 0 ? "bag.thanked" : "bag.thankedNoPts", { category: snack.category, vars: { name: tip.username, pts: tip.points } })}
+          </p>
+        )}
       </div>
 
       <NewBadges badges={newBadges} username={username} />
