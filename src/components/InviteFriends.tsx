@@ -4,6 +4,7 @@ import type { InviteStats } from "../../shared/types";
 import { api } from "../api";
 import { personalInviteLink } from "../lib/ref";
 import { Avatar } from "./Avatar";
+import { track } from "../lib/track";
 
 /**
  * The "Invite friends" card on your own profile: your personal link, ways to
@@ -33,6 +34,7 @@ export function InviteFriends({ username }: { username: string }) {
 
   // The phone's own share sheet (Messages, Instagram...) where there is one.
   const share = async () => {
+    track("share");
     if (navigator.share) await navigator.share({ title: "Join me on Crunchd", text: message }).catch(() => {});
     else await copy();
   };
@@ -46,7 +48,7 @@ export function InviteFriends({ username }: { username: string }) {
         {INVITE_POINTS.onBoards ? "They count on the points tables too." : "Invite points add to your total, not the tables."}
       </p>
       <div className="row">
-        <a className="button whatsapp grow" href={`https://wa.me/?text=${encodeURIComponent(message)}`} target="_blank" rel="noreferrer">
+        <a className="button whatsapp grow" href={`https://wa.me/?text=${encodeURIComponent(message)}`} onClick={() => track("share")} target="_blank" rel="noreferrer">
           WhatsApp
         </a>
         <button type="button" className="button secondary grow" onClick={share}>

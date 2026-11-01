@@ -539,6 +539,23 @@ select:focus { outline: 2px solid var(--orange); border-color: transparent; }
 .new-badge { display: flex; align-items: center; gap: 12px; background: var(--card); border: 2px solid var(--orange); border-radius: 16px; padding: 10px 12px; }
 .small-preview img { height: min(40vh, 360px); }
 
+/* Crisp of the Week (src/pages/Cotw.tsx) */
+.cotw-card { border: 2px solid var(--orange); }
+.cotw-matchup { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: stretch; gap: 8px; }
+.cotw-vs { align-self: center; font-weight: 900; color: var(--muted); }
+.cotw-side { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 18px 6px 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); color: inherit; font: inherit; text-align: center; }
+button.cotw-side { cursor: pointer; }
+button.cotw-side:disabled { cursor: default; }
+.cotw-side.picked { border: 2px solid var(--orange); background: color-mix(in srgb, var(--orange) 10%, var(--card)); }
+.cotw-name { font-weight: 900; line-height: 1.2; overflow-wrap: anywhere; }
+.cotw-percent { font-weight: 900; font-size: 1.15rem; color: var(--orange-dark); }
+.cotw-bar { width: 100%; flex: none; }
+.cotw-crown { position: absolute; top: -16px; font-size: 1.4rem; line-height: 1; }
+
+/* Settings > Stats: a green dot by people who've been active this week. */
+.stats-dot { display: inline-block; width: 8px; height: 8px; margin-left: 6px; border-radius: 50%; background: #2bb673; vertical-align: middle; }
+.sources tr.muted td { color: var(--muted); }
+
 /* Last week's champions (src/components/ChampionsCard.tsx) */
 .champions-card { border: 2px solid var(--orange); }
 .champion-row { display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; }

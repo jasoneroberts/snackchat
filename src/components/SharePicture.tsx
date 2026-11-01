@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { track } from "../lib/track";
 
 /**
  * A sheet for sharing a picture made on the phone (a badge, a Crisp of the
@@ -47,6 +48,7 @@ export function SharePicture({
         await navigator.clipboard.writeText(text);
         setNote("Copied. Paste it into a chat.");
       }
+      track("share");
     } catch (err) {
       if ((err as Error).name !== "AbortError") setNote("Couldn't open sharing. Save the picture instead.");
     }
@@ -70,7 +72,7 @@ export function SharePicture({
           {canShareFile ? "Share picture" : "Share"}
         </button>
         <div className="two-up">
-          <a className="button secondary" href={`https://wa.me/?text=${encodeURIComponent(text)}`} target="_blank" rel="noreferrer">
+          <a className="button secondary" href={`https://wa.me/?text=${encodeURIComponent(text)}`} onClick={() => track("share")} target="_blank" rel="noreferrer">
             WhatsApp
           </a>
           {card ? (
