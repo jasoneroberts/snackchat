@@ -36,6 +36,7 @@ import { sendStreakNudges } from "./lib/achievements";
 import { achievements } from "./routes/achievements";
 import { champions } from "./routes/champions";
 import { week } from "./routes/week";
+import { joins } from "./routes/joins";
 
 // Where the app lives, for push messages sent from the cron (no request to read it from).
 const appOrigin = (env: Env) => (env.CANONICAL_HOST ? `https://${env.CANONICAL_HOST}` : "https://snackchat.jasoneroberts.workers.dev");
@@ -84,6 +85,7 @@ app.route("/push", push);
 app.route("/achievements", achievements);
 app.route("/champions", champions);
 app.route("/week", week);
+app.route("/joins", joins);
 
 app.get("/me", async (c) => {
   const user = c.get("user");

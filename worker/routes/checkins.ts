@@ -6,6 +6,7 @@ import { blockedEitherWay } from "../lib/blocks";
 import { pointsFor, startOfUtcDay, validateCheckin } from "../lib/checkin";
 import { currentUser } from "../lib/currentUser";
 import { listCheckins, nextCursor, parseCursor } from "../lib/feed";
+import { joinWindow, listJoins } from "../lib/joins";
 import { overDailyLimit } from "../lib/limits";
 import { inBackground, pingAdmins } from "../lib/notify";
 import { notifyLike } from "../lib/likeAlerts";
@@ -28,8 +29,13 @@ const PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 checkins.get("/", async (c) => {
   const user = currentUser(c);
   const limit = 20;
-  const items = await listCheckins(c.env.DB, { viewerId: user.id, before: parseCursor(c.req.query("before")), limit });
-  return c.json({ items, next: nextCursor(items, limit) });
+  const before = parseCursor(c.req.query("before"));
+  const items = await listCheckins(c.env.DB, { viewerId: user.id, before, limit });
+  const next = nextCursor(items, limit);
+  // "X joined Crunchd" lines from the same stretch of time as these check-ins,
+  // for the app to slot in between them (lib/joins.ts).
+  const joins = await listJoins(c.env.DB, user.id, joinWindow(before, items, next !== null));
+  return c.json({ items, joins, next });
 });
 
 // Post a check-in. It arrives as a form with two parts: "data" (the check-in as

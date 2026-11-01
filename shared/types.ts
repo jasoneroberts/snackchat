@@ -392,3 +392,12 @@ export interface YourWeek {
   /** The best-rated of those. */
   best: { poster: string; snack: string; snackId: string; overall: number } | null;
 }
+
+/** A "joined Crunchd" line in the feed, slotted in among the check-ins by time. */
+export interface JoinedItem {
+  username: string;
+  avatarId: string | null;
+  joinedAt: number; // Unix seconds
+  likes: number; // from people the viewer can see
+  liked: boolean; // whether the viewer has liked it
+}

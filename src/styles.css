@@ -127,6 +127,14 @@ input:focus, textarea:focus { outline: 2px solid var(--orange); border-color: tr
 .avatar { border-radius: 50%; object-fit: cover; background: var(--line-soft); display: inline-flex; align-items: center; justify-content: center; font-weight: 900; color: var(--ink); flex-shrink: 0; }
 
 .checkin { background: var(--card); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+/* "X joined Crunchd": a thin line between check-ins, not a card. Runs of them sit closer together. */
+.joined-line { display: flex; align-items: center; gap: 8px; padding: 2px 4px 2px 6px; font-size: 0.8125rem; min-height: 32px; }
+.joined-line + .joined-line { margin-top: -10px; }
+.joined-who { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
+.joined-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.joined-when { white-space: nowrap; }
+.joined-like { display: flex; align-items: center; gap: 2px; min-width: 40px; justify-content: flex-end; }
+.joined-like .heart { margin-left: 0; }
 .checkin-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px 8px; font-size: 0.875rem; }
 .checkin-snack { display: flex; align-items: center; gap: 12px; padding: 0 14px 4px; }
 .snack-link { font-size: 1.15rem; font-weight: 900; color: var(--ink); text-decoration: underline; text-decoration-color: var(--orange); text-underline-offset: 3px; text-decoration-thickness: 2px; }
