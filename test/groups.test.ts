@@ -86,21 +86,28 @@ describe("last week's crown", () => {
     });
   });
 
-  it("crowns the top scorer, shares it on a tie, and skips a week nobody scored", () => {
+  it("crowns the top scorer and skips a week nobody scored", () => {
     expect(
       champions([
         { username: "amy", value: 30 },
         { username: "bob", value: 12 },
       ]).map((r) => r.username),
     ).toEqual(["amy"]);
-    expect(
-      champions([
-        { username: "cat", value: 20 },
-        { username: "amy", value: 20 },
-        { username: "bob", value: 3 },
-      ]).map((r) => r.username),
-    ).toEqual(["amy", "cat"]);
     expect(champions([{ username: "amy", value: 0 }])).toEqual([]);
     expect(champions([])).toEqual([]);
+  });
+
+  const tied = [
+    { username: "cat", value: 20, lastAt: 100 },
+    { username: "amy", value: 20, lastAt: 200 },
+    { username: "bob", value: 3, lastAt: 50 },
+  ];
+
+  it("on a tie, crowns whoever got there first", () => {
+    expect(champions(tied, "first").map((r) => r.username)).toEqual(["cat"]);
+  });
+
+  it("or shares it, if ties are set to share", () => {
+    expect(champions(tied, "share").map((r) => r.username)).toEqual(["amy", "cat"]);
   });
 });

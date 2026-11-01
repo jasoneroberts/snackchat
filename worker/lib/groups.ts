@@ -98,10 +98,24 @@ export function lastWeek(nowSeconds: number): { start: number; end: number } {
 }
 
 /**
- * Last week's champions: whoever came top, provided they scored something.
- * Joint winners all keep a crown, so a tie at the top crowns everyone on it.
+ * How a tie at the top is settled. "first": one champion, whoever got to
+ * the winning score first (their last counted check-in of the week was
+ * earliest). "share": everyone tied wears a crown.
  */
-export function champions<T extends { value: number; username: string }>(rows: T[]): T[] {
+export const CROWN_TIES: "first" | "share" = "first";
+
+/**
+ * Last week's champions: whoever came top, provided they scored something.
+ * Returns one person, or several on a tie when CROWN_TIES is "share".
+ */
+export function champions<T extends { value: number; username: string; lastAt?: number | null }>(
+  rows: T[],
+  ties: "first" | "share" = CROWN_TIES,
+): T[] {
   const best = Math.max(0, ...rows.map((r) => r.value));
-  return best > 0 ? rows.filter((r) => r.value === best).sort((a, b) => a.username.localeCompare(b.username)) : [];
+  if (best <= 0) return [];
+  const top = rows
+    .filter((r) => r.value === best)
+    .sort((a, b) => (a.lastAt ?? Infinity) - (b.lastAt ?? Infinity) || a.username.localeCompare(b.username));
+  return ties === "share" ? top.sort((a, b) => a.username.localeCompare(b.username)) : top.slice(0, 1);
 }

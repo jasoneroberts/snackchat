@@ -3,7 +3,8 @@ import { getCategory } from "../../shared/catalogue";
 import { filterFor, filterShort, typeFilters } from "../../shared/typeFilters";
 import type { BoardPeriod, GroupCard, PeopleMetric, PeopleRow, SnackRow } from "../../shared/types";
 import { api, errorText, type Me } from "../api";
-import { Avatar } from "../components/Avatar";
+import { Avatar, SnackCrown } from "../components/Avatar";
+import { personCrownLabel, snackCrownLabel, useCrowns } from "../lib/crowns";
 import { dietQuery, DietFilter, useDiets } from "../components/DietFilter";
 import { Link } from "../components/Link";
 import { SnackTile } from "../components/SnackTile";
@@ -171,6 +172,7 @@ const PODIUM_COLOURS = ["#F7C68E", "#E6E1D8", "#E9C2A0"]; // gold, silver, bronz
 const PODIUM_HEIGHTS = [120, 92, 72];
 
 function PeopleBoard({ rows, me, unit }: { rows: PeopleRow[] | null; me: Me; unit: string }) {
+  const crowns = useCrowns();
   const { t } = useVoice();
   if (!rows) return <p className="muted">Loading…</p>;
   if (rows.every((r) => r.checkins === 0)) {
@@ -196,7 +198,13 @@ function PeopleBoard({ rows, me, unit }: { rows: PeopleRow[] | null; me: Me; uni
           const place = podium.indexOf(p);
           return (
             <Link key={p.username} href={`/u/${p.username}`} className="podium-spot plain">
-              <Avatar username={p.username} avatarId={p.avatarId} size={52} />
+              <Avatar
+                username={p.username}
+                avatarId={p.avatarId}
+                size={52}
+                crown={!!crowns?.people[p.username]}
+                crownLabel={personCrownLabel(crowns?.people[p.username]) ?? undefined}
+              />
               <span className="podium-name">{p.username}</span>
               <span className="podium-block" style={{ height: PODIUM_HEIGHTS[place], background: PODIUM_COLOURS[place] }}>
                 <b className="podium-rank">{p.rank}</b>
@@ -214,7 +222,13 @@ function PeopleBoard({ rows, me, unit }: { rows: PeopleRow[] | null; me: Me; uni
             <li key={r.username} className={r.username === me.username ? "me" : undefined}>
               <span className="board-rank">{r.rank}</span>
               <Link href={`/u/${r.username}`} className="plain row grow">
-                <Avatar username={r.username} avatarId={r.avatarId} size={34} />
+                <Avatar
+                  username={r.username}
+                  avatarId={r.avatarId}
+                  size={34}
+                  crown={!!crowns?.people[r.username]}
+                  crownLabel={personCrownLabel(crowns?.people[r.username]) ?? undefined}
+                />
                 <span className="grow">
                   <b>{r.username}</b>
                   {r.username === me.username && <span className="muted"> {t("boards.you")}</span>}
@@ -238,6 +252,7 @@ const MEDALS = ["#E0A526", "#A8A29A", "#B87333"];
 
 function SnackBoard({ rows }: { rows: SnackRow[] | null }) {
   const { t } = useVoice();
+  const crowns = useCrowns();
   if (!rows) return <p className="muted">Loading…</p>;
   if (rows.length === 0) {
     return (
@@ -258,7 +273,10 @@ function SnackBoard({ rows }: { rows: SnackRow[] | null }) {
             <SnackTile snack={r.snack} size={48} />
           </span>
           <span className="grow">
-            <b className="block">{r.snack.name}</b>
+            <b className="block">
+              {r.snack.name}
+              <SnackCrown label={snackCrownLabel(crowns?.snacks[r.snack.id])} />
+            </b>
             <span className="small muted">
               {[r.snack.brand, getCategory(r.snack.category)?.short].filter(Boolean).join(" · ")} · {r.provisional ? "1 rating, provisional" : r.count === 1 ? "1 rating" : `${r.count} ratings`}
             </span>

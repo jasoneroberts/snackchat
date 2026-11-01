@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { BoardRow, GroupCard, GroupPage, GroupPreview, ResetPeriod, ScoringMode } from "../../shared/types";
-import { invitePointsSql } from "../lib/referrals";
+import { squadScores } from "../lib/squadScores";
 import type { AppContext } from "../env";
 import { newId } from "../lib/crypto";
 import { currentUser } from "../lib/currentUser";
@@ -41,55 +41,23 @@ const MAX_PICTURE_BYTES = 1024 * 1024;
 const PICTURE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 export const groupPictureKey = (groupId: string, pictureId: string) => `groups/${groupId}/${pictureId}`;
 
-// Only check-ins of the group's snack types count. ?3 is the JSON list of
-// types, or NULL for all of them.
-const COUNTS = `s.category_id IN (SELECT value FROM json_each(?3)) OR ?3 IS NULL`;
-
-// What each scoring mode adds up for one member (m.user_id) from ?2 up to
-// (not including) ?4. ?4 is NULL for "up to now" (the live board); last
-// week's crown passes the Monday this week started.
-const BEFORE = (col: string) => `(?4 IS NULL OR ${col} < ?4)`;
-const SCORE_SQL: Record<ScoringMode, string> = {
-  points: `(SELECT COALESCE(SUM(pl.points), 0) FROM points_ledger pl
-             JOIN checkins c ON c.id = pl.checkin_id JOIN snacks s ON s.id = c.snack_id
-            WHERE pl.user_id = m.user_id AND pl.created_at >= ?2 AND ${BEFORE("pl.created_at")}
-              AND c.scored = 1 AND (${COUNTS}))${invitePointsSql("m.user_id", "?2", "?4")}`,
-  checkins: `SELECT COUNT(*) FROM checkins c JOIN snacks s ON s.id = c.snack_id
-              WHERE c.user_id = m.user_id AND c.created_at >= ?2 AND ${BEFORE("c.created_at")}
-                AND c.scored = 1 AND (${COUNTS})`,
-  unique: `SELECT COUNT(DISTINCT c.snack_id) FROM checkins c JOIN snacks s ON s.id = c.snack_id
-            WHERE c.user_id = m.user_id AND c.created_at >= ?2 AND ${BEFORE("c.created_at")}
-              AND c.scored = 1 AND (${COUNTS})`,
-};
-
-type ScoreRow = { username: string; avatarId: string | null; role: BoardRow["role"]; value: number };
-
-/** Every current member's score between two times (until = null means up to now). */
-async function scores(db: D1Database, g: GroupRow, since: number, until: number | null): Promise<ScoreRow[]> {
-  const { results } = await db
-    .prepare(
-      `SELECT u.username, u.avatar_id AS avatarId, m.role, (${SCORE_SQL[g.scoring_mode]}) AS value
-         FROM group_members m JOIN users u ON u.id = m.user_id
-        WHERE m.group_id = ?1`,
-    )
-    .bind(g.id, since, g.categories, until)
-    .all<ScoreRow>();
-  return results;
-}
-
 /** The group's leaderboard for the current period, every member included. */
 async function leaderboard(db: D1Database, g: GroupRow): Promise<BoardRow[]> {
-  return rank(await scores(db, g, periodStart(g.reset_period, now()), null));
+  return rank(await squadScores(db, g, periodStart(g.reset_period, now()), null));
 }
 
 /**
  * Who wears the crown this week: the top scorer last Monday to Sunday, by
  * the squad's own scoring and snack types. Only people still in the squad
- * can win, and nobody does if nobody scored. Ties share it.
+ * can win, and nobody does if nobody scored. Ties: see champions().
  */
-async function lastWeekChampions(db: D1Database, g: GroupRow): Promise<GroupPage["champions"]> {
+async function lastWeekChampions(db: D1Database, g: GroupRow): Promise<Pick<GroupPage, "champions" | "championTie">> {
   const { start, end } = lastWeek(now());
-  return champions(await scores(db, g, start, end)).map((r) => ({ username: r.username, value: r.value }));
+  const rows = await squadScores(db, g, start, end);
+  const winners = champions(rows).map((r) => ({ username: r.username, value: r.value }));
+  // A single winner who shared the top score took it by getting there first.
+  const championTie = winners.length === 1 && champions(rows, "share").length > 1;
+  return { champions: winners, championTie };
 }
 
 async function membership(db: D1Database, groupId: string, userId: string) {
@@ -310,7 +278,7 @@ groups.get("/:id", async (c) => {
     myRole: g.role,
     periodEnd: periodEnd(g.reset_period, now()),
     board,
-    champions: crowned,
+    ...crowned,
     favourite: favourite ?? null,
   };
   return c.json(page);

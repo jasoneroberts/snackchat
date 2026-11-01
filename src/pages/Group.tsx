@@ -132,6 +132,7 @@ export function Group({ id, me }: { id: string; me: Me }) {
               {data.champions.length === 1 ? (
                 <>
                   <b>{champ.username}</b> won last week with {champ.value} {mode.unit}
+                  {data.championTie && " (a tie, but they got there first)"}
                 </>
               ) : (
                 <>
