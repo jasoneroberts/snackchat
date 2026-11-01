@@ -74,13 +74,3 @@ push.put("/squads", async (c) => {
   await c.env.DB.prepare("UPDATE users SET squad_alerts = ? WHERE id = ?").bind(body.on ? 1 : 0, currentUser(c).id).run();
   return c.json({ ok: true, squadAlerts: body.on });
 });
-
-// "Weekly round-up instead": { on: boolean }. Off unless turned on. When on,
-// likes and squad check-ins come as one Sunday push (lib/weeklyDigest.ts)
-// instead of one push each as they happen.
-push.put("/digest", async (c) => {
-  const body = (await c.req.json().catch(() => null)) as { on?: unknown } | null;
-  if (typeof body?.on !== "boolean") return c.json({ error: "Say on or off." }, 400);
-  await c.env.DB.prepare("UPDATE users SET weekly_digest = ? WHERE id = ?").bind(body.on ? 1 : 0, currentUser(c).id).run();
-  return c.json({ ok: true, weeklyDigest: body.on });
-});

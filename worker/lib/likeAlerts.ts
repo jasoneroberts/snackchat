@@ -4,8 +4,6 @@
 //   - it's their own check-in (no telling you about your own heart),
 //   - either of them has blocked the other,
 //   - the owner turned these off in Settings (users.like_alerts = 0),
-//   - the owner asked for a weekly round-up instead (users.weekly_digest = 1;
-//     the like is counted in their Sunday push, see weeklyDigest.ts),
 //   - we've already told the owner about this person liking this check-in.
 //     like_notices remembers that, so unlike, like, unlike, like only ever
 //     buzzes once.
@@ -51,7 +49,7 @@ export async function notifyLike(env: Env, origin: string, checkinId: string, li
            JOIN users o ON o.id = c.user_id
            JOIN snacks s ON s.id = c.snack_id
            JOIN users l ON l.id = ?2
-          WHERE c.id = ?1 AND o.id != ?2 AND o.like_alerts = 1 AND o.weekly_digest = 0 AND o.id NOT LIKE 'demo-%'
+          WHERE c.id = ?1 AND o.id != ?2 AND o.like_alerts = 1 AND o.id NOT LIKE 'demo-%'
             AND NOT ${blockedEitherWay("o.id", "?2")}
             AND EXISTS (SELECT 1 FROM push_subscriptions p WHERE p.user_id = o.id)`,
       )

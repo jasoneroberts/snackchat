@@ -543,3 +543,7 @@ select:focus { outline: 2px solid var(--orange); border-color: transparent; }
 .champions-card { border: 2px solid var(--orange); }
 .champion-row { display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; }
 .champion-medal { font-size: 1.6rem; width: 32px; text-align: center; flex-shrink: 0; }
+
+/* Your week (src/components/YourWeekCard.tsx) */
+.week-row { display: flex; align-items: flex-start; gap: 10px; color: inherit; text-decoration: none; line-height: 1.35; }
+.week-icon { width: 24px; text-align: center; flex-shrink: 0; }
