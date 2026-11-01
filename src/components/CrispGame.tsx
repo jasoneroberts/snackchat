@@ -2,6 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { drawCrisp, drawGame } from "../game/draw";
 import { WORLD_H, newGame, resize, score, start, step, type CrashCause, type Game } from "../game/wingIt";
 import { bestScore, recordScore } from "../lib/goldenCrisp";
+import { api } from "../api";
+import { line } from "../../shared/voice";
+import { WINGIT_BADGES } from "../../shared/achievements";
+
 import { useVoice } from "../lib/voice";
 
 // What to say when the run ends, in each voice. Kept here rather than in
@@ -24,6 +28,8 @@ interface Result {
   best: number;
   newBest: boolean;
   line: string;
+  /** Score badges this round earned, filled in when the server answers. */
+  badges?: string[];
 }
 
 /**
@@ -99,6 +105,10 @@ export function CrispGame({ onClose, banner }: { onClose: () => void; banner?: s
           setBest(b);
           const lines = ENDINGS[voice === "lad" ? "lad" : "grownup"][g.cause ?? "bar"];
           setResult({ score: s, best: b, newBest, line: lines[Math.floor(Math.random() * lines.length)] });
+          // Score badges: send the best on this phone, so earlier high scores count too.
+          if (b >= WINGIT_BADGES[0].goal) api<{ newBadges: { name: string }[] }>("/achievements/wingit", { body: { score: b } })
+            .then((r) => r.newBadges.length && setResult((prev) => prev && { ...prev, badges: r.newBadges.map((x) => x.name) }))
+            .catch(() => {});
         }
       }
       frame = requestAnimationFrame(tick);
@@ -202,6 +212,11 @@ export function CrispGame({ onClose, banner }: { onClose: () => void; banner?: s
           <p className="wingit-line">{result.line}</p>
           <p className="wingit-final">{result.score}</p>
           <p className="wingit-sub">{result.newBest ? "New best!" : `Best ${result.best}`}</p>
+          {result.badges?.map((name) => (
+            <p key={name} className="wingit-sub wingit-badge">
+              {line(voice, "badges.newNamed", { vars: { name } })}
+            </p>
+          ))}
           <div className="wingit-actions">
             <button type="button" className="button" onClick={again}>
               Fly again

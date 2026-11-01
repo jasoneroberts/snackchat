@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BADGES, isEarly, isLate, streakFrom, ukHour, weekNumber, weekStartOf } from "../shared/achievements";
-import { awardSecretBadge, checkAchievements, sendStreakNudges, streakMessage } from "../worker/lib/achievements";
+import { awardSecretBadge, awardWingItBadges, checkAchievements, sendStreakNudges, streakMessage } from "../worker/lib/achievements";
 import { crowns, lastWeeksChampions } from "../worker/lib/champions";
 import type { Env } from "../worker/env";
 
@@ -142,6 +142,18 @@ describe("badges", () => {
     expect(await awardSecretBadge(db, "jase", "golden_crisp", NOW + 5)).toMatchObject({ new: false, badge: { earnedAt: NOW } });
     const { page } = await checkAchievements(db, "jase", NOW);
     expect(page.badges.find((b) => b.id === "golden_crisp")?.earnedAt).toBe(NOW);
+  });
+
+  it("gives Wing It score badges up to the score, once each, and only lists them once earned", async () => {
+    expect(await awardWingItBadges(db, "jase", 9, NOW)).toEqual([]);
+    expect((await awardWingItBadges(db, "jase", 27, NOW)).map((b) => b.id)).toEqual(["wingit_10", "wingit_25"]);
+    expect((await awardWingItBadges(db, "jase", 30, NOW)).map((b) => b.id)).toEqual([]);
+    expect((await awardWingItBadges(db, "jase", 50, NOW)).map((b) => b.id)).toEqual(["wingit_50"]);
+    const { page, newly } = await checkAchievements(db, "sam", NOW);
+    expect(page.badges.some((b) => b.id.startsWith("wingit"))).toBe(false);
+    expect(newly).toEqual([]);
+    const mine = (await checkAchievements(db, "jase", NOW)).page.badges.filter((b) => b.id.startsWith("wingit"));
+    expect(mine.map((b) => b.earnedAt)).toEqual([NOW, NOW, NOW]);
   });
 
   it("has unique ids and sensible goals", () => {

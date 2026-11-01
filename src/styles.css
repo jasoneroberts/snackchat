@@ -560,6 +560,7 @@ button.cotw-side:disabled { cursor: default; }
 .champions-card { border: 2px solid var(--orange); }
 .champion-row { display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; }
 .champion-medal { font-size: 1.6rem; width: 32px; text-align: center; flex-shrink: 0; }
+.wingit-badge { opacity: 1; color: #ffd36b; font-weight: 900; }
 
 /* Your week (src/components/YourWeekCard.tsx) */
 .week-row { display: flex; align-items: flex-start; gap: 10px; color: inherit; text-decoration: none; line-height: 1.35; }

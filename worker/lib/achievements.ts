@@ -12,6 +12,7 @@
 import {
   BADGES,
   SECRET_BADGES,
+  WINGIT_BADGES,
   badgeById,
   isEarly,
   isLate,
@@ -29,10 +30,12 @@ import { periodStart } from "./groups";
 import { pushToUser } from "./notify";
 
 const SCAMPI_FRIES = "seed-scampi-fries";
+/** The metrics worked out from the database. "secret" and "wingit" badges are handed out by the game instead. */
+type Counted = Exclude<Metric, "secret" | "wingit">;
 const DAY = 86400;
 
 /** Every badge's number for one person, plus their streak. */
-export async function progressFor(db: D1Database, userId: string, nowSeconds: number): Promise<{ counts: Record<Metric, number>; streak: Streak }> {
+export async function progressFor(db: D1Database, userId: string, nowSeconds: number): Promise<{ counts: Record<Counted, number>; streak: Streak }> {
   // One trip to the database for all the simple counts. Only check-ins that
   // count (scored = 1) count here too, as on the boards.
   const distinctOf = (category: string) =>
@@ -73,11 +76,10 @@ export async function progressFor(db: D1Database, userId: string, nowSeconds: nu
 
   return {
     counts: {
-      ...(counts as Record<Exclude<Metric, "late" | "early" | "streak" | "secret">, number>),
+      ...(counts as Record<Exclude<Counted, "late" | "early" | "streak">, number>),
       late: times.filter((t) => isLate(t.created_at)).length,
       early: times.filter((t) => isEarly(t.created_at)).length,
       streak: streak.best,
-      secret: 0,
     },
     streak,
   };
@@ -119,14 +121,14 @@ export async function checkAchievements(
   ]);
   const earned = new Map(held.results.map((r) => [r.badge_id, r.earned_at]));
 
-  const reached = BADGES.filter((b) => !earned.has(b.id) && b.metric !== "secret" && counts[b.metric] >= b.goal);
+  const reached = BADGES.filter((b) => !earned.has(b.id) && b.metric in counts && counts[b.metric as Counted] >= b.goal);
   if (reached.length) {
     await db.batch(awardStatements(db, userId, reached, nowSeconds));
     for (const b of reached) earned.set(b.id, nowSeconds);
   }
 
   const badges = BADGES.filter((b) => !b.hidden || earned.has(b.id)).map((b) =>
-    toState(b, b.metric === "secret" ? null : Math.min(counts[b.metric], b.goal), earned.get(b.id) ?? null),
+    toState(b, b.metric in counts ? Math.min(counts[b.metric as Counted], b.goal) : null, earned.get(b.id) ?? null),
   );
   return { page: { streak, badges }, newly: badges.filter((b) => reached.some((r) => r.id === b.id)) };
 }
@@ -150,6 +152,25 @@ export async function awardSecretBadge(
     .bind(userId, def.id)
     .first<{ earned_at: number }>();
   return { badge: toState(def, null, row?.earned_at ?? nowSeconds), new: isNew };
+}
+
+/**
+ * A Wing It round has ended: give every score badge the score reaches. The
+ * game sends its best score on this phone, so people who played before
+ * these badges existed get theirs too. Returns the ones that are new.
+ * Scores aren't kept: the badges are the record.
+ */
+export async function awardWingItBadges(
+  db: D1Database,
+  userId: string,
+  score: number,
+  nowSeconds = Math.floor(Date.now() / 1000),
+): Promise<BadgeState[]> {
+  const reached = WINGIT_BADGES.filter((b) => score >= b.goal);
+  if (!reached.length) return [];
+  const results = await db.batch(awardStatements(db, userId, reached, nowSeconds));
+  // Every badge is two statements; the second (into user_badges) says if it's new.
+  return reached.filter((_, i) => (results[i * 2 + 1]?.meta?.changes ?? 0) > 0).map((b) => toState(b, null, nowSeconds));
 }
 
 /**

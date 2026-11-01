@@ -12,6 +12,7 @@ import { SharePicture } from "./SharePicture";
  * picture.
  */
 export function Achievements({ data, username, isMe }: { data: AchievementsPage; username: string; isMe: boolean }) {
+  const { t } = useVoice();
   const [open, setOpen] = useState<BadgeState | null>(null);
   const [sharing, setSharing] = useState<BadgeState | null>(null);
   const earned = data.badges.filter((b) => b.earnedAt !== null).length;
@@ -20,7 +21,7 @@ export function Achievements({ data, username, isMe }: { data: AchievementsPage;
     <section className="card-plain stack-sm">
       <StreakLine streak={data.streak} isMe={isMe} />
       <div className="row-between">
-        <h2 className="section-title no-margin">Badges</h2>
+        <h2 className="section-title no-margin">{t("badges.title")}</h2>
         <span className="small muted">
           {earned} of {data.badges.length}
         </span>
@@ -104,12 +105,13 @@ function StreakLine({ streak, isMe }: { streak: AchievementsPage["streak"]; isMe
 
 /** The share sheet for one badge. Used on the profile and straight after earning it. */
 export function ShareBadge({ badge, username, onClose }: { badge: BadgeState; username: string; onClose: () => void }) {
+  const { t } = useVoice();
   const link = withInviter(`${window.location.origin}/?ref=badge`, username);
   return (
     <SharePicture
       title={`Share ${badge.name}`}
-      make={() => makeBadgeCard({ badge, username, site: window.location.host })}
-      text={`I just earned the ${badge.name} badge on Crunchd ${badge.emoji} ${badge.description} Can you get it? ${link}`}
+      make={() => makeBadgeCard({ badge, username, site: window.location.host, heading: t("badges.cardTop") })}
+      text={`${t("badges.shareText", { vars: { name: badge.name } })} ${badge.emoji} ${badge.description} Can you get it? ${link}`}
       link={link}
       alt={`I earned ${badge.name} on Crunchd`}
       onClose={onClose}
@@ -119,6 +121,7 @@ export function ShareBadge({ badge, username, onClose }: { badge: BadgeState; us
 
 /** "New badge!" rows, shown after a check-in. */
 export function NewBadges({ badges, username }: { badges: BadgeState[]; username: string }) {
+  const { t } = useVoice();
   const [sharing, setSharing] = useState<BadgeState | null>(null);
   if (!badges.length) return null;
   return (
@@ -129,7 +132,7 @@ export function NewBadges({ badges, username }: { badges: BadgeState[]; username
             {b.emoji}
           </span>
           <div className="grow">
-            <div className="small accent">New badge!</div>
+            <div className="small accent">{t("badges.new")}</div>
             <div className="big-text">{b.name}</div>
           </div>
           <button type="button" className="button small secondary" onClick={() => setSharing(b)}>

@@ -73,7 +73,7 @@ export async function newCanvas(): Promise<{ canvas: HTMLCanvasElement; ctx: Can
   return { canvas, ctx, icon };
 }
 
-export async function makeBadgeCard(input: { badge: BadgeState; username: string; site: string }): Promise<Blob> {
+export async function makeBadgeCard(input: { badge: BadgeState; username: string; site: string; heading: string }): Promise<Blob> {
   const { canvas, ctx, icon } = await newCanvas();
   drawBackground(ctx);
   drawHeader(ctx, icon);
@@ -88,7 +88,7 @@ export async function makeBadgeCard(input: { badge: BadgeState; username: string
 
   ctx.fillStyle = MUTED;
   ctx.font = `800 44px ${FONT}`;
-  ctx.fillText("I earned a badge", mid, cardY + 110);
+  ctx.fillText(input.heading, mid, cardY + 110);
 
   // The medal: a ribbon, a gold ring, a cream face and the badge's emoji.
   const cy = cardY + 470;

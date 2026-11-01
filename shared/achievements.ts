@@ -24,7 +24,8 @@ export type Metric =
   | "scampi_low" // times you rated Scampi Fries 2 or under
   | "scampi_high" // times you rated Scampi Fries 4.5 or more
   | "streak" // best weekly streak ever
-  | "secret"; // never counted: given out by a hidden game (see SECRET_BADGES)
+  | "secret" // never counted: given out by a hidden game (see SECRET_BADGES)
+  | "wingit"; // a Wing It score, sent by the game when a round ends (see WINGIT_BADGES)
 
 export interface BadgeDef {
   id: string;
@@ -69,7 +70,14 @@ export const BADGES: BadgeDef[] = [
     goal: 1,
     hidden: true,
   },
+  // Wing It scores. Hidden like the game itself, so they only show once earned.
+  { id: "wingit_10", name: "Lift Off", emoji: "🪽", description: "Score 10 in Wing It.", metric: "wingit", goal: 10, hidden: true },
+  { id: "wingit_25", name: "Frequent Flyer", emoji: "✈️", description: "Score 25 in Wing It.", metric: "wingit", goal: 25, hidden: true },
+  { id: "wingit_50", name: "Crisp Ace", emoji: "🚀", description: "Score 50 in Wing It.", metric: "wingit", goal: 50, hidden: true },
 ];
+
+/** The Wing It score badges, lowest first (POST /api/achievements/wingit). */
+export const WINGIT_BADGES = BADGES.filter((b) => b.metric === "wingit");
 
 /** Badges a hidden game gives out itself (POST /api/achievements/secret/:id). */
 export const SECRET_BADGES = new Set(BADGES.filter((b) => b.metric === "secret").map((b) => b.id));

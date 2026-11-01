@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { api } from "../api";
 import { foundGoldenCrisp, markFound, onGoldenCrisp } from "../lib/goldenCrisp";
 import { CrispBadge, CrispGame } from "./CrispGame";
+import { line } from "../../shared/voice";
+import { useVoice } from "../lib/voice";
 import { track } from "../lib/track";
 
 /**
@@ -10,6 +12,7 @@ import { track } from "../lib/track";
  * the screen for a few seconds. Tap it in time and Wing It opens.
  */
 export function GoldenCrisp() {
+  const { voice } = useVoice();
   // A new number each flight, so a second flight restarts the animation.
   const [flight, setFlight] = useState<{ id: number; top: number; flip: boolean } | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -43,7 +46,7 @@ export function GoldenCrisp() {
       const r = await api<{ new?: boolean; badge?: { name?: string } }>("/achievements/secret/golden_crisp", {
         method: "POST",
       });
-      if (r.new) setBanner(`You caught the Golden Crisp! New badge: ${r.badge?.name ?? "Golden Crisp"}`);
+      if (r.new) setBanner(`You caught the Golden Crisp! ${line(voice, "badges.newNamed", { vars: { name: r.badge?.name ?? "Golden Crisp" } })}`);
     } catch {
       // No badge yet. Nothing to tell them.
     }
