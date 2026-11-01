@@ -219,14 +219,16 @@ describe("last week's champions", () => {
     expect(result.person).toMatchObject({ username: "sam", points: 20 });
   });
 
-  it("leaves admins off, like the global Table", async () => {
+  it("counts admins like anyone else, but not check-ins marked scored = 0", async () => {
     const [a] = await crisps(1);
     await checkIn("jase", a, MONDAY - DAY, 4);
     await ledger("jase", "c1", 10, MONDAY - DAY);
     await db.prepare("UPDATE users SET is_admin = 1 WHERE id = 'jase'").run();
-    const result = await lastWeeksChampions(db, NOW);
-    expect(result.person).toBeNull();
-    expect(result.snack?.id).toBe(a); // their rating still counts for the snack
+    expect((await lastWeeksChampions(db, NOW)).person).toMatchObject({ username: "jase", points: 10 });
+
+    // A pre-launch test check-in: kept on show, but worth nothing.
+    await db.prepare("UPDATE checkins SET scored = 0 WHERE id = 'c1'").run();
+    expect((await lastWeeksChampions(db, NOW)).person).toBeNull();
   });
 
   it("is empty after a quiet week", async () => {
