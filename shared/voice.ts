@@ -80,6 +80,13 @@ export const LINES = {
   "push.no": { grownup: "Not now", lad: "Nah" },
   "share.prompt": { grownup: "Share it and see what your friends would give it.", lad: "Show the lads. Start the {snack} debate." },
 
+  // Badges (src/components/Achievements.tsx). Lad mode calls them chieves.
+  "badges.title": { grownup: "Badges", lad: "Chieves" },
+  "badges.new": { grownup: "New badge!", lad: "New chieve!" },
+  "badges.newNamed": { grownup: "New badge: {name}", lad: "New chieve: {name}" },
+  "badges.cardTop": { grownup: "I earned a badge", lad: "I bagged a chieve" },
+  "badges.shareText": { grownup: "I just earned the {name} badge on Crunchd", lad: "Just bagged the {name} chieve on Crunchd" },
+
   // Explore
   "explore.setTaste": { grownup: "What do you like?", lad: "What's your poison?" },
   "explore.yourTaste": { grownup: "Your taste", lad: "Your poison" },
