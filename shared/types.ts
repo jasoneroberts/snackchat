@@ -17,6 +17,10 @@ export interface FeedItem {
   createdAt: number; // Unix seconds
   likes: number; // hearts from people the viewer can see
   liked: boolean; // whether the viewer has hearted it
+  bagged: boolean; // the viewer has this snack in their bagged (saved to try) list
+  tried: boolean; // the viewer has checked this snack in themselves
+  bags: number; // own check-ins only: people who bagged the snack from it (else 0)
+  tries: number; // own check-ins only: of those, people who then tried it (else 0)
 }
 
 /** Someone who hearted a check-in. */

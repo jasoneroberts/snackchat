@@ -39,7 +39,12 @@ export function CheckIn({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // Posted: the share screen shows until they tap Done.
-  const [posted, setPosted] = useState<{ points: number; photoPending: boolean; newBadges: BadgeState[] } | null>(null);
+  const [posted, setPosted] = useState<{
+    points: number;
+    photoPending: boolean;
+    newBadges: BadgeState[];
+    tip: { username: string; points: number } | null;
+  } | null>(null);
   const { t } = useVoice();
 
   // Editing: fill the form in from the check-in as it is.
@@ -118,8 +123,13 @@ export function CheckIn({
       return;
     }
     try {
-      const res = await api<{ points: number; photoPending: boolean; newBadges?: BadgeState[] }>("/checkins", { body: form });
-      setPosted({ points: res.points, photoPending: res.photoPending, newBadges: res.newBadges ?? [] });
+      const res = await api<{
+        points: number;
+        photoPending: boolean;
+        newBadges?: BadgeState[];
+        tip?: { username: string; points: number } | null;
+      }>("/checkins", { body: form });
+      setPosted({ points: res.points, photoPending: res.photoPending, newBadges: res.newBadges ?? [], tip: res.tip ?? null });
     } catch (err) {
       setError(errorText(err));
       setBusy(false);
@@ -142,6 +152,7 @@ export function CheckIn({
         review={review.trim() || null}
         photo={photo?.blob ?? null}
         newBadges={posted.newBadges}
+        tip={posted.tip}
         onDone={() => onDone(snack.name, posted.points, posted.photoPending)}
       />
     );

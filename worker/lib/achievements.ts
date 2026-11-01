@@ -56,6 +56,7 @@ export async function progressFor(db: D1Database, userId: string, nowSeconds: nu
          (SELECT COUNT(*) FROM likes l JOIN checkins c ON c.id = l.checkin_id WHERE c.user_id = ?1 AND l.user_id != ?1) AS hearts,
          (SELECT COUNT(*) FROM group_members WHERE user_id = ?1) AS squads,
          (SELECT COUNT(*) FROM referrals WHERE inviter_id = ?1) AS invites,
+         (SELECT COUNT(*) FROM bag_tips WHERE tipper_id = ?1) AS tips,
          (SELECT COUNT(*) FROM checkins WHERE user_id = ?1 AND scored = 1 AND snack_id = '${SCAMPI_FRIES}' AND overall <= 2) AS scampi_low,
          (SELECT COUNT(*) FROM checkins WHERE user_id = ?1 AND scored = 1 AND snack_id = '${SCAMPI_FRIES}' AND overall >= 4.5) AS scampi_high`,
     )

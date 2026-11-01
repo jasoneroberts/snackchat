@@ -4,6 +4,7 @@ import type { FeedItem } from "../../shared/types";
 import { rating, timeAgo } from "../lib/format";
 import { useVoice } from "../lib/voice";
 import { Avatar } from "./Avatar";
+import { BagCount, BagIt } from "./BagIt";
 import { personCrownLabel, useCrowns } from "../lib/crowns";
 import { Likes } from "./Likes";
 import { Link } from "./Link";
@@ -106,6 +107,8 @@ export function CheckinCard({
       {/* The heart, then Edit and Delete on your own check-ins or Report on everyone else's. */}
       <div className="checkin-actions">
         <Likes item={item} />
+        {/* Bag someone else's snack to try; on your own, how many bagged it from you. */}
+        {mine ? <BagCount item={item} /> : <BagIt item={item} />}
         {mine && (
           <Link href={`/checkin?edit=${encodeURIComponent(item.id)}`} className="link-button small checkin-edit">
             Edit

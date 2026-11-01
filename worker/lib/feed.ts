@@ -26,6 +26,10 @@ interface Row {
   created_at: number;
   likes: number;
   liked: number;
+  bagged: number;
+  tried: number;
+  bags: number;
+  tries: number;
 }
 
 export interface FeedFilter {
@@ -50,7 +54,13 @@ export async function listCheckins(db: D1Database, f: FeedFilter): Promise<FeedI
               (SELECT COALESCE(SUM(points), 0) FROM points_ledger WHERE checkin_id = c.id) AS points,
               -- Hearts, leaving out people the viewer can't see, so the count matches the list.
               (SELECT COUNT(*) FROM likes l WHERE l.checkin_id = c.id AND NOT ${blockedEitherWay("?1", "l.user_id")}) AS likes,
-              EXISTS (SELECT 1 FROM likes l WHERE l.checkin_id = c.id AND l.user_id = ?1) AS liked
+              EXISTS (SELECT 1 FROM likes l WHERE l.checkin_id = c.id AND l.user_id = ?1) AS liked,
+              -- For the "Bag it" button (lib/bagTips.ts): has the viewer bagged or tried this snack?
+              EXISTS (SELECT 1 FROM explore_choices e WHERE e.user_id = ?1 AND e.snack_id = c.snack_id AND e.choice = 'saved') AS bagged,
+              EXISTS (SELECT 1 FROM checkins x WHERE x.user_id = ?1 AND x.snack_id = c.snack_id) AS tried,
+              -- On your own check-ins only: how many bagged it from here, and how many of them have tried it.
+              CASE WHEN c.user_id = ?1 THEN (SELECT COUNT(*) FROM explore_choices e WHERE e.from_checkin_id = c.id) ELSE 0 END AS bags,
+              CASE WHEN c.user_id = ?1 THEN (SELECT COUNT(*) FROM bag_tips t WHERE t.from_checkin_id = c.id) ELSE 0 END AS tries
          FROM checkins c
          JOIN users u ON u.id = c.user_id
          JOIN snacks s ON s.id = c.snack_id
@@ -94,6 +104,10 @@ export async function listCheckins(db: D1Database, f: FeedFilter): Promise<FeedI
     createdAt: r.created_at,
     likes: r.likes,
     liked: r.liked === 1,
+    bagged: r.bagged === 1,
+    tried: r.tried === 1,
+    bags: r.bags,
+    tries: r.tries,
   }));
 }
 
