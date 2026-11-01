@@ -3,6 +3,7 @@ import type { ProfilePage } from "../../shared/types";
 import { adminToDo, api, errorText, type Me } from "../api";
 import { Achievements } from "../components/Achievements";
 import { Avatar } from "../components/Avatar";
+import { personCrownLabel, useCrowns } from "../lib/crowns";
 import { CheckinCard } from "../components/CheckinCard";
 import { InviteFriends } from "../components/InviteFriends";
 import { Link } from "../components/Link";
@@ -26,6 +27,7 @@ export function Profile({
   const { t } = useVoice();
   const [data, setData] = useState<ProfilePage | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const crowns = useCrowns();
   const isMe = username.toLowerCase() === me.username.toLowerCase();
 
   const load = () =>
@@ -52,15 +54,23 @@ export function Profile({
 
   if (error) return <p className="error page">{error}</p>;
   if (!data) return <p className="muted page">Loading…</p>;
+  const crownLabel = personCrownLabel(crowns?.people[data.profile.username]);
 
   const joined = new Date(data.profile.joinedAt * 1000).toLocaleDateString("en-GB", { month: "short", year: "numeric" });
 
   return (
     <div className="page stack">
       <div className="profile-head">
-        <Avatar username={data.profile.username} avatarId={data.profile.avatarId} size={72} />
+        <Avatar
+          username={data.profile.username}
+          avatarId={data.profile.avatarId}
+          size={72}
+          crown={!!crownLabel}
+          crownLabel={crownLabel ?? undefined}
+        />
         <div>
           <h1 className="title">{data.profile.username}</h1>
+          {crownLabel && <div className="small accent">{crownLabel}</div>}
           <div className="muted">
             {data.profile.country === "GB" ? "UK" : data.profile.country} · Snacking since {joined}
           </div>

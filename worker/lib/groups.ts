@@ -87,3 +87,35 @@ export function rank<T extends { value: number; username: string }>(rows: T[]): 
     return { ...row, rank: current };
   });
 }
+
+/**
+ * Last week's window for the squad crown: the Monday-to-Monday (UTC) week
+ * before this one, whatever the squad's own reset period is.
+ */
+export function lastWeek(nowSeconds: number): { start: number; end: number } {
+  const end = periodStart("weekly", nowSeconds);
+  return { start: end - 7 * 86400, end };
+}
+
+/**
+ * How a tie at the top is settled. "first": one champion, whoever got to
+ * the winning score first (their last counted check-in of the week was
+ * earliest). "share": everyone tied wears a crown.
+ */
+export const CROWN_TIES: "first" | "share" = "first";
+
+/**
+ * Last week's champions: whoever came top, provided they scored something.
+ * Returns one person, or several on a tie when CROWN_TIES is "share".
+ */
+export function champions<T extends { value: number; username: string; lastAt?: number | null }>(
+  rows: T[],
+  ties: "first" | "share" = CROWN_TIES,
+): T[] {
+  const best = Math.max(0, ...rows.map((r) => r.value));
+  if (best <= 0) return [];
+  const top = rows
+    .filter((r) => r.value === best)
+    .sort((a, b) => (a.lastAt ?? Infinity) - (b.lastAt ?? Infinity) || a.username.localeCompare(b.username));
+  return ties === "share" ? top.sort((a, b) => a.username.localeCompare(b.username)) : top.slice(0, 1);
+}
