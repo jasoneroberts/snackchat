@@ -126,7 +126,7 @@ export const LINES = {
 export type LineKey = keyof typeof LINES;
 
 // Snack types that count as "crunch" in lad mode; everything else is "munch".
-const CRUNCHY = new Set(["crisps", "nuts"]);
+const CRUNCHY = new Set(["crisps", "nuts", "popcorn"]);
 
 export interface LineOptions {
   /** The snack type the line is about. Kids snacks always get grown-up words. */

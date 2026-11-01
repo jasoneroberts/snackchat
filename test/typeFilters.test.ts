@@ -16,7 +16,7 @@ describe("snack type filters", () => {
   });
 
   it("Rest covers the types without their own lad pill", () => {
-    expect(filterTypes(REST)).toEqual(["kids", "world", "healthy"]);
+    expect(filterTypes(REST)).toEqual(["popcorn", "kids", "world", "healthy"]);
     expect(filterShort(REST)).toBe("the rest");
   });
 
