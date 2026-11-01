@@ -43,13 +43,51 @@ export function remember(key: string, value: string | null): void {
   }
 }
 
+// One more ask for people we'd stopped asking (they said "Not now" three
+// times, or turned notifications off in Settings), from when notifications
+// became "on by default" in Nov 2026. Set once that ask has been answered,
+// so it really is just once.
+const ASKED_AGAIN = "crunchd.pushAskedAgain";
+// The "notifications are blocked" how-to: shown once, it needs phone settings.
+const BLOCKED_SHOWN = "crunchd.pushBlockedShown";
+// "Some of your notifications are off": asked once per phone.
+const TYPES_ASKED = "crunchd.pushTypesAsked";
+
 /** Should we show the sheet now? `state` is pushState() for this phone. */
 export function shouldAskForPush(state: PushState, now = Date.now()): boolean {
-  // Only "off" can be fixed with one tap. "blocked" needs phone settings,
-  // "needs-install" needs the home screen first (the welcome page covers that).
-  if (state !== "off" || recall(TURNED_OFF)) return false;
+  // Only "off" can be fixed with one tap. "blocked" needs phone settings
+  // (see shouldShowBlockedHelp), "needs-install" needs the home screen first
+  // (the welcome page covers that).
+  if (state !== "off") return false;
   const { count, next } = askRecord();
-  return count <= ASK_GAPS_DAYS.length && now >= next;
+  const stoppedAsking = recall(TURNED_OFF) !== null || count > ASK_GAPS_DAYS.length;
+  if (stoppedAsking) return recall(ASKED_AGAIN) === null; // the one comeback ask
+  return now >= next;
+}
+
+/** Call when they answer the sheet either way, so the comeback ask is used up. */
+export function markPushAsked(): void {
+  remember(ASKED_AGAIN, "1");
+}
+
+/** Blocked in the phone's settings: show how to unblock, once. */
+export function shouldShowBlockedHelp(state: PushState): boolean {
+  return state === "blocked" && recall(BLOCKED_SHOWN) === null;
+}
+export function markBlockedHelpShown(): void {
+  remember(BLOCKED_SHOWN, "1");
+}
+
+/**
+ * Notifications are on for this phone but they've switched some kinds off
+ * in Settings. `off` is how many kinds are off. Asked once: if they say
+ * "Keep as they are", that's their choice and we leave it.
+ */
+export function shouldAskAboutTypes(state: PushState, off: number): boolean {
+  return state === "on" && off > 0 && recall(TYPES_ASKED) === null;
+}
+export function markTypesAsked(): void {
+  remember(TYPES_ASKED, "1");
 }
 
 /** They tapped "Not now": back off a bit more each time. */

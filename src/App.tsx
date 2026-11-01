@@ -373,7 +373,7 @@ export function App() {
             </button>
           </div>
         )}
-        <PushPrompt me={me} path={path} />
+        <PushPrompt me={me} path={path} onChanged={refreshMe} />
         <GoldenCrisp />
         <TabBar active={tab} meBadge={adminToDo(me)} />
       </div>
