@@ -16,7 +16,6 @@ import { Privacy, Terms } from "./pages/Legal";
 import { DietCheck } from "./pages/DietCheck";
 import { Explore } from "./pages/Explore";
 import { Feed } from "./pages/Feed";
-import { Cotw } from "./pages/Cotw";
 import { Group } from "./pages/Group";
 import { Groups } from "./pages/Groups";
 import { Home, VerifyNotice } from "./pages/Home";
@@ -274,9 +273,6 @@ export function App() {
     tab = mine ? "/me" : "";
     title = mine ? "Your snacks" : `${triedBy}'s snacks`;
     page = <TriedSnacks username={triedBy} isMe={mine} />;
-  } else if (path === "/cotw") {
-    title = "Crisp of the Week";
-    page = <Cotw me={me} />;
   } else if (path === "/snacks") {
     title = "All snacks";
     page = <AllSnacks />;

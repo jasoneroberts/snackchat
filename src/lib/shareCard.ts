@@ -17,7 +17,7 @@ export interface ShareCardInput {
   site: string; // "getcrunchd.com"
 }
 
-// Shared with the badge and Crisp of the Week pictures (badgeCard.ts, battleCard.ts).
+// Shared with the badge picture (badgeCard.ts).
 export const W = 1080;
 export const H = 1920;
 export const ORANGE = "#f28c28";

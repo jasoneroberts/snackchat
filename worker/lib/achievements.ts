@@ -1,7 +1,7 @@
 // Badges and weekly streaks.
 //
 // Nothing here is counted up as it happens. Instead, whenever it matters
-// (after a check-in, a vote, or when a profile is opened) we work out every
+// (after a check-in, or when a profile is opened) we work out every
 // badge's number from what's already in the database, and any badge whose
 // number has reached its goal is written to user_badges. That means badges
 // can't drift out of step, existing users get the badges they've already
@@ -54,8 +54,7 @@ export async function progressFor(db: D1Database, userId: string, nowSeconds: nu
          (SELECT COUNT(*) FROM group_members WHERE user_id = ?1) AS squads,
          (SELECT COUNT(*) FROM referrals WHERE inviter_id = ?1) AS invites,
          (SELECT COUNT(*) FROM checkins WHERE user_id = ?1 AND scored = 1 AND snack_id = '${SCAMPI_FRIES}' AND overall <= 2) AS scampi_low,
-         (SELECT COUNT(*) FROM checkins WHERE user_id = ?1 AND scored = 1 AND snack_id = '${SCAMPI_FRIES}' AND overall >= 4.5) AS scampi_high,
-         (SELECT COUNT(*) FROM cotw_votes WHERE user_id = ?1) AS votes`,
+         (SELECT COUNT(*) FROM checkins WHERE user_id = ?1 AND scored = 1 AND snack_id = '${SCAMPI_FRIES}' AND overall >= 4.5) AS scampi_high`,
     )
     .bind(userId)
     .first<Record<string, number>>();
@@ -74,31 +73,16 @@ export async function progressFor(db: D1Database, userId: string, nowSeconds: nu
 
   return {
     counts: {
-      ...(counts as Record<Exclude<Metric, "late" | "early" | "streak" | "backed" | "secret">, number>),
+      ...(counts as Record<Exclude<Metric, "late" | "early" | "streak" | "secret">, number>),
       late: times.filter((t) => isLate(t.created_at)).length,
       early: times.filter((t) => isEarly(t.created_at)).length,
       streak: streak.best,
-      backed: await backedWinners(db, userId, nowSeconds),
       secret: 0,
     },
     streak,
   };
 }
 
-/** How many finished Crisp of the Week battles this person voted for the winner in. */
-async function backedWinners(db: D1Database, userId: string, nowSeconds: number): Promise<number> {
-  const { results } = await db
-    .prepare(
-      `SELECT v.snack_id AS mine, b.snack_a AS a, b.snack_b AS b,
-              (SELECT COUNT(*) FROM cotw_votes x WHERE x.week_start = b.week_start AND x.snack_id = b.snack_a) AS votesA,
-              (SELECT COUNT(*) FROM cotw_votes x WHERE x.week_start = b.week_start AND x.snack_id = b.snack_b) AS votesB
-         FROM cotw_votes v JOIN cotw_battles b ON b.week_start = v.week_start
-        WHERE v.user_id = ? AND b.week_start < ?`,
-    )
-    .bind(userId, periodStart("weekly", nowSeconds))
-    .all<{ mine: string; a: string; b: string; votesA: number; votesB: number }>();
-  return results.filter((r) => (r.votesA > r.votesB ? r.a : r.votesB > r.votesA ? r.b : null) === r.mine).length;
-}
 
 /** Write badges to someone's name. INSERT OR IGNORE, so giving one twice does nothing. */
 function awardStatements(db: D1Database, userId: string, badges: BadgeDef[], nowSeconds: number): D1PreparedStatement[] {
@@ -170,7 +154,7 @@ export async function awardSecretBadge(
 
 /**
  * Wrapped in a try for routes: a badge going wrong must never stop a
- * check-in or vote from saving. Returns the badges just earned, if any.
+ * check-in from saving. Returns the badges just earned, if any.
  */
 export async function newBadgesSafely(db: D1Database, userId: string, nowSeconds?: number): Promise<BadgeState[]> {
   try {

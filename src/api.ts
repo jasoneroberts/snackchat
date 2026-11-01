@@ -21,6 +21,8 @@ export interface Me {
   likeAlerts: boolean;
   /** "Someone in your squad just checked in" pushes on (on unless turned off). */
   squadAlerts: boolean;
+  /** Likes and squad check-ins as one Sunday push instead of one each (off unless turned on). */
+  weeklyDigest: boolean;
   /** null until they've picked lad mode or grown-up mode. */
   voice: Voice | null;
 }
