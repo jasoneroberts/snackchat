@@ -336,8 +336,9 @@ fieldset legend { padding: 0; margin-bottom: 6px; }
 [data-voice="lad"] .section-title,
 .voice-option[data-voice="lad"] .voice-name { text-transform: uppercase; letter-spacing: 0.02em; }
 /* Beer-mat badges: square-ish and red rather than round and green. */
-[data-voice="lad"] .points-badge,
 [data-voice="lad"] .count-badge { background: var(--mat-red); color: #fff; border-radius: 4px; }
+/* Points on a check-in: a faint red tint with soft pink text, so it reads as a beer-mat stamp, not an alert. */
+[data-voice="lad"] .points-badge { background: color-mix(in srgb, var(--mat-red) 16%, transparent); color: #e8a0a9; font-weight: 700; border: 1px solid color-mix(in srgb, var(--mat-red) 35%, transparent); border-radius: 4px; }
 [data-voice="lad"] .photo-drop { border-color: var(--line); }
 [data-voice="lad"] .link-box { border-color: var(--line); }
 
