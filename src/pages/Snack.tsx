@@ -9,7 +9,7 @@ import { DietBadges } from "../components/DietFilter";
 import { ReportButton } from "../components/Report";
 import { SnackTile } from "../components/SnackTile";
 import { Crown } from "../components/Avatar";
-import { snackCrownLabel, useCrowns } from "../lib/crowns";
+import { snackAwardLabel, useCrowns } from "../lib/crowns";
 import { rating } from "../lib/format";
 
 export function Snack({ id, me }: { id: string; me: Me }) {
@@ -26,7 +26,7 @@ export function Snack({ id, me }: { id: string; me: Me }) {
 
   if (error) return <p className="error page">{error}</p>;
   if (!data) return <p className="muted page">Loading…</p>;
-  const crownLabel = snackCrownLabel(crowns?.snacks[data.snack.id]);
+  const awards = crowns?.snacks[data.snack.id] ?? [];
 
   const { snack } = data;
   const category = getCategory(snack.category);
@@ -34,14 +34,14 @@ export function Snack({ id, me }: { id: string; me: Me }) {
 
   return (
     <div className="page stack">
-      <SnackTile snack={{ ...snack, photoId: snack.photoId ?? photo }} />
+      <SnackTile snack={{ ...snack, photoId: snack.photoId ?? photo }} won={awards} crownSize={30} />
       <div>
         <h1 className="title">{snack.name}</h1>
-        {crownLabel && (
-          <div className="small accent row-inline">
-            <Crown size={15} label={crownLabel} /> {crownLabel}
+        {awards.map((kind) => (
+          <div key={kind} className="small accent row-inline">
+            <Crown size={15} kind={kind} label={snackAwardLabel(kind)} /> {snackAwardLabel(kind)}
           </div>
-        )}
+        ))}
         <div className="muted">
           {[snack.brand, category?.name, snack.country === "GB" ? "UK" : snack.country].filter(Boolean).join(" · ")}
           {snack.status === "pending" && <span className="tag">new, waiting for approval</span>}
