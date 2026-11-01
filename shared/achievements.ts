@@ -172,3 +172,13 @@ export interface Champions {
   /** Most points that week, as on the global people Table (admins left out). Null if nobody scored. */
   person: { username: string; avatarId: string | null; points: number } | null;
 }
+
+/**
+ * Who wears a crown around the app this week (worker/lib/champions.ts crowns()).
+ * people: username to "global" (last week's top scorer on Crunchd) or "squad"
+ * (won a squad last week). snacks: snack id to the tables it won.
+ */
+export interface Crowns {
+  people: Record<string, "global" | "squad">;
+  snacks: Record<string, ("week" | "month")[]>;
+}

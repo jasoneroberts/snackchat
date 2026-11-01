@@ -176,6 +176,10 @@ export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<v
               <span className="muted small">Who's joined, PIN resets</span>
             )}
           </Link>
+          <Link href="/admin/stats" className="card-plain row settings-link">
+            <b className="grow">Stats</b>
+            <span className="muted small">Who comes back, what gets used</span>
+          </Link>
           <Link href="/admin/health" className="card-plain row settings-link">
             <b className="grow">Health</b>
             <span className="muted small">Errors, admin changes, backups</span>
@@ -310,28 +314,6 @@ function Notifications({ me, onChanged }: { me: Me; onChanged: () => Promise<voi
           />
           Tell me when someone in my squads checks in
         </label>
-      )}
-      {state === "on" && (me.likeAlerts || me.squadAlerts) && (
-        <label className="radio-row">
-          <input
-            type="checkbox"
-            checked={me.weeklyDigest}
-            disabled={busy}
-            onChange={(e) => {
-              const on = e.target.checked;
-              void run(async () => {
-                await api("/push/digest", { method: "PUT", body: { on } });
-                await onChanged();
-              }, on ? "Done. You'll get one round-up on Sunday mornings instead." : "Back to hearing about them as they happen.");
-            }}
-          />
-          Send these as one weekly round-up instead
-        </label>
-      )}
-      {state === "on" && me.weeklyDigest && (me.likeAlerts || me.squadAlerts) && (
-        <p className="small muted no-margin">
-          Likes and squad check-ins come together in one message on Sunday mornings, not one at a time.
-        </p>
       )}
       {note && <p className="small muted no-margin">{note}</p>}
     </section>

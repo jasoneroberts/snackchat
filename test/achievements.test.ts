@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BADGES, isEarly, isLate, streakFrom, ukHour, weekNumber, weekStartOf } from "../shared/achievements";
 import { awardSecretBadge, awardWingItBadges, checkAchievements, sendStreakNudges, streakMessage } from "../worker/lib/achievements";
-import { lastWeeksChampions } from "../worker/lib/champions";
+import { crowns, lastWeeksChampions } from "../worker/lib/champions";
 import type { Env } from "../worker/env";
 
 // Pushes are recorded instead of sent.
@@ -231,5 +231,59 @@ describe("last week's champions", () => {
 
   it("is empty after a quiet week", async () => {
     expect(await lastWeeksChampions(db, NOW)).toMatchObject({ snack: null, person: null });
+  });
+});
+
+describe("crowns", () => {
+  const ledger = (userId: string, checkinId: string, points: number, time: number) =>
+    db.prepare("INSERT INTO points_ledger (user_id, checkin_id, reason, points, created_at) VALUES (?, ?, 'new_snack', ?, ?)").bind(userId, checkinId, points, time).run();
+  const squad = async (id: string, members: string[], mode = "checkins") => {
+    await db.prepare("INSERT INTO groups (id, name, invite_code, scoring_mode, created_by, created_at) VALUES (?, ?, ?, ?, ?, 0)").bind(id, id, id, mode, members[0]).run();
+    for (const m of members) await db.prepare("INSERT INTO group_members (group_id, user_id, joined_at) VALUES (?, ?, 0)").bind(id, m).run();
+  };
+  const lastWeek = MONDAY - 3 * DAY;
+
+  it("crowns busy squads' champions, and the global winner says so", async () => {
+    await addUser("pat");
+    await addUser("kim");
+    const [a, b] = await crisps(2);
+    await squad("pub", ["sam", "pat", "kim"]);
+    await checkIn("sam", a, lastWeek); // c1
+    await checkIn("sam", b, lastWeek); // c2
+    await checkIn("pat", a, lastWeek); // c3
+    await checkIn("kim", a, lastWeek); // c4
+    await ledger("pat", "c3", 50, lastWeek); // pat tops Crunchd on points
+    // A squad of one can't hand out crowns.
+    await squad("solo", ["jase"]);
+    await checkIn("jase", a, lastWeek);
+    const result = await crowns(db, NOW);
+    expect(result.people).toEqual({ sam: "squad", pat: "global" });
+  });
+
+  it("needs three people scoring in a squad", async () => {
+    const [a] = await crisps(1);
+    await squad("duo", ["jase", "sam"]);
+    await checkIn("sam", a, lastWeek);
+    await checkIn("jase", a, lastWeek);
+    expect((await crowns(db, NOW)).people).toEqual({});
+  });
+
+  it("settles a points tie by who got there first", async () => {
+    const [a] = await crisps(1);
+    await checkIn("jase", a, lastWeek + 3600); // c1, later
+    await checkIn("sam", a, lastWeek); // c2, earlier
+    await ledger("jase", "c1", 20, lastWeek + 3600);
+    await ledger("sam", "c2", 20, lastWeek);
+    expect((await lastWeeksChampions(db, NOW)).person?.username).toBe("sam");
+  });
+
+  it("crowns last week's and last month's top snacks", async () => {
+    const [a, b, c] = await crisps(3);
+    const october = Date.UTC(2026, 9, 10) / 1000;
+    await checkIn("jase", a, october, 5); // a lone 5 ranks as 3.75 on the month
+    await checkIn("jase", b, october, 4);
+    await checkIn("sam", b, october, 4); // b: 4 from two people, so b wins October
+    await checkIn("sam", c, lastWeek + 2 * DAY, 5); // Sunday 1 Nov: last week, not October
+    expect((await crowns(db, NOW)).snacks).toEqual({ [c]: ["week"], [b]: ["month"] });
   });
 });

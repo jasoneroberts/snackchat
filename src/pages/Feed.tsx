@@ -5,6 +5,7 @@ import { CheckinCard } from "../components/CheckinCard";
 import { Link } from "../components/Link";
 import { ChampionsCard } from "../components/ChampionsCard";
 import { useVoice } from "../lib/voice";
+import { YourWeekCard } from "../components/YourWeekCard";
 
 export function Feed({ me, onChanged }: { me: Me; onChanged: () => void }) {
   const [items, setItems] = useState<FeedItem[] | null>(null);
@@ -41,6 +42,7 @@ export function Feed({ me, onChanged }: { me: Me; onChanged: () => void }) {
   return (
     <div className="page stack">
       <ChampionsCard />
+      <YourWeekCard />
       {items.length === 0 && (
         <div className="empty">
           <h2>{t("feed.emptyTitle")}</h2>

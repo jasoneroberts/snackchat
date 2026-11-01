@@ -4,6 +4,7 @@ import { foundGoldenCrisp, markFound, onGoldenCrisp } from "../lib/goldenCrisp";
 import { CrispBadge, CrispGame } from "./CrispGame";
 import { line } from "../../shared/voice";
 import { useVoice } from "../lib/voice";
+import { track } from "../lib/track";
 
 /**
  * Lives once at the top of the signed-in app (App.tsx). It waits for the
@@ -37,6 +38,7 @@ export function GoldenCrisp() {
     setFlight(null);
     setBanner(first ? "You caught the Golden Crisp!" : "Caught it again!");
     setPlaying(true);
+    track("wingit");
     if (!first) return;
     // The achievements feature gives a secret badge for this. Until that's
     // live the endpoint won't exist, and that's fine: the game works without it.

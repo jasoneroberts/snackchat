@@ -12,6 +12,7 @@ import { ComingSoon } from "./pages/ComingSoon";
 import { BrandLogos } from "./pages/BrandLogos";
 import { AdminReports } from "./pages/AdminReports";
 import { Health } from "./pages/Health";
+import { Stats } from "./pages/Stats";
 import { Privacy, Terms } from "./pages/Legal";
 import { DietCheck } from "./pages/DietCheck";
 import { Explore } from "./pages/Explore";
@@ -303,6 +304,9 @@ export function App() {
   } else if (path === "/admin/reports" && me.isAdmin) {
     title = "Reports and requests";
     page = <AdminReports onChanged={refresh} />;
+  } else if (path === "/admin/stats" && me.isAdmin) {
+    title = "Stats";
+    page = <Stats />;
   } else if (path === "/admin/health" && me.isAdmin) {
     title = "Health";
     page = <Health />;

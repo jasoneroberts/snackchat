@@ -107,6 +107,10 @@ export interface GroupPage {
   myRole: "owner" | "admin" | "member";
   periodEnd: number | null; // Unix seconds, null when the board never resets
   board: BoardRow[];
+  /** Last Monday-to-Sunday week's top scorer(s), who wear a crown; empty if nobody scored. */
+  champions: { username: string; value: number }[];
+  /** True when the champion tied on score and won by getting there first. */
+  championTie: boolean;
   favourite: (SnackSummary & { avg: number; checkins: number }) | null;
 }
 
@@ -303,4 +307,88 @@ export interface InviteStats {
   joined: number;
   checkedIn: number;
   points: number; // invite points earned so far
+}
+
+// Admin Stats page (GET /api/admin/stats). Weeks run Monday to Sunday, UTC.
+export interface StatsSummary {
+  /** Whether app opens, Wing It and shares are being recorded yet (migration 0031). */
+  hasUsage: boolean;
+  people: number;
+  /** Did anything this week (checked in, liked, voted, opened the app...). */
+  activeThisWeek: number;
+  /** Active this week and joined before it: the people who came back. */
+  returningThisWeek: number;
+  /** Active last week and again this week. */
+  keptFromLastWeek: number;
+  /** People with notifications turned on, on at least one phone. */
+  pushOn: number;
+  /** Newest week first. */
+  weeks: StatsWeek[];
+  features: StatsFeature[];
+  sources: StatsSource[];
+  inviters: StatsInviter[];
+  /** Everyone, most recently active first. */
+  everyone: StatsPerson[];
+}
+
+export interface StatsWeek {
+  weekStart: number;
+  joined: number;
+  active: number;
+  returning: number;
+  checkins: number;
+}
+
+export interface StatsFeature {
+  key: string;
+  label: string;
+  /** Last 7 days: how many times, and by how many people. */
+  week: number;
+  weekPeople: number;
+  /** Last 30 days. */
+  month: number;
+  monthPeople: number;
+}
+
+export interface StatsSource {
+  /** The ?ref= on their first link; null for people who came straight in. */
+  ref: string | null;
+  joined: number;
+  /** ...of whom this many have checked in at least once. */
+  checkedIn: number;
+  activeThisWeek: number;
+}
+
+export interface StatsInviter {
+  username: string;
+  joined: number;
+  checkedIn: number;
+}
+
+export interface StatsPerson {
+  username: string;
+  joinedAt: number;
+  ref: string | null;
+  checkins: number;
+  /** Last time they did anything, within the weeks shown; null if not in that time. */
+  lastActive: number | null;
+  /** How many of the weeks shown they were active in. */
+  weeksActive: number;
+  activeThisWeek: boolean;
+}
+
+/** GET /api/week: what happened for you last week (Monday to Sunday, UTC). See worker/lib/yourWeek.ts. */
+export interface YourWeek {
+  /** Hearts on your check-ins from other people. */
+  likes: number;
+  /** Up to two of the people who liked them, most hearts first. */
+  likers: string[];
+  /** How many different people liked them, for "and 3 others". */
+  likerCount: number;
+  /** Your own check-ins. */
+  checkins: number;
+  /** Check-ins by people in your squads. */
+  squadCheckins: number;
+  /** The best-rated of those. */
+  best: { poster: string; snack: string; snackId: string; overall: number } | null;
 }

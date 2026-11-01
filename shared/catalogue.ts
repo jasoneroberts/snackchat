@@ -40,6 +40,17 @@ export const CATEGORIES: Category[] = [
     tint: "#FBD7A8",
     extra: [crunch, spice, { key: "grease", label: "Greasiness", low: "Dry", high: "Greasy" }],
   },
+  {
+    id: "popcorn",
+    name: "Popcorn",
+    short: "popcorn",
+    tint: "#FFF0B3",
+    extra: [
+      crunch,
+      { key: "coating", label: "Coating", low: "Light dusting", high: "Smothered" },
+      { key: "husks", label: "Bits in your teeth", low: "None", high: "Everywhere" },
+    ],
+  },
   { id: "nuts", name: "Nuts and seeds", short: "nuts", tint: "#D9E6B8", extra: [crunch, spice] },
   {
     id: "chocolate",

@@ -135,11 +135,12 @@ export function tellInviterAboutJoin(env: Env, origin: string, opts: { inviterId
  * board or squad covers, since they aren't for a snack. Empty when
  * INVITE_POINTS.onBoards is off.
  */
-export function invitePointsSql(userCol: string, since: string): string {
+export function invitePointsSql(userCol: string, since: string, until?: string): string {
   if (!INVITE_POINTS.onBoards) return "";
+  const before = until ? ` AND (${until} IS NULL OR ip.created_at < ${until})` : "";
   return ` + (SELECT COALESCE(SUM(ip.points), 0) FROM points_ledger ip
                WHERE ip.user_id = ${userCol} AND ip.checkin_id IS NULL
-                 AND ip.reason IN ('invite_join', 'invite_checkin') AND ip.created_at >= ${since})`;
+                 AND ip.reason IN ('invite_join', 'invite_checkin') AND ip.created_at >= ${since}${before})`;
 }
 
 /** Your invite numbers, for the card on your profile. */

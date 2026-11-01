@@ -4,6 +4,7 @@ import type { FeedItem } from "../../shared/types";
 import { rating, timeAgo } from "../lib/format";
 import { useVoice } from "../lib/voice";
 import { Avatar } from "./Avatar";
+import { personCrownLabel, useCrowns } from "../lib/crowns";
 import { Likes } from "./Likes";
 import { Link } from "./Link";
 import { PhotoViewer } from "./PhotoViewer";
@@ -16,13 +17,18 @@ export function CheckinCard({
   item,
   mine,
   onDelete,
+  crowned = false,
 }: {
   item: FeedItem;
   mine: boolean;
   onDelete?: (id: string) => void;
+  /** On a squad page: this person was the squad's champion last week. Elsewhere crowns come from useCrowns(). */
+  crowned?: boolean;
 }) {
   const category = getCategory(item.snack.category);
   const { t } = useVoice();
+  const crowns = useCrowns();
+  const personLabel = personCrownLabel(crowns?.people[item.username]);
   const about = { category: item.snack.category };
   // Show sliders in their usual order rather than the order they were saved.
   const [viewing, setViewing] = useState(false);
@@ -34,7 +40,12 @@ export function CheckinCard({
     <article className="checkin">
       <header className="checkin-head">
         <Link href={`/u/${item.username}`} className="plain">
-          <Avatar username={item.username} avatarId={item.avatarId} />
+          <Avatar
+            username={item.username}
+            avatarId={item.avatarId}
+            crown={crowned || !!personLabel}
+            crownLabel={crowned ? undefined : personLabel ?? undefined}
+          />
         </Link>
         <div className="grow">
           <div>

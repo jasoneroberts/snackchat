@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { newInviteCode, normaliseCode, periodEnd, periodStart, rank, validateGroup } from "../worker/lib/groups";
+import { champions, lastWeek, newInviteCode, normaliseCode, periodEnd, periodStart, rank, validateGroup } from "../worker/lib/groups";
 
 const at = (iso: string) => Date.parse(iso) / 1000;
 
@@ -70,4 +70,44 @@ it("rank shares places on ties", () => {
     ["cat", 2],
     ["dan", 4],
   ]);
+});
+
+describe("last week's crown", () => {
+  it("covers the Monday-to-Monday week before this one", () => {
+    // Saturday 31 Oct 2026: this week began Mon 26 Oct, so last week is 19 to 26 Oct.
+    expect(lastWeek(at("2026-10-31T23:00:00Z"))).toEqual({
+      start: at("2026-10-19T00:00:00Z"),
+      end: at("2026-10-26T00:00:00Z"),
+    });
+    // Just after midnight on Monday the crown passes to the week that just ended.
+    expect(lastWeek(at("2026-11-02T00:00:01Z"))).toEqual({
+      start: at("2026-10-26T00:00:00Z"),
+      end: at("2026-11-02T00:00:00Z"),
+    });
+  });
+
+  it("crowns the top scorer and skips a week nobody scored", () => {
+    expect(
+      champions([
+        { username: "amy", value: 30 },
+        { username: "bob", value: 12 },
+      ]).map((r) => r.username),
+    ).toEqual(["amy"]);
+    expect(champions([{ username: "amy", value: 0 }])).toEqual([]);
+    expect(champions([])).toEqual([]);
+  });
+
+  const tied = [
+    { username: "cat", value: 20, lastAt: 100 },
+    { username: "amy", value: 20, lastAt: 200 },
+    { username: "bob", value: 3, lastAt: 50 },
+  ];
+
+  it("on a tie, crowns whoever got there first", () => {
+    expect(champions(tied, "first").map((r) => r.username)).toEqual(["cat"]);
+  });
+
+  it("or shares it, if ties are set to share", () => {
+    expect(champions(tied, "share").map((r) => r.username)).toEqual(["amy", "cat"]);
+  });
 });
