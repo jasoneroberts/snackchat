@@ -3,11 +3,11 @@ import { getCategory } from "../../shared/catalogue";
 import { filterFor, filterShort, typeFilters } from "../../shared/typeFilters";
 import type { BoardPeriod, GroupCard, PeopleMetric, PeopleRow, SnackRow } from "../../shared/types";
 import { api, errorText, type Me } from "../api";
-import { Avatar, SnackCrown } from "../components/Avatar";
-import { personCrownLabel, snackCrownLabel, useCrowns } from "../lib/crowns";
+import { Avatar, InlineSnackCrowns } from "../components/Avatar";
+import { personCrownLabel, useCrowns } from "../lib/crowns";
 import { dietQuery, DietFilter, useDiets } from "../components/DietFilter";
 import { Link } from "../components/Link";
-import { SnackTile } from "../components/SnackTile";
+import { SnackTile, useHasPicture } from "../components/SnackTile";
 import { rating } from "../lib/format";
 import { useViewState } from "../lib/viewState";
 import { useVoice } from "../lib/voice";
@@ -248,6 +248,11 @@ function PeopleBoard({ rows, me, unit }: { rows: PeopleRow[] | null; me: Me; uni
   );
 }
 
+/** A snack's award crowns after its name, only when it has no picture to wear them on. */
+function NameCrowns({ snack, won }: { snack: SnackRow["snack"]; won: ("week" | "month")[] | undefined }) {
+  return useHasPicture(snack) ? null : <InlineSnackCrowns won={won} />;
+}
+
 const MEDALS = ["#E0A526", "#A8A29A", "#B87333"];
 
 function SnackBoard({ rows }: { rows: SnackRow[] | null }) {
@@ -270,12 +275,12 @@ function SnackBoard({ rows }: { rows: SnackRow[] | null }) {
         <Link key={r.snack.id} href={`/snack/${r.snack.id}`} className="list-card">
           <span className="board-rank">{r.rank}</span>
           <span className="medal-ring" style={{ borderColor: MEDALS[r.rank - 1] ?? "transparent" }}>
-            <SnackTile snack={r.snack} size={48} />
+            <SnackTile snack={r.snack} size={48} won={crowns?.snacks[r.snack.id]} />
           </span>
           <span className="grow">
             <b className="block">
               {r.snack.name}
-              <SnackCrown label={snackCrownLabel(crowns?.snacks[r.snack.id])} />
+              <NameCrowns snack={r.snack} won={crowns?.snacks[r.snack.id]} />
             </b>
             <span className="small muted">
               {[r.snack.brand, getCategory(r.snack.category)?.short].filter(Boolean).join(" · ")} · {r.provisional ? "1 rating, provisional" : r.count === 1 ? "1 rating" : `${r.count} ratings`}

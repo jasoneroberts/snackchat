@@ -245,8 +245,18 @@ fieldset legend { padding: 0; margin-bottom: 6px; }
 /* Last week's squad champion: a small crown tipped on the avatar's top-right edge. */
 .crowned { position: relative; display: inline-flex; flex-shrink: 0; }
 .crowned .crown { position: absolute; top: -26%; right: -16%; transform: rotate(24deg) skewX(-4deg); filter: drop-shadow(0 1px 1px rgba(43, 29, 14, 0.25)); pointer-events: none; }
-.snack-crown { display: inline-flex; vertical-align: -2px; margin-left: 5px; }
-.snack-crown .crown, .row-inline .crown { transform: rotate(14deg); }
+/* Snack awards sit on the picture's top corners: last week's (gold) right, last month's (purple) left. */
+.crown-box { position: relative; display: inline-flex; flex-shrink: 0; }
+.crown-box.wide { display: block; }
+.inline-crown { display: inline-flex; vertical-align: -2px; margin-left: 5px; }
+.inline-crown .crown { transform: rotate(14deg); }
+.snack-crown { position: absolute; top: -12px; display: inline-flex; pointer-events: none; filter: drop-shadow(0 1px 1px rgba(43, 29, 14, 0.25)); }
+.snack-crown.week { right: -9px; transform: rotate(22deg); }
+.snack-crown.month { left: -9px; transform: rotate(-20deg) scaleX(-1); }
+.crown-box .snack-crown { top: -14px; }
+.crown-box .snack-crown.week { right: -6px; }
+.crown-box .snack-crown.month { left: -6px; }
+.row-inline .crown { transform: rotate(14deg); }
 .row-inline { display: flex; align-items: center; gap: 5px; }
 .champion-note { margin: 0; padding: 10px 14px; border-top: 1px solid var(--line-soft); display: flex; align-items: center; gap: 6px; }
 .champion-note .crown { flex-shrink: 0; }

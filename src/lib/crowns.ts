@@ -30,9 +30,19 @@ export function personCrownLabel(kind: "global" | "squad" | undefined): string |
   return null;
 }
 
-/** What a snack's crown means, for its label. */
-export function snackCrownLabel(won: ("week" | "month")[] | undefined): string | null {
-  if (!won?.length) return null;
-  if (won.length === 2) return "Top of the Table last week and last month";
-  return won[0] === "week" ? "Top of the Table last week" : "Top of the Table last month";
+const DAY = 86400 * 1000;
+const shortDate = (ms: number) => new Date(ms).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+
+/**
+ * What one snack award is called: "Snack of the week (19 to 25 Oct)" or
+ * "Snack of the month (October)". Weeks run Monday to Sunday, UTC, like the Table.
+ */
+export function snackAwardLabel(kind: "week" | "month", now = Date.now()): string {
+  const d = new Date(now);
+  if (kind === "month") {
+    const last = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 1, 1));
+    return `Snack of the month (${last.toLocaleDateString("en-GB", { month: "long", timeZone: "UTC" })})`;
+  }
+  const thisMonday = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+  return `Snack of the week (${shortDate(thisMonday - 7 * DAY)} to ${shortDate(thisMonday - DAY)})`;
 }
