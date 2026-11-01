@@ -14,8 +14,13 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title || "Crunchd", {
       body: data.body || "Something needs a look.",
+      // The full-colour logo, shown beside the message.
       icon: "/icon-192.png",
-      badge: "/icon-192.png",
+      // The little icon in Android's status bar. Android only uses the
+      // transparency of this picture and paints it white, so a full-colour
+      // square icon came out as a plain white blob. This one is a white crisp
+      // on a see-through background, so the crisp shape shows.
+      badge: "/badge-96.png",
       // One notification per kind: a second new snack replaces the first, renotify buzzes again.
       tag: data.tag || "crunchd",
       renotify: true,
