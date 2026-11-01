@@ -25,7 +25,8 @@ export type Metric =
   | "scampi_high" // times you rated Scampi Fries 4.5 or more
   | "streak" // best weekly streak ever
   | "secret" // never counted: given out by a hidden game (see SECRET_BADGES)
-  | "wingit"; // a Wing It score, sent by the game when a round ends (see WINGIT_BADGES)
+  | "wingit" // a Wing It score, sent by the game when a round ends (see WINGIT_BADGES)
+  | "crown"; // won a week: given to everyone wearing a crown (worker/lib/champions.ts cachedCrowns)
 
 export interface BadgeDef {
   id: string;
@@ -38,6 +39,8 @@ export interface BadgeDef {
   goal: number;
   /** Not listed until someone earns it. */
   hidden?: boolean;
+  /** A different name in lad mode, if it has one. */
+  ladName?: string;
 }
 
 // The order here is the order on the profile.
@@ -60,6 +63,15 @@ export const BADGES: BadgeDef[] = [
   { id: "scampi_sceptic", name: "Scampi Fries Sceptic", emoji: "🤨", description: "Rate Scampi Fries 2 stars or under.", metric: "scampi_low", goal: 1 },
   { id: "scampi_disciple", name: "Scampi Fries Disciple", emoji: "🦐", description: "Rate Scampi Fries 4.5 stars or more.", metric: "scampi_high", goal: 1 },
   { id: "on_a_roll", name: "On a Roll", emoji: "🔥", description: "Check in 4 weeks in a row.", metric: "streak", goal: 4 },
+  {
+    id: "king_of_the_castle",
+    name: "King of the Castle",
+    ladName: "King of the Clan",
+    emoji: "👑",
+    description: "Win a week: most points on Crunchd, or top of a squad where 3 or more people scored.",
+    metric: "crown",
+    goal: 1,
+  },
   { id: "crunch_machine", name: "Crunch Machine", emoji: "⚙️", description: "Check in 12 weeks in a row.", metric: "streak", goal: 12 },
   {
     id: "golden_crisp",
@@ -93,7 +105,16 @@ export interface BadgeState {
   goal: number;
   progress: number | null;
   earnedAt: number | null;
+  ladName?: string;
 }
+
+/** A badge with the name it goes by in this voice (King of the Castle is King of the Clan in lad mode). */
+export function voicedBadge<B extends { name: string; ladName?: string }>(b: B, voice: string | null | undefined): B {
+  return voice === "lad" && b.ladName ? { ...b, name: b.ladName } : b;
+}
+
+/** The badge everyone wearing a person crown gets. */
+export const CROWN_BADGE = "king_of_the_castle";
 
 export interface Streak {
   /** Weeks in a row with a check-in, up to this week (or last week, if this week has none yet). */

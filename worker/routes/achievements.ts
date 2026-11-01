@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { AppContext } from "../env";
 import { awardSecretBadge, awardWingItBadges, checkAchievements } from "../lib/achievements";
+import { cachedCrowns } from "../lib/champions";
 import { currentUser } from "../lib/currentUser";
 
 // Your own badges and streak. Other people's come with their profile
@@ -9,6 +10,9 @@ import { currentUser } from "../lib/currentUser";
 export const achievements = new Hono<AppContext>();
 
 achievements.get("/", async (c) => {
+  // Work out this week's crowns first (usually cached), which hands out
+  // King of the Castle to the winners, so a new one shows up here.
+  await cachedCrowns(c.env, Math.floor(Date.now() / 1000)).catch(() => undefined);
   const { page } = await checkAchievements(c.env.DB, currentUser(c).id);
   return c.json(page);
 });

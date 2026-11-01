@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { markBadgesSeen } from "../lib/badgesSeen";
 import { api } from "../api";
 import { foundGoldenCrisp, markFound, onGoldenCrisp } from "../lib/goldenCrisp";
 import { CrispBadge, CrispGame } from "./CrispGame";
@@ -46,6 +47,7 @@ export function GoldenCrisp() {
       const r = await api<{ new?: boolean; badge?: { name?: string } }>("/achievements/secret/golden_crisp", {
         method: "POST",
       });
+      if (r.new) markBadgesSeen(["golden_crisp"]); // announced in the banner, so no popup as well
       if (r.new) setBanner(`You caught the Golden Crisp! ${line(voice, "badges.newNamed", { vars: { name: r.badge?.name ?? "Golden Crisp" } })}`);
     } catch {
       // No badge yet. Nothing to tell them.
