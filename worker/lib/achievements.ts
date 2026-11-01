@@ -11,6 +11,7 @@
 
 import {
   BADGES,
+  CROWN_BADGE,
   SECRET_BADGES,
   WINGIT_BADGES,
   badgeById,
@@ -30,8 +31,12 @@ import { periodStart } from "./groups";
 import { pushToUser } from "./notify";
 
 const SCAMPI_FRIES = "seed-scampi-fries";
-/** The metrics worked out from the database. "secret" and "wingit" badges are handed out by the game instead. */
-type Counted = Exclude<Metric, "secret" | "wingit">;
+/**
+ * The metrics worked out from the database. "secret" and "wingit" badges are
+ * handed out by the game instead, and "crown" when the week's crowns are
+ * worked out (awardCrownBadges).
+ */
+type Counted = Exclude<Metric, "secret" | "wingit" | "crown">;
 const DAY = 86400;
 
 /** Every badge's number for one person, plus their streak. */
@@ -103,6 +108,7 @@ const toState = (b: BadgeDef, progress: number | null, earnedAt: number | null):
   goal: b.goal,
   progress,
   earnedAt,
+  ...(b.ladName ? { ladName: b.ladName } : {}),
 });
 
 /**
@@ -171,6 +177,27 @@ export async function awardWingItBadges(
   const results = await db.batch(awardStatements(db, userId, reached, nowSeconds));
   // Every badge is two statements; the second (into user_badges) says if it's new.
   return reached.filter((_, i) => (results[i * 2 + 1]?.meta?.changes ?? 0) > 0).map((b) => toState(b, null, nowSeconds));
+}
+
+/**
+ * Give King of the Castle (King of the Clan in lad mode) to everyone wearing
+ * a person crown this week: last week's top scorer on Crunchd and each busy
+ * squad's champion. Called whenever the week's crowns are worked out afresh,
+ * so the winners have it from the moment their crown appears. Giving it
+ * twice does nothing.
+ */
+export async function awardCrownBadges(db: D1Database, usernames: string[], nowSeconds = Math.floor(Date.now() / 1000)): Promise<void> {
+  const def = badgeById(CROWN_BADGE);
+  if (!def || !usernames.length) return;
+  await db.batch([
+    db.prepare("INSERT OR IGNORE INTO badges (id, name, description, points) VALUES (?, ?, ?, 0)").bind(def.id, def.name, def.description),
+    db
+      .prepare(
+        `INSERT OR IGNORE INTO user_badges (user_id, badge_id, earned_at)
+         SELECT id, ?1, ?2 FROM users WHERE username IN (SELECT value FROM json_each(?3))`,
+      )
+      .bind(def.id, nowSeconds, JSON.stringify(usernames)),
+  ]);
 }
 
 /**

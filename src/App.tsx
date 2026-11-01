@@ -38,6 +38,7 @@ import { markWelcomed, welcomed } from "./lib/install";
 import { keepPushOn, setIconBadge } from "./lib/push";
 import { PushPrompt } from "./components/PushPrompt";
 import { GoldenCrisp } from "./components/GoldenCrisp";
+import { BadgePopup } from "./components/BadgePopup";
 import { maybeReleaseGoldenCrisp } from "./lib/goldenCrisp";
 import { VoiceProvider } from "./lib/voice";
 import { line } from "../shared/voice";
@@ -375,6 +376,7 @@ export function App() {
         )}
         <PushPrompt me={me} path={path} />
         <GoldenCrisp />
+        <BadgePopup username={me.username} path={path} />
         <TabBar active={tab} meBadge={adminToDo(me)} />
       </div>
     </VoiceProvider>

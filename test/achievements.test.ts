@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { BADGES, isEarly, isLate, streakFrom, ukHour, weekNumber, weekStartOf } from "../shared/achievements";
-import { awardSecretBadge, awardWingItBadges, checkAchievements, sendStreakNudges, streakMessage } from "../worker/lib/achievements";
+import { BADGES, CROWN_BADGE, isEarly, voicedBadge, isLate, streakFrom, ukHour, weekNumber, weekStartOf } from "../shared/achievements";
+import { awardCrownBadges, awardSecretBadge, awardWingItBadges, checkAchievements, sendStreakNudges, streakMessage } from "../worker/lib/achievements";
 import { crowns, lastWeeksChampions } from "../worker/lib/champions";
 import type { Env } from "../worker/env";
 
@@ -258,6 +258,19 @@ describe("crowns", () => {
     await checkIn("jase", a, lastWeek);
     const result = await crowns(db, NOW);
     expect(result.people).toEqual({ sam: "squad", pat: "global" });
+  });
+
+  it("gives everyone wearing a crown King of the Castle, once", async () => {
+    await addUser("pat");
+    await awardCrownBadges(db, ["pat", "nobody"], NOW);
+    await awardCrownBadges(db, ["pat"], NOW + 100); // a second time changes nothing
+    const pat = (await checkAchievements(db, "pat", NOW)).page.badges.find((b) => b.id === CROWN_BADGE)!;
+    expect(pat).toMatchObject({ name: "King of the Castle", ladName: "King of the Clan", earnedAt: NOW, progress: null });
+    expect(voicedBadge(pat, "lad").name).toBe("King of the Clan");
+    expect(voicedBadge(pat, "grownup").name).toBe("King of the Castle");
+    // Not earned by just checking in, and shown locked to everyone else.
+    const sam = (await checkAchievements(db, "sam", NOW)).page.badges.find((b) => b.id === CROWN_BADGE)!;
+    expect(sam.earnedAt).toBeNull();
   });
 
   it("needs three people scoring in a squad", async () => {

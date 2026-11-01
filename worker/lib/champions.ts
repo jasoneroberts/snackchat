@@ -16,6 +16,7 @@ import { boardAverage } from "./boards";
 import { periodStart } from "./groups";
 import { invitePointsSql } from "./referrals";
 import { LATEST_PHOTO } from "./photoSql";
+import { awardCrownBadges } from "./achievements";
 
 const WEEK = 7 * 86400;
 
@@ -124,10 +125,12 @@ export async function crowns(db: D1Database, nowSeconds: number): Promise<Crowns
 
 /** crowns(), kept for an hour: the weeks it looks at are finished, so it rarely changes. */
 export async function cachedCrowns(env: Env, nowSeconds: number): Promise<Crowns> {
-  const key = `crowns:v1:${lastWeek(nowSeconds).start}:${periodStart("monthly", nowSeconds)}`;
+  const key = `crowns:v2:${lastWeek(nowSeconds).start}:${periodStart("monthly", nowSeconds)}`;
   const hit = await env.CACHE.get<Crowns>(key, "json").catch(() => null);
   if (hit) return hit;
   const fresh = await crowns(env.DB, nowSeconds);
+  // Everyone wearing a person crown has won a week: give them the badge.
+  await awardCrownBadges(env.DB, Object.keys(fresh.people), nowSeconds).catch((err) => console.error("[badges] crown award failed", err));
   await env.CACHE.put(key, JSON.stringify(fresh), { expirationTtl: 3600 }).catch(() => undefined);
   return fresh;
 }

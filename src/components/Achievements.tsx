@@ -1,5 +1,6 @@
-import { useState } from "react";
-import type { AchievementsPage, BadgeState } from "../../shared/achievements";
+import { useEffect, useState } from "react";
+import { voicedBadge, type AchievementsPage, type BadgeState } from "../../shared/achievements";
+import { markBadgesSeen } from "../lib/badgesSeen";
 import { makeBadgeCard } from "../lib/badgeCard";
 import { withInviter } from "../lib/ref";
 import { useVoice } from "../lib/voice";
@@ -12,10 +13,11 @@ import { SharePicture } from "./SharePicture";
  * picture.
  */
 export function Achievements({ data, username, isMe }: { data: AchievementsPage; username: string; isMe: boolean }) {
-  const { t } = useVoice();
+  const { voice, t } = useVoice();
   const [open, setOpen] = useState<BadgeState | null>(null);
   const [sharing, setSharing] = useState<BadgeState | null>(null);
-  const earned = data.badges.filter((b) => b.earnedAt !== null).length;
+  const badges = data.badges.map((b) => voicedBadge(b, voice));
+  const earned = badges.filter((b) => b.earnedAt !== null).length;
 
   return (
     <section className="card-plain stack-sm">
@@ -23,11 +25,11 @@ export function Achievements({ data, username, isMe }: { data: AchievementsPage;
       <div className="row-between">
         <h2 className="section-title no-margin">{t("badges.title")}</h2>
         <span className="small muted">
-          {earned} of {data.badges.length}
+          {earned} of {badges.length}
         </span>
       </div>
       <div className="badge-grid">
-        {data.badges.map((b) => (
+        {badges.map((b) => (
           <button key={b.id} type="button" className={`badge-cell ${b.earnedAt ? "earned" : "locked"}`} onClick={() => setOpen(b)}>
             <span className="badge-medal" aria-hidden="true">
               {b.emoji}
@@ -119,10 +121,12 @@ export function ShareBadge({ badge, username, onClose }: { badge: BadgeState; us
   );
 }
 
-/** "New badge!" rows, shown after a check-in. */
-export function NewBadges({ badges, username }: { badges: BadgeState[]; username: string }) {
-  const { t } = useVoice();
+/** "New badge!" rows, shown after a check-in. They count as seen, so the popup doesn't repeat them. */
+export function NewBadges({ badges: raw, username }: { badges: BadgeState[]; username: string }) {
+  const { voice, t } = useVoice();
   const [sharing, setSharing] = useState<BadgeState | null>(null);
+  const badges = raw.map((b) => voicedBadge(b, voice));
+  useEffect(() => markBadgesSeen(raw.map((b) => b.id)), [raw]);
   if (!badges.length) return null;
   return (
     <div className="stack-sm">
