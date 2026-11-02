@@ -52,9 +52,10 @@ export function Group({ id, me }: { id: string; me: Me }) {
   const types = group.categories?.map((c) => getCategory(c)?.short ?? c).join(", ");
   const isOwner = data.myRole === "owner";
   // Last week's winner(s) wear a crown on the table and on their check-ins here.
-  // Not on an all-time ("Never" resets) table, where a weekly crown doesn't
-  // match the ranking; the note under the table still says who won.
-  const crowned = new Set(group.resetPeriod === "never" ? [] : data.champions.map((c) => c.username));
+  const crowned = new Set(data.champions.map((c) => c.username));
+  // Except on an all-time ("Never" resets) table, where a weekly crown doesn't
+  // match the ranking. The note under the table still says who won.
+  const crownOnTable = group.resetPeriod !== "never";
   const champ = data.champions[0];
 
   const leaveOrDelete = async () => {
@@ -113,7 +114,7 @@ export function Group({ id, me }: { id: string; me: Me }) {
               <li key={r.username} className={isMe ? "me" : undefined}>
                 <span className="board-rank">{r.rank}</span>
                 <Link href={`/u/${r.username}`} className="plain row grow">
-                  <Avatar username={r.username} avatarId={r.avatarId} size={34} crown={crowned.has(r.username)} />
+                  <Avatar username={r.username} avatarId={r.avatarId} size={34} crown={crownOnTable && crowned.has(r.username)} />
                   <span className="grow">
                     <b>{r.username}</b>
                     {isMe && <span className="muted"> (you)</span>}
