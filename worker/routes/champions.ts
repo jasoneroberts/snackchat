@@ -3,7 +3,7 @@ import type { AppContext } from "../env";
 import { cachedCrowns, lastWeeksChampions } from "../lib/champions";
 
 // Last week's top snack and top snacker (lib/champions.ts). The feed asks
-// for them on Mondays only.
+// for them on Mondays and Tuesdays only.
 export const champions = new Hono<AppContext>();
 
 champions.get("/", async (c) => {

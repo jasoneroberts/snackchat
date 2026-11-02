@@ -165,7 +165,7 @@ export const isEarly = (seconds: number) => {
 };
 
 // Last week's champions ----------------------------------------------------------
-// Shown at the top of the feed on Mondays (worker/lib/champions.ts).
+// Shown at the top of the feed on Mondays and Tuesdays (worker/lib/champions.ts).
 
 export interface Champions {
   /** Monday 00:00 UTC of the week that just finished. */

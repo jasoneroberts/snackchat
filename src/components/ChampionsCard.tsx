@@ -2,31 +2,27 @@ import { useEffect, useState } from "react";
 import type { Champions } from "../../shared/achievements";
 import { api } from "../api";
 import { rating } from "../lib/format";
+import { isRecapDay } from "../lib/recapDay";
 import { useVoice } from "../lib/voice";
 import { Avatar } from "./Avatar";
 import { Link } from "./Link";
 import { SnackTile } from "./SnackTile";
 
-/** Monday on a UK clock, when the champions card shows. */
-export function isUkMonday(date = new Date()): boolean {
-  return new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short" }).format(date) === "Mon";
-}
-
 /**
- * The card at the top of the feed on Mondays: last week's top snack on the
+ * The card at the top of the feed on Mondays and Tuesdays: last week's top snack on the
  * Table and the person with the most points. The rest of the week it isn't
  * shown at all, so the Table's live "This week" is the only race in town.
  */
 export function ChampionsCard() {
   const { voice } = useVoice();
   const [data, setData] = useState<Champions | null>(null);
-  const monday = isUkMonday();
+  const showing = isRecapDay();
 
   useEffect(() => {
-    if (monday) api<Champions>("/champions").then(setData).catch(() => setData(null));
-  }, [monday]);
+    if (showing) api<Champions>("/champions").then(setData).catch(() => setData(null));
+  }, [showing]);
 
-  if (!monday || !data || (!data.snack && !data.person)) return null;
+  if (!showing || !data || (!data.snack && !data.person)) return null;
   return (
     <section className="card-plain stack-sm champions-card">
       <h2 className="section-title no-margin">{voice === "lad" ? "Last week's legends" : "Last week's champions"}</h2>

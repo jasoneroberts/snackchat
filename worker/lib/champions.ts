@@ -1,4 +1,4 @@
-// Last week's champions, for the card at the top of the feed on Mondays:
+// Last week's champions, for the card at the top of the feed on Mondays and Tuesdays:
 // the snack that finished top of the Table's "This week", and the person
 // with the most points. Both are worked out the same way the Table works
 // them out (worker/routes/boards.ts), just for the week that's finished, so
