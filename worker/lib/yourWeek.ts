@@ -1,4 +1,4 @@
-// "Your week": the card at the top of the feed on Mondays that sums up what
+// "Your week": the card at the top of the feed on Mondays and Tuesdays that sums up what
 // happened for you last week, instead of a round-up push:
 //
 //   Your week

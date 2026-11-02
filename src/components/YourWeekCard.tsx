@@ -1,27 +1,27 @@
 import { useEffect, useState } from "react";
 import type { YourWeek } from "../../shared/types";
 import { api } from "../api";
+import { isRecapDay } from "../lib/recapDay";
 import { weekLines } from "../lib/yourWeek";
-import { isUkMonday } from "./ChampionsCard";
 import { useVoice } from "../lib/voice";
 import { Link } from "./Link";
 
 /**
- * "Your week": at the top of the feed on Mondays, what happened for you last
+ * "Your week": at the top of the feed on Mondays and Tuesdays, what happened for you last
  * week (worker/lib/yourWeek.ts). Quiet weeks show nothing, and so does every
  * other day, so the feed stays about check-ins.
  */
 export function YourWeekCard() {
   const { voice } = useVoice();
   const [week, setWeek] = useState<YourWeek | null>(null);
-  const monday = isUkMonday();
+  const showing = isRecapDay();
 
   useEffect(() => {
-    if (monday) api<YourWeek>("/week").then(setWeek).catch(() => setWeek(null));
-  }, [monday]);
+    if (showing) api<YourWeek>("/week").then(setWeek).catch(() => setWeek(null));
+  }, [showing]);
 
   const lad = voice === "lad";
-  const lines = monday && week ? weekLines(week, lad) : [];
+  const lines = showing && week ? weekLines(week, lad) : [];
   if (!lines.length) return null;
   return (
     <section className="card-plain stack-sm">
