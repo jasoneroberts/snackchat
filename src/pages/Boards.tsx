@@ -162,8 +162,8 @@ export function Boards({ me }: { me: Me }) {
       </p>
 
       {error && <p className="error">{error}</p>}
-      {view.kind === "people" && <PeopleBoard rows={people} me={me} unit={metric.unit} />}
-      {view.kind === "snacks" && <SnackBoard rows={snacks} />}
+      {view.kind === "people" && <PeopleBoard rows={people} me={me} unit={metric.unit} crowned={view.period !== "all"} />}
+      {view.kind === "snacks" && <SnackBoard rows={snacks} crowned={view.period !== "all"} />}
     </div>
   );
 }
@@ -171,8 +171,12 @@ export function Boards({ me }: { me: Me }) {
 const PODIUM_COLOURS = ["#F7C68E", "#E6E1D8", "#E9C2A0"]; // gold, silver, bronze
 const PODIUM_HEIGHTS = [120, 92, 72];
 
-function PeopleBoard({ rows, me, unit }: { rows: PeopleRow[] | null; me: Me; unit: string }) {
-  const crowns = useCrowns();
+// Crowns are for last week's (and last month's) winners, so they only show on
+// the This week and This month tables. On All time they'd sit on people and
+// snacks for a recent win that has nothing to do with the all-time ranking.
+function PeopleBoard({ rows, me, unit, crowned }: { rows: PeopleRow[] | null; me: Me; unit: string; crowned: boolean }) {
+  const allCrowns = useCrowns();
+  const crowns = crowned ? allCrowns : null;
   const { t } = useVoice();
   if (!rows) return <p className="muted">Loading…</p>;
   if (rows.every((r) => r.checkins === 0)) {
@@ -255,9 +259,10 @@ function NameCrowns({ snack, won }: { snack: SnackRow["snack"]; won: ("week" | "
 
 const MEDALS = ["#E0A526", "#A8A29A", "#B87333"];
 
-function SnackBoard({ rows }: { rows: SnackRow[] | null }) {
+function SnackBoard({ rows, crowned }: { rows: SnackRow[] | null; crowned: boolean }) {
   const { t } = useVoice();
-  const crowns = useCrowns();
+  const allCrowns = useCrowns();
+  const crowns = crowned ? allCrowns : null;
   if (!rows) return <p className="muted">Loading…</p>;
   if (rows.length === 0) {
     return (
