@@ -52,7 +52,9 @@ export function Group({ id, me }: { id: string; me: Me }) {
   const types = group.categories?.map((c) => getCategory(c)?.short ?? c).join(", ");
   const isOwner = data.myRole === "owner";
   // Last week's winner(s) wear a crown on the table and on their check-ins here.
-  const crowned = new Set(data.champions.map((c) => c.username));
+  // Not on an all-time ("Never" resets) table, where a weekly crown doesn't
+  // match the ranking; the note under the table still says who won.
+  const crowned = new Set(group.resetPeriod === "never" ? [] : data.champions.map((c) => c.username));
   const champ = data.champions[0];
 
   const leaveOrDelete = async () => {
