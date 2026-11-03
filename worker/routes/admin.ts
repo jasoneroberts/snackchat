@@ -14,6 +14,7 @@ import { hashPassword, newId } from "../lib/crypto";
 import { LATEST_PHOTO } from "../lib/photoSql";
 import { newPin } from "../lib/quickSignIn";
 import { validateSnackFields } from "../lib/validation";
+import { mergeSnacks } from "../lib/mergeSnacks";
 import { avatarKey } from "./avatars";
 import { clearWrongPins } from "../lib/pinLock";
 import { health } from "./health";
@@ -418,13 +419,26 @@ admin.patch("/snacks/:id", async (c) => {
     )
     .bind(id, name, brand ?? "")
     .first();
-  if (clash) return c.json({ error: "Another snack already has that name and maker." }, 409);
+  if (clash) {
+    return c.json({ error: "Another snack already has that name and maker. If they're the same snack, use Merge instead." }, 409);
+  }
   const updated = await db
     .prepare("UPDATE snacks SET name = ?, brand = ?, category_id = ? WHERE id = ? AND status != 'merged'")
     .bind(name, brand, category, id)
     .run();
   if (updated.meta.changes !== 1) return c.json({ error: "Snack not found." }, 404);
   return c.json({ ok: true });
+});
+
+// Merge a duplicate into the snack to keep: { into }. Check-ins (with their
+// ratings, photos and points), saves, bag tips and reports move across, and
+// the duplicate is retired as 'merged' (see lib/mergeSnacks.ts).
+admin.post("/snacks/:id/merge", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as { into?: unknown } | null;
+  const into = typeof body?.into === "string" ? body.into : "";
+  const result = await mergeSnacks(c.env.DB, c.req.param("id"), into);
+  if (!result.ok) return c.json({ error: result.error }, result.status);
+  return c.json({ ok: true, moved: result.moved });
 });
 
 // Say yes or no to a snack someone added: { action: "approve" | "reject" }.
