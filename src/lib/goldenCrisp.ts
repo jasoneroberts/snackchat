@@ -1,6 +1,6 @@
 // The Golden Crisp: a rare winged crisp that flutters across the screen just
 // after you like a check-in or post one. Tap it before it flies off and it
-// opens the hidden game, Wing It (src/game/wingIt.ts).
+// opens the hidden game, The Last Crisp (src/game/wingIt.ts).
 //
 // Everything here is remembered on this phone only (localStorage), like the
 // notifications prompt. It's a bit of fun, so losing it in private browsing is fine.
@@ -14,10 +14,15 @@ import { recall, remember } from "./pushAsk";
 
 const KEY = "crunchd.goldenCrisp"; // {"last": ms it last flew, "found": true once caught, "best": top score}
 
-/** Chance of the crisp appearing. A check-in is rarer than a like, so it's more generous. */
-export const ODDS = { like: 1 / 6, checkin: 1 / 3 } as const;
+/**
+ * Chance of the crisp appearing: 1 in 8 likes, 1 in 4 check-ins (a check-in is
+ * rarer than a like, so it is more generous). The dice are rolled on each
+ * person's own phone for their own likes, so someone who likes a lot sees it
+ * more, but that never makes it show up more for anyone else.
+ */
+export const ODDS = { like: 1 / 8, checkin: 1 / 4 } as const;
 /** Never twice within this long, so it stays a surprise. */
-export const COOLDOWN_MS = 20 * 60_000;
+export const COOLDOWN_MS = 30 * 60_000; // 30 minutes
 
 export type Reason = keyof typeof ODDS;
 

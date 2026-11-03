@@ -529,7 +529,7 @@ select:focus { outline: 2px solid var(--orange); border-color: transparent; }
   @keyframes crisp-stay { 0% { opacity: 0; } 10%, 85% { opacity: 1; } 100% { opacity: 0; } }
 }
 
-/* Wing It, the hidden game: full screen over everything. */
+/* The Last Crisp, the hidden game: full screen over everything. */
 .wingit { position: fixed; inset: 0; z-index: 90; background: #2a1608; color: #fff4e0; user-select: none; -webkit-user-select: none; }
 .wingit-canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 .wingit-hud { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 12px; padding: max(12px, env(safe-area-inset-top)) 16px 0; pointer-events: none; }

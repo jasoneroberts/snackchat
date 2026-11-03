@@ -1,4 +1,4 @@
-// "Wing It": the hidden Golden Crisp game. This file is only the rules: where
+// "The Last Crisp": the hidden Golden Crisp game. This file is only the rules: where
 // everything is, how it moves and what counts as a crash. It never touches the
 // screen, so it can be unit tested in plain Node (test/wingIt.test.ts). The
 // drawing lives in draw.ts and the React wrapper in components/CrispGame.tsx.

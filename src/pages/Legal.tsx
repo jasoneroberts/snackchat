@@ -30,7 +30,7 @@ export function Privacy() {
         </li>
         <li>
           <b>What you do in the app:</b> points, badges, snacks you save or skip in Explore, your taste preferences,
-          people you block, anything you report, and which days you open the app and how often you play Wing It or share something (so we can see which parts of the app get used).
+          people you block, anything you report, and which days you open the app and how often you play The Last Crisp or share something (so we can see which parts of the app get used).
         </li>
         <li>
           <b>Technical bits:</b> a cookie that keeps you signed in, and some settings stored on your phone (like

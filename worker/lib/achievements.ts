@@ -156,7 +156,7 @@ export async function awardSecretBadge(
 }
 
 /**
- * A Wing It round has ended: give every score badge the score reaches. The
+ * A Last Crisp round has ended: give every score badge the score reaches. The
  * game sends its best score on this phone, so people who played before
  * these badges existed get theirs too. Returns the ones that are new.
  * Scores aren't kept: the badges are the record.

@@ -52,7 +52,7 @@ export function Stats() {
       {!data.hasUsage && (
         <div className="notice">
           <p className="small no-margin">
-            App opens, Wing It games and shares aren't being counted yet. They start once the database update for this page is
+            App opens, Last Crisp games and shares aren't being counted yet. They start once the database update for this page is
             applied.
           </p>
         </div>

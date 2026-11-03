@@ -24,7 +24,7 @@ const run = (g: Game, seconds: number, holding: (g: Game) => boolean) => {
   for (let t = 0; t < seconds && g.state === "playing"; t += 1 / 60) step(g, 1 / 60, holding(g));
 };
 
-describe("Wing It rules", () => {
+describe("The Last Crisp rules", () => {
   it("waits on the ready screen until the first touch", () => {
     const g = newGame(300, () => 0.5);
     for (let i = 0; i < 120; i++) step(g, 1 / 60, false);
@@ -133,15 +133,18 @@ describe("when the Golden Crisp flies", () => {
   beforeEach(() => store.clear());
 
   it("follows the odds: rarer after a like than a check-in", () => {
-    expect(gc.shouldRelease("like", 1e12, 0.1)).toBe(true);
-    expect(gc.shouldRelease("like", 1e12, 0.2)).toBe(false);
-    expect(gc.shouldRelease("checkin", 1e12, 0.3)).toBe(true);
+    // 1 in 8 likes, 1 in 4 check-ins.
+    expect(gc.shouldRelease("like", 1e12, 0.12)).toBe(true);
+    expect(gc.shouldRelease("like", 1e12, 0.13)).toBe(false);
+    expect(gc.shouldRelease("checkin", 1e12, 0.24)).toBe(true);
+    expect(gc.shouldRelease("checkin", 1e12, 0.26)).toBe(false);
   });
 
   it("never flies twice within the cool-down", () => {
     const now = 1e12;
     expect(gc.maybeReleaseGoldenCrisp("like", now, 0)).toBe(true);
     expect(gc.maybeReleaseGoldenCrisp("like", now + 60_000, 0)).toBe(false);
+    expect(gc.maybeReleaseGoldenCrisp("like", now + 25 * 60_000, 0)).toBe(false); // still quiet 25 minutes later
     expect(gc.maybeReleaseGoldenCrisp("like", now + gc.COOLDOWN_MS, 0)).toBe(true);
   });
 

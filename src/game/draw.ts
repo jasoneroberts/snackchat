@@ -1,4 +1,4 @@
-// Drawing for Wing It. Everything is painted with plain canvas calls (no image
+// Drawing for The Last Crisp. Everything is painted with plain canvas calls (no image
 // files), so the game adds only a few kilobytes and stays sharp on any screen.
 // The canvas is scaled so that 1 unit here = 1 world unit (see CrispGame.tsx).
 
