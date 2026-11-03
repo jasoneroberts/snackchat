@@ -14,10 +14,15 @@ import { recall, remember } from "./pushAsk";
 
 const KEY = "crunchd.goldenCrisp"; // {"last": ms it last flew, "found": true once caught, "best": top score}
 
-/** Chance of the crisp appearing: 1 in 20 likes, 1 in 10 check-ins (a check-in is rarer than a like, so it is more generous). Kept low so it stays a rare treat. */
-export const ODDS = { like: 1 / 20, checkin: 1 / 10 } as const;
+/**
+ * Chance of the crisp appearing: 1 in 8 likes, 1 in 4 check-ins (a check-in is
+ * rarer than a like, so it is more generous). The dice are rolled on each
+ * person's own phone for their own likes, so someone who likes a lot sees it
+ * more, but that never makes it show up more for anyone else.
+ */
+export const ODDS = { like: 1 / 8, checkin: 1 / 4 } as const;
 /** Never twice within this long, so it stays a surprise. */
-export const COOLDOWN_MS = 2 * 60 * 60_000; // 2 hours
+export const COOLDOWN_MS = 30 * 60_000; // 30 minutes
 
 export type Reason = keyof typeof ODDS;
 

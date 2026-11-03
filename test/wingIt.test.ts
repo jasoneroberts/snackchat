@@ -133,18 +133,18 @@ describe("when the Golden Crisp flies", () => {
   beforeEach(() => store.clear());
 
   it("follows the odds: rarer after a like than a check-in", () => {
-    // 1 in 20 likes, 1 in 10 check-ins.
-    expect(gc.shouldRelease("like", 1e12, 0.04)).toBe(true);
-    expect(gc.shouldRelease("like", 1e12, 0.06)).toBe(false);
-    expect(gc.shouldRelease("checkin", 1e12, 0.09)).toBe(true);
-    expect(gc.shouldRelease("checkin", 1e12, 0.11)).toBe(false);
+    // 1 in 8 likes, 1 in 4 check-ins.
+    expect(gc.shouldRelease("like", 1e12, 0.12)).toBe(true);
+    expect(gc.shouldRelease("like", 1e12, 0.13)).toBe(false);
+    expect(gc.shouldRelease("checkin", 1e12, 0.24)).toBe(true);
+    expect(gc.shouldRelease("checkin", 1e12, 0.26)).toBe(false);
   });
 
   it("never flies twice within the cool-down", () => {
     const now = 1e12;
     expect(gc.maybeReleaseGoldenCrisp("like", now, 0)).toBe(true);
     expect(gc.maybeReleaseGoldenCrisp("like", now + 60_000, 0)).toBe(false);
-    expect(gc.maybeReleaseGoldenCrisp("like", now + 90 * 60_000, 0)).toBe(false); // still quiet 1.5 hours later
+    expect(gc.maybeReleaseGoldenCrisp("like", now + 25 * 60_000, 0)).toBe(false); // still quiet 25 minutes later
     expect(gc.maybeReleaseGoldenCrisp("like", now + gc.COOLDOWN_MS, 0)).toBe(true);
   });
 
