@@ -8,6 +8,7 @@ import type { BadgeState } from "../../shared/achievements";
 import { SnackTile } from "../components/SnackTile";
 import { StarPicker } from "../components/Stars";
 import { useVoice } from "../lib/voice";
+import { SwipeSafeRange } from "../components/SwipeSafeRange";
 
 export function CheckIn({
   editId,
@@ -284,14 +285,12 @@ export function CheckIn({
                     <label htmlFor={`attr-${a.key}`}>{a.label}</label>
                     <b>{v ? `${v}/5` : "skip"}</b>
                   </div>
-                  <input
+                  <SwipeSafeRange
                     id={`attr-${a.key}`}
-                    type="range"
                     min={0}
                     max={5}
-                    step={1}
                     value={v}
-                    onChange={(e) => setAttrs({ ...attrs, [a.key]: Number(e.target.value) })}
+                    onChange={(n) => setAttrs({ ...attrs, [a.key]: n })}
                   />
                   <div className="slider-ends">
                     <span>{a.low}</span>
