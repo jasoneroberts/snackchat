@@ -60,7 +60,11 @@ checkins.post("/", async (c) => {
   const snack =
     typeof snackId === "string"
       ? await db
-          .prepare("SELECT id, name, category_id, status, created_by FROM snacks WHERE id = ?")
+          // A merged snack's id (from an old link or an open page) checks in the snack it was merged into.
+          .prepare(
+            `SELECT id, name, category_id, status, created_by FROM snacks
+              WHERE id = IFNULL((SELECT merged_into FROM snacks WHERE id = ?1 AND status = 'merged'), ?1)`,
+          )
           .bind(snackId)
           .first<{ id: string; name: string; category_id: string; status: string; created_by: string | null }>()
       : null;

@@ -44,7 +44,7 @@ export function AdminSnacks({ onChanged }: { onChanged: () => void }) {
   return (
     <div className="page stack">
       <p className="small muted no-margin">
-        Tap a snack to fix its name, maker or type, pick its main picture, or hide a wrong photo. {snacks.length} snacks
+        Tap a snack to fix its name, maker or type, pick its main picture, hide a wrong photo, or merge a duplicate. {snacks.length} snacks
         {pending ? `, ${pending} waiting for a yes or no` : ""}.
       </p>
       <input type="search" placeholder="Search snacks or makers" value={query} onChange={(e) => setQuery(e.target.value)} />
@@ -86,6 +86,7 @@ export function AdminSnacks({ onChanged }: { onChanged: () => void }) {
               {open === s.id && (
                 <SnackEditor
                   snack={s}
+                  others={snacks}
                   onSaved={() => {
                     load();
                     onChanged();
@@ -100,7 +101,7 @@ export function AdminSnacks({ onChanged }: { onChanged: () => void }) {
   );
 }
 
-function SnackEditor({ snack, onSaved }: { snack: AdminSnackRow; onSaved: () => void }) {
+function SnackEditor({ snack, others, onSaved }: { snack: AdminSnackRow; others: AdminSnackRow[]; onSaved: () => void }) {
   const [name, setName] = useState(snack.name);
   const [brand, setBrand] = useState(snack.brand ?? "");
   const [category, setCategory] = useState(snack.category);
@@ -210,6 +211,8 @@ function SnackEditor({ snack, onSaved }: { snack: AdminSnackRow; onSaved: () => 
         </div>
       )}
 
+      {snack.status !== "rejected" && <MergeInto snack={snack} others={others} busy={busy} run={run} onMerged={onSaved} />}
+
       <div>
         <div className="field-label">Photos</div>
         {photos && photos.length > 1 && (
@@ -263,6 +266,112 @@ function SnackEditor({ snack, onSaved }: { snack: AdminSnackRow; onSaved: () => 
           </>
         )}
       </p>
+    </div>
+  );
+}
+
+const label = (s: AdminSnackRow) => `${s.brand ? `${s.brand} ` : ""}${s.name}`;
+
+/**
+ * Merge this snack into another one: for two entries of the same snack, where
+ * renaming one to match the other is refused because that name is taken.
+ * Its check-ins, ratings, photos and points move to the snack picked here,
+ * and this one disappears from the catalogue.
+ */
+function MergeInto({
+  snack,
+  others,
+  busy,
+  run,
+  onMerged,
+}: {
+  snack: AdminSnackRow;
+  others: AdminSnackRow[];
+  busy: boolean;
+  run: (work: () => Promise<unknown>) => Promise<boolean>;
+  onMerged: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [target, setTarget] = useState<AdminSnackRow | null>(null);
+
+  if (!open) {
+    return (
+      <p className="small muted no-margin">
+        Same snack as another entry?{" "}
+        <button type="button" className="link-button" onClick={() => setOpen(true)}>
+          Merge it into the other one
+        </button>
+      </p>
+    );
+  }
+
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const matches = words.length
+    ? others
+        .filter((o) => o.id !== snack.id && o.status !== "rejected")
+        .filter((o) => words.every((w) => label(o).toLowerCase().includes(w)))
+        .slice(0, 8)
+    : [];
+
+  const merge = async () => {
+    if (!target) return;
+    const moving = snack.checkins === 1 ? "its 1 check-in" : `its ${snack.checkins} check-ins`;
+    if (!confirm(`Merge "${label(snack)}" into "${label(target)}"? ${moving} move across and "${label(snack)}" disappears. This can't be undone from the app.`)) return;
+    if (await run(() => api(`/admin/snacks/${encodeURIComponent(snack.id)}/merge`, { body: { into: target.id } }))) onMerged();
+  };
+
+  return (
+    <div className="stack-sm">
+      <div className="field-label">Merge into another snack</div>
+      <p className="small muted no-margin">
+        Pick the entry to keep. This one's check-ins, ratings, photos and points move to it, and this one goes. Fix the kept
+        one's name afterwards if it needs it.
+      </p>
+      {target ? (
+        <div className="row">
+          <span className="grow small">
+            Keep <b>{label(target)}</b> ({target.checkins} {target.checkins === 1 ? "check-in" : "check-ins"})
+          </span>
+          <button type="button" className="link-button small" disabled={busy} onClick={() => setTarget(null)}>
+            Change
+          </button>
+        </div>
+      ) : (
+        <>
+          <input type="search" placeholder="Search for the snack to keep" value={query} onChange={(e) => setQuery(e.target.value)} />
+          {matches.map((o) => (
+            <button key={o.id} type="button" className="admin-snack-row" onClick={() => setTarget(o)}>
+              <span className="brand-logo-slot">
+                <SnackTile snack={o} size={32} />
+              </span>
+              <span className="grow small">
+                <b>{o.name}</b>
+                <span className="muted block">
+                  {o.brand ?? "No maker"} · {o.checkins} {o.checkins === 1 ? "check-in" : "check-ins"}
+                </span>
+              </span>
+            </button>
+          ))}
+        </>
+      )}
+      <div className="row">
+        <button
+          type="button"
+          className="button secondary small"
+          disabled={busy}
+          onClick={() => {
+            setOpen(false);
+            setTarget(null);
+            setQuery("");
+          }}
+        >
+          Cancel
+        </button>
+        <button type="button" className="button small" disabled={busy || !target} onClick={merge}>
+          Merge
+        </button>
+      </div>
     </div>
   );
 }

@@ -120,8 +120,15 @@ snacks.get("/all", async (c) => {
 // A snack's page: averages, slider averages, rank in its category, recent check-ins.
 snacks.get("/:id", async (c) => {
   const user = currentUser(c);
-  const id = c.req.param("id");
   const db = c.env.DB;
+  // A snack merged into another one shows the one it was merged into, so old
+  // links and shared check-ins still land somewhere useful.
+  const asked = c.req.param("id");
+  const merged = await db
+    .prepare("SELECT merged_into FROM snacks WHERE id = ? AND status = 'merged'")
+    .bind(asked)
+    .first<{ merged_into: string | null }>();
+  const id = merged?.merged_into ?? asked;
 
   const snack = await db
     .prepare(
