@@ -594,3 +594,9 @@ button.cotw-side:disabled { cursor: default; }
 .week-row { display: flex; align-items: flex-start; gap: 10px; color: inherit; text-decoration: none; line-height: 1.35; }
 /* Smaller than the text and a little faded; line-height keeps it level with the first line of text. */
 .week-icon { width: 20px; text-align: center; flex-shrink: 0; font-size: 0.85rem; line-height: 1.6; opacity: 0.8; filter: saturate(0.7); }
+
+/* Rating sliders that ignore up/down swipes (see SwipeSafeRange.tsx). The
+   wrapper lets the page scroll vertically but keeps sideways drags for itself;
+   the real input takes no touches so the browser can't jump it on contact. */
+.swipe-range { touch-action: pan-y; padding: 6px 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.swipe-range input[type="range"] { pointer-events: none; display: block; margin: 0; }

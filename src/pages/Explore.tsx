@@ -10,6 +10,7 @@ import { SnackTile } from "../components/SnackTile";
 import { rating } from "../lib/format";
 import { useViewState } from "../lib/viewState";
 import { useVoice } from "../lib/voice";
+import { SwipeSafeRange } from "../components/SwipeSafeRange";
 
 type Panel = "taste" | "saved" | "rejected" | null;
 
@@ -352,14 +353,12 @@ function PreferenceEditor({
               <label htmlFor={`pref-${a.key}`}>{a.label}</label>
               <b>{v ? `${v}/5` : "don't mind"}</b>
             </div>
-            <input
+            <SwipeSafeRange
               id={`pref-${a.key}`}
-              type="range"
               min={0}
               max={5}
-              step={1}
               value={v}
-              onChange={(e) => setPrefs({ ...prefs, [a.key]: Number(e.target.value) })}
+              onChange={(n) => setPrefs({ ...prefs, [a.key]: n })}
             />
             <div className="slider-ends">
               <span>{a.low}</span>
