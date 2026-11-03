@@ -127,7 +127,7 @@ export function Settings({ me, onChanged }: { me: Me; onChanged: () => Promise<v
       {/* The hidden game: only listed once you've caught the Golden Crisp (admins always see it). */}
       {(foundGoldenCrisp() || me.isAdmin) && (
         <button type="button" className="card-plain row settings-link wingit-link" onClick={playWingIt}>
-          <b className="grow">Wing It</b>
+          <b className="grow">The Last Crisp</b>
           <span className="muted small">{bestScore() > 0 ? `Your best: ${bestScore()}` : "The Golden Crisp game"}</span>
         </button>
       )}

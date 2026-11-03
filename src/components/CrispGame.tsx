@@ -33,7 +33,7 @@ interface Result {
 }
 
 /**
- * Wing It, full screen. The rules live in game/wingIt.ts and the art in
+ * The Last Crisp, full screen. The rules live in game/wingIt.ts and the art in
  * game/draw.ts; this component just runs the loop:
  *   every animation frame → step the game by the time since the last frame →
  *   draw it → and only tell React when the score or state changes, so the
@@ -172,7 +172,7 @@ export function CrispGame({ onClose, banner }: { onClose: () => void; banner?: s
   };
 
   return (
-    <div className="wingit" role="dialog" aria-modal="true" aria-label="Wing It, the Golden Crisp game">
+    <div className="wingit" role="dialog" aria-modal="true" aria-label="The Last Crisp, the Golden Crisp game">
       <canvas
         ref={canvasRef}
         className="wingit-canvas"
@@ -197,7 +197,7 @@ export function CrispGame({ onClose, banner }: { onClose: () => void; banner?: s
         <div className="wingit-card wingit-intro">
           <CrispBadge />
           {banner && <p className="wingit-banner">{banner}</p>}
-          <h2>Wing It</h2>
+          <h2>The Last Crisp</h2>
           <p>
             <b>Hold</b> to flap up, <b>let go</b> to glide.
             <br />

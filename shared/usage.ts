@@ -4,7 +4,7 @@
 
 export const USAGE_FEATURES = {
   open: "Opened the app", // once a day, recorded by GET /api/me
-  wingit: "Played Wing It", // caught the Golden Crisp and the game started
+  wingit: "Played The Last Crisp", // caught the Golden Crisp and the game started
   share: "Shared something", // a check-in picture, badge, invite or squad link
 } as const;
 

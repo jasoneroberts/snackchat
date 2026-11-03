@@ -142,7 +142,7 @@ app.put("/me/voice", async (c) => {
   return c.json({ voice });
 });
 
-// The app notes Wing It games and shares here (src/lib/track.ts), for the
+// The app notes Last Crisp games and shares here (src/lib/track.ts), for the
 // admin Stats page. Not counted against the write limit: it's not a change
 // anyone else sees, and a busy sharer shouldn't be told to slow down.
 app.post("/usage", async (c) => {

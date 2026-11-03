@@ -315,7 +315,7 @@ export interface InviteStats {
 
 // Admin Stats page (GET /api/admin/stats). Weeks run Monday to Sunday, UTC.
 export interface StatsSummary {
-  /** Whether app opens, Wing It and shares are being recorded yet (migration 0031). */
+  /** Whether app opens, The Last Crisp and shares are being recorded yet (migration 0031). */
   hasUsage: boolean;
   people: number;
   /** Did anything this week (checked in, liked, voted, opened the app...). */

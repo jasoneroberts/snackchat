@@ -144,7 +144,7 @@ describe("badges", () => {
     expect(page.badges.find((b) => b.id === "golden_crisp")?.earnedAt).toBe(NOW);
   });
 
-  it("gives Wing It score badges up to the score, once each, and only lists them once earned", async () => {
+  it("gives The Last Crisp score badges up to the score, once each, and only lists them once earned", async () => {
     expect(await awardWingItBadges(db, "jase", 9, NOW)).toEqual([]);
     expect((await awardWingItBadges(db, "jase", 27, NOW)).map((b) => b.id)).toEqual(["wingit_10", "wingit_25"]);
     expect((await awardWingItBadges(db, "jase", 30, NOW)).map((b) => b.id)).toEqual([]);

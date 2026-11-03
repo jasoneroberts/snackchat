@@ -22,7 +22,7 @@ achievements.post("/secret/:id", async (c) => {
   return c.json(result);
 });
 
-// Wing It sends its score when a round ends: { score }, the best on that
+// The Last Crisp sends its score when a round ends: { score }, the best on that
 // phone. Answers with any score badges that are new.
 achievements.post("/wingit", async (c) => {
   const body = await c.req.json<{ score?: unknown }>().catch(() => ({ score: undefined }));

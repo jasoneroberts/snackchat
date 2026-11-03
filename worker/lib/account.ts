@@ -149,7 +149,7 @@ export async function exportAccount(db: D1Database, userId: string, origin: stri
     ),
     // Crisp of the Week votes. week_start is the Monday the battle began.
     all("SELECT v.week_start, s.name AS voted_for, v.created_at FROM cotw_votes v JOIN snacks s ON s.id = v.snack_id WHERE v.user_id = ?"),
-    // Days they opened the app, Wing It games and shares (for the admin Stats
+    // Days they opened the app, Last Crisp games and shares (for the admin Stats
     // page). day = days since 1970. Empty if that table isn't there yet.
     all("SELECT day, feature, times FROM app_usage WHERE user_id = ? ORDER BY day").catch(() => []),
   ]);

@@ -9,7 +9,7 @@ import { track } from "../lib/track";
 /**
  * Lives once at the top of the signed-in app (App.tsx). It waits for the
  * Golden Crisp to be released (see lib/goldenCrisp.ts), then flutters it across
- * the screen for a few seconds. Tap it in time and Wing It opens.
+ * the screen for a few seconds. Tap it in time and The Last Crisp opens.
  */
 export function GoldenCrisp() {
   const { voice } = useVoice();

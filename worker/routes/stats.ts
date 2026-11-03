@@ -11,7 +11,7 @@ import { hasUsageTable } from "../lib/usage";
 // people came from. Mounted inside the admin routes, so only admins get here.
 //
 // Almost everything is worked out from tables the app already has (every
-// check-in, like and vote has a time on it). Only app opens, Wing It and
+// check-in, like and vote has a time on it). Only app opens, The Last Crisp and
 // shares need their own table (app_usage, migration 0031); until that's
 // applied those lines are simply left out.
 export const stats = new Hono<AppContext>();
@@ -55,7 +55,7 @@ const SOURCES: Source[] = [
   { key: "squadsMade", label: "Started a squad", from: "groups", who: "created_by", at: "created_at" },
   { key: "snacks", label: "New snacks added", from: "snacks", who: "created_by", at: "created_at", active: true },
   { key: "badges", label: "Badges earned", from: "user_badges", who: "user_id", at: "earned_at" },
-  usage("wingit", "Wing It games"),
+  usage("wingit", "Last Crisp games"),
   usage("share", "Shares"),
   { key: "reports", label: "Reports and requests", from: "reports", who: "reporter_id", at: "created_at" },
 ];
