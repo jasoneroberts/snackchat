@@ -17,9 +17,8 @@ describe("line", () => {
     expect(line("lad", "checkin.search")).toBe("What you crunching?");
   });
 
-  it("keeps kids snacks grown-up even in lad mode", () => {
-    expect(line("lad", "checkin.submit", { category: "kids" })).toBe("Check in");
-    expect(line("lad", "checkin.where", { category: "kids" })).toBe("Where?");
+  it("counts crackers as crunch", () => {
+    expect(line("lad", "checkin.submit", { category: "crackers" })).toBe("Log the crunch");
   });
 
   it("fills in values in both voices", () => {

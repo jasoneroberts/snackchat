@@ -138,7 +138,7 @@ export function CheckIn({
 
   const category = snack ? getCategory(snack.category) : undefined;
   const reviewBonus = review.trim().length >= REVIEW_BONUS_CHARS;
-  // Kids snacks keep grown-up words, and crisps are "crunch" while chocolate is "munch".
+  // In lad mode crisps are "crunch" while chocolate is "munch".
   const about = { category: snack?.category };
 
   if (loading) return <p className="muted page">Loading…</p>;

@@ -57,8 +57,7 @@ const TASTE: Record<string, [number, number, number]> = {
   "seed-salted-pistachios": [3, 4, 1], "seed-popchips-sea-salt": [2, 3, 1],
 };
 
-// How hot the snacks whose type has a Spice slider are (crisps, nuts and
-// world snacks), so Explore can match chilli fans.
+// How hot the snacks whose type has a Spice slider are (crisps and nuts), so Explore can match chilli fans.
 const SPICE: Record<string, number> = {
   "seed-walkers-cheese-onion": 1, "seed-mccoys-flame-grilled-steak": 2, "seed-kettle-sea-salt-balsamic": 1,
   "seed-tyrrells-sea-salted": 1, "seed-pipers-anglesey-sea-salt": 1, "seed-seabrook-original": 1,

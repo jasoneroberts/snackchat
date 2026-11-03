@@ -12,7 +12,7 @@ export type Metric =
   | "snacks" // different snacks
   | "crisps" // different crisps
   | "sweets" // different chocolate and sweets
-  | "world" // different world snacks
+  | "crackers" // different crackers
   | "types" // different snack types tried
   | "late" // check-ins between midnight and 4am, UK time
   | "early" // check-ins between 5am and 8am, UK time
@@ -48,7 +48,7 @@ export const BADGES: BadgeDef[] = [
   { id: "centurion", name: "Centurion", emoji: "💯", description: "Log 100 check-ins.", metric: "checkins", goal: 100 },
   { id: "crisp_connoisseur", name: "Crisp Connoisseur", emoji: "🎩", description: "Try 25 different crisps.", metric: "crisps", goal: 25 },
   { id: "sweet_tooth", name: "Sweet Tooth", emoji: "🍫", description: "Try 10 different chocolates and sweets.", metric: "sweets", goal: 10 },
-  { id: "globetrotter", name: "Globetrotter", emoji: "🌍", description: "Try 5 different world snacks.", metric: "world", goal: 5 },
+  { id: "cheeseboard", name: "Cheeseboard Champion", emoji: "🧀", description: "Try 5 different crackers.", metric: "crackers", goal: 5 },
   { id: "all_rounder", name: "All-Rounder", emoji: "🎯", description: "Try snacks from 5 different snack types.", metric: "types", goal: 5 },
   { id: "explorer", name: "Snack Explorer", emoji: "🧭", description: "Try 50 different snacks.", metric: "snacks", goal: 50 },
   { id: "night_owl", name: "Night Owl", emoji: "🦉", description: "Log a snack between midnight and 4am.", metric: "late", goal: 1 },
