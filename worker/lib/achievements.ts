@@ -48,7 +48,7 @@ export async function progressFor(db: D1Database, userId: string, nowSeconds: nu
          (SELECT COUNT(DISTINCT snack_id) FROM checkins WHERE user_id = ?1 AND scored = 1) AS snacks,
          ${distinctOf("crisps")} AS crisps,
          ${distinctOf("chocolate")} AS sweets,
-         ${distinctOf("world")} AS world,
+         ${distinctOf("crackers")} AS crackers,
          (SELECT COUNT(DISTINCT s.category_id) FROM checkins c JOIN snacks s ON s.id = c.snack_id
            WHERE c.user_id = ?1 AND c.scored = 1) AS types,
          (SELECT COUNT(*) FROM checkins WHERE user_id = ?1 AND scored = 1 AND LENGTH(TRIM(review)) >= ${REVIEW_BONUS_CHARS}) AS reviews,

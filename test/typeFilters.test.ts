@@ -16,7 +16,7 @@ describe("snack type filters", () => {
   });
 
   it("Rest covers the types without their own lad pill", () => {
-    expect(filterTypes(REST)).toEqual(["popcorn", "kids", "world", "healthy"]);
+    expect(filterTypes(REST)).toEqual(["popcorn", "crackers", "healthy"]);
     expect(filterShort(REST)).toBe("the rest");
   });
 
@@ -30,7 +30,7 @@ describe("snack type filters", () => {
   it("Rest falls back to All in grown-up mode", () => {
     expect(filterFor("grownup", REST)).toBe("");
     expect(filterFor("lad", REST)).toBe(REST);
-    expect(filterFor("grownup", "kids")).toBe("kids");
-    expect(filterFor("lad", "kids")).toBe("");
+    expect(filterFor("grownup", "crackers")).toBe("crackers");
+    expect(filterFor("lad", "crackers")).toBe("");
   });
 });

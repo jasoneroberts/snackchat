@@ -149,10 +149,10 @@ export const LINES = {
 export type LineKey = keyof typeof LINES;
 
 // Snack types that count as "crunch" in lad mode; everything else is "munch".
-const CRUNCHY = new Set(["crisps", "nuts", "popcorn"]);
+const CRUNCHY = new Set(["crisps", "nuts", "popcorn", "crackers"]);
 
 export interface LineOptions {
-  /** The snack type the line is about. Kids snacks always get grown-up words. */
+  /** The snack type the line is about (crunch or munch in lad mode). */
   category?: string;
   vars?: Record<string, string | number>;
 }
@@ -160,8 +160,7 @@ export interface LineOptions {
 /** One line of app text in the given voice. */
 export function line(voice: Voice, key: LineKey, { category, vars }: LineOptions = {}): string {
   const entry: Line = LINES[key];
-  // Parents rate kids snacks, often with the kid watching: keep those grown-up.
-  const useLad = voice === "lad" && category !== "kids" && entry.lad !== undefined;
+  const useLad = voice === "lad" && entry.lad !== undefined;
   let text = useLad ? entry.lad! : entry.grownup;
   if (useLad) {
     const word = !category || CRUNCHY.has(category) ? "crunch" : "munch";

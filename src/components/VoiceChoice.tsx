@@ -6,7 +6,7 @@ import { api, errorText } from "../api";
 // picks up the dark pub colours from styles.css even before you choose it.
 const PREVIEW: Record<Voice, { blurb: string; sample: string }> = {
   grownup: { blurb: "Clean and friendly. Good for families.", sample: "Rate every snack. Beat your mates." },
-  lad: { blurb: "Grittier, with pub banter. Kids snacks stay grown-up.", sample: "Rate the crunch. Bury your mates." },
+  lad: { blurb: "Grittier, with pub banter.", sample: "Rate the crunch. Bury your mates." },
 };
 
 /** Two big buttons, grown-up and lad, that save the choice straight away. */

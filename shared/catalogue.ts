@@ -80,21 +80,15 @@ export const CATEGORIES: Category[] = [
     extra: [crunch, { key: "dunk", label: "Dunkability", low: "Collapses", high: "Survives" }],
   },
   {
-    id: "kids",
-    name: "Kids snacks",
-    short: "kids snacks",
-    tint: "#CFE4F7",
+    id: "crackers",
+    name: "Crackers",
+    short: "crackers",
+    tint: "#F3E2BF",
     extra: [
-      { key: "kid", label: "Kid approval", low: "Refused", high: "Loved it" },
-      { key: "mess", label: "Mess factor", low: "Tidy", high: "Carnage" },
+      crunch,
+      { key: "topping", label: "Holds a topping", low: "Snaps under brie", high: "Takes a whole wedge" },
+      { key: "crumbs", label: "Crumb factor", low: "Tidy", high: "Everywhere" },
     ],
-  },
-  {
-    id: "world",
-    name: "World snacks",
-    short: "world snacks",
-    tint: "#F6B8A8",
-    extra: [spice, { key: "novelty", label: "Novelty", low: "Familiar", high: "Wild" }],
   },
   {
     id: "healthy",
