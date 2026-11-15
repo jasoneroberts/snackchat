@@ -64,7 +64,7 @@ export function validateCheckin(raw: unknown, categoryId: string): Result<Checki
 }
 
 export interface PointsLine {
-  reason: "new_snack" | "repeat" | "photo" | "review";
+  reason: "new_snack" | "repeat" | "crunch" | "photo" | "review";
   points: number;
 }
 
@@ -75,6 +75,8 @@ export interface PointsLine {
  */
 export function pointsFor(opts: {
   firstTime: boolean;
+  /** The snack's type is one of CRUNCHY_TYPES, so it earns the crunch bonus. */
+  crunchy: boolean;
   hasPhoto: boolean;
   review: string | null;
   earnedToday: number;
@@ -82,6 +84,7 @@ export function pointsFor(opts: {
   const lines: PointsLine[] = [
     opts.firstTime ? { reason: "new_snack", points: POINTS.newSnack } : { reason: "repeat", points: POINTS.repeat },
   ];
+  if (opts.crunchy) lines.push({ reason: "crunch", points: opts.firstTime ? POINTS.crunchNew : POINTS.crunchRepeat });
   if (opts.hasPhoto) lines.push({ reason: "photo", points: POINTS.photo });
   if (opts.review && opts.review.length >= REVIEW_BONUS_CHARS) lines.push({ reason: "review", points: POINTS.review });
 

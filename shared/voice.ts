@@ -10,6 +10,8 @@
 // values passed in `vars`. A line with no lad version falls back to grown-up,
 // so nothing ever shows blank.
 
+import { CRUNCHY_TYPES } from "./catalogue";
+
 export type Voice = "grownup" | "lad";
 export const VOICES: Voice[] = ["grownup", "lad"];
 
@@ -78,6 +80,7 @@ export const LINES = {
   },
   "push.yes": { grownup: "Turn on", lad: "Go on then" },
   "push.no": { grownup: "Not now", lad: "Nah" },
+  "share.crunchBonus": { grownup: "Includes a +{pts} crunch bonus.", lad: "+{pts} of that is the crunch bonus. Proper snack." },
   "share.prompt": { grownup: "Share it and see what your friends would give it.", lad: "Show the lads. Start the {snack} debate." },
 
   // Badges (src/components/Achievements.tsx). Lad mode calls them chieves.
@@ -149,7 +152,8 @@ export const LINES = {
 export type LineKey = keyof typeof LINES;
 
 // Snack types that count as "crunch" in lad mode; everything else is "munch".
-const CRUNCHY = new Set(["crisps", "nuts", "popcorn", "crackers"]);
+// The same list earns the crunch bonus (shared/catalogue.ts).
+const CRUNCHY = CRUNCHY_TYPES;
 
 export interface LineOptions {
   /** The snack type the line is about (crunch or munch in lad mode). */
