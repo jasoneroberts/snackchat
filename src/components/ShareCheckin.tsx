@@ -15,6 +15,7 @@ import { track } from "../lib/track";
  */
 export function ShareCheckin({
   points,
+  crunch = 0,
   snack,
   rating,
   username,
@@ -25,6 +26,8 @@ export function ShareCheckin({
   onDone,
 }: {
   points: number;
+  /** The crunch bonus inside `points` (crisps, nuts, popcorn, crackers). */
+  crunch?: number;
   snack: { name: string; brand: string | null; category: string; photoId?: string | null };
   rating: number;
   username: string;
@@ -85,6 +88,7 @@ export function ShareCheckin({
     <div className="page stack share-checkin">
       <div className="centre stack-sm">
         <h1 className="title">{points > 0 ? `+${points} pts` : t("toast.checkedIn")}</h1>
+        {crunch > 0 && <p className="small no-margin">{t("share.crunchBonus", { vars: { pts: crunch } })}</p>}
         <p className="muted no-margin">{t("share.prompt", { category: snack.category })}</p>
         {tip && (
           <p className="small no-margin share-tip">

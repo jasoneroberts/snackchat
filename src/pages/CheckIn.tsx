@@ -42,6 +42,7 @@ export function CheckIn({
   // Posted: the share screen shows until they tap Done.
   const [posted, setPosted] = useState<{
     points: number;
+    crunch: number; // the crunch bonus inside `points`, 0 for non-crunchy types
     photoPending: boolean;
     newBadges: BadgeState[];
     tip: { username: string; points: number } | null;
@@ -126,11 +127,13 @@ export function CheckIn({
     try {
       const res = await api<{
         points: number;
+        lines?: { reason: string; points: number }[];
         photoPending: boolean;
         newBadges?: BadgeState[];
         tip?: { username: string; points: number } | null;
       }>("/checkins", { body: form });
-      setPosted({ points: res.points, photoPending: res.photoPending, newBadges: res.newBadges ?? [], tip: res.tip ?? null });
+      const crunch = res.lines?.find((l) => l.reason === "crunch")?.points ?? 0;
+      setPosted({ points: res.points, crunch, photoPending: res.photoPending, newBadges: res.newBadges ?? [], tip: res.tip ?? null });
     } catch (err) {
       setError(errorText(err));
       setBusy(false);
@@ -147,6 +150,7 @@ export function CheckIn({
     return (
       <ShareCheckin
         points={posted.points}
+        crunch={posted.crunch}
         snack={snack}
         rating={overall}
         username={username}

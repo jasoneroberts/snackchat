@@ -125,7 +125,7 @@ export async function crowns(db: D1Database, nowSeconds: number): Promise<Crowns
 
 /** crowns(), kept for an hour: the weeks it looks at are finished, so it rarely changes. */
 export async function cachedCrowns(env: Env, nowSeconds: number): Promise<Crowns> {
-  const key = `crowns:v1:${lastWeek(nowSeconds).start}:${periodStart("monthly", nowSeconds)}`;
+  const key = `crowns:v2:${lastWeek(nowSeconds).start}:${periodStart("monthly", nowSeconds)}`;
   const hit = await env.CACHE.get<Crowns>(key, "json").catch(() => null);
   if (hit) return hit;
   const fresh = await crowns(env.DB, nowSeconds);
