@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { pointsFor, startOfUtcDay, validateCheckin } from "../worker/lib/checkin";
-import { attributesFor, isCrunchy } from "../shared/catalogue";
+import { attributesFor, earnsCrunchBonus, isCrunchy } from "../shared/catalogue";
 
 const base = { snackId: "seed-frazzles", overall: 4.25 };
 
@@ -78,8 +78,14 @@ describe("pointsFor", () => {
     expect(["chocolate", "chews", "biscuits", "healthy"].some(isCrunchy)).toBe(false);
   });
 
-  it("lets health food be rated on crunch", () => {
+  it("lets health food be rated on crunch, and gives it the bonus only when it is", () => {
     expect(attributesFor("healthy").map((a) => a.key)).toContain("crunch");
+    expect(earnsCrunchBonus("healthy", {})).toBe(false);
+    expect(earnsCrunchBonus("healthy", { flavour: 4 })).toBe(false);
+    expect(earnsCrunchBonus("healthy", { crunch: 1 })).toBe(true);
+    expect(earnsCrunchBonus("crisps", {})).toBe(true);
+    expect(earnsCrunchBonus("biscuits", { crunch: 5 })).toBe(false);
+    expect(earnsCrunchBonus("chocolate", {})).toBe(false);
   });
 
   it("stops at the daily cap of 100", () => {

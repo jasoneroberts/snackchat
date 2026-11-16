@@ -3,7 +3,7 @@ import type { CheckinForEdit, Liker } from "../../shared/types";
 import type { AppContext } from "../env";
 import { newId } from "../lib/crypto";
 import { blockedEitherWay } from "../lib/blocks";
-import { isCrunchy } from "../../shared/catalogue";
+import { earnsCrunchBonus } from "../../shared/catalogue";
 import { pointsFor, startOfUtcDay, validateCheckin } from "../lib/checkin";
 import { currentUser } from "../lib/currentUser";
 import { listCheckins, nextCursor, parseCursor } from "../lib/feed";
@@ -93,7 +93,7 @@ checkins.post("/", async (c) => {
   ]);
   const lines = pointsFor({
     firstTime: !seen,
-    crunchy: isCrunchy(snack.category_id),
+    crunchy: earnsCrunchBonus(snack.category_id, input.attributes),
     hasPhoto: photo !== null,
     review: input.review,
     earnedToday: today?.total ?? 0,

@@ -75,7 +75,7 @@ export interface PointsLine {
  */
 export function pointsFor(opts: {
   firstTime: boolean;
-  /** The snack's type is one of CRUNCHY_TYPES, so it earns the crunch bonus. */
+  /** earnsCrunchBonus(): a crunchy type, or health food given a Crunch score. */
   crunchy: boolean;
   hasPhoto: boolean;
   review: string | null;

@@ -123,12 +123,21 @@ export function attributeLabel(key: string): string {
 // Snack types that earn the crunch bonus: Crunchd started out as a place to
 // rate crisps, so these score a little more than sweets and chocolate. Lad
 // mode also calls these "crunch" and everything else "munch" (shared/voice.ts).
-// Health food and biscuits have a Crunch slider but no bonus: plenty of them
-// (fruit bars, soft cookies) aren't crunchy.
+// Biscuits have a Crunch slider but no bonus. Health food earns it only when
+// the check-in gives it a Crunch score (any 1 to 5), since plenty of it
+// (fruit bars, yoghurt bites) isn't crunchy: see earnsCrunchBonus().
 export const CRUNCHY_TYPES: ReadonlySet<string> = new Set(["crisps", "nuts", "popcorn", "crackers"]);
+
+/** Snack types that earn the crunch bonus when the check-in has a Crunch score. */
+export const CRUNCH_IF_RATED: ReadonlySet<string> = new Set(["healthy"]);
 
 export function isCrunchy(categoryId: string): boolean {
   return CRUNCHY_TYPES.has(categoryId);
+}
+
+/** Whether a check-in of this type, with these sliders, gets the crunch bonus. */
+export function earnsCrunchBonus(categoryId: string, attributes: Record<string, number>): boolean {
+  return isCrunchy(categoryId) || (CRUNCH_IF_RATED.has(categoryId) && (attributes.crunch ?? 0) > 0);
 }
 
 // Points for a check-in (see the definition doc's scoring section).
